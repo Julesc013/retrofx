@@ -1,0 +1,9 @@
+# RetroFX runtime/output directories (generated, machine-local)
+active/
+state/
+
+# Temporary/editor noise
+*~
+*.swp
+*.swo
+.DS_Store
