@@ -67,6 +67,30 @@ Profiles are TOML files under:
 - `exclude_wm_name` = array of strings
 - `exclude_opacity_below` = float `0..1`
 
+### `[fonts]` (optional)
+
+- `tty` = console font name (example: `ter-v16n`)
+- `terminal` = preferred terminal font family (example: `Terminus Nerd Font`)
+- `terminal_fallback` = array of fallback families
+- `ui` = preferred UI sans font family for session-local fontconfig
+
+Behavior:
+
+- All keys are optional.
+- If `[fonts]` is absent, no font family overrides are generated.
+- `tty` is best-effort and only attempted by the TTY backend when safe.
+
+### `[font_aa]` (optional)
+
+- `antialias` = `default` | `on` | `off`
+- `subpixel` = `default` | `rgb` | `bgr` | `none`
+
+Behavior:
+
+- `default` leaves fontconfig/system behavior unchanged.
+- Non-default values generate a session-local `active/fontconfig.conf`.
+- No global fontconfig files are modified by RetroFX.
+
 Scope behavior:
 
 - `x11=true` applies picom/X11 backend helpers.

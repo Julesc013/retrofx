@@ -64,6 +64,17 @@ Profiles created by the wizard are saved under `profiles/user/`.
 - Structured palette profiles (`palette-2` .. `palette-256`) are optimized and fast.
 - Custom palettes are supported up to 32 colors (see `palettes/c64.txt` and `docs/PALETTES.md`).
 
+## Fonts & AA (Session-Local)
+
+Use a profile that includes `[fonts]` / `[font_aa]` (example: `crt-green-fonts-aa`), then export the session-local fontconfig variable:
+
+```bash
+./scripts/retrofx apply crt-green-fonts-aa
+eval "$(./scripts/integrate/retrofx-env.sh)"
+```
+
+This affects apps launched from that shell/session only. Plasma/GNOME defaults remain unchanged unless you opt in.
+
 ## Wayland Note (Degraded Mode)
 
 On Wayland sessions, RetroFX does not provide global post-process compositor shaders. In this mode, `apply` generates degraded outputs only (terminal palette artifacts, optional TTY palette backend, optional tuigreet snippet) and reports this explicitly in command output and `doctor`.

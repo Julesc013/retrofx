@@ -31,6 +31,7 @@ RetroFX is a profile-driven renderer that generates deterministic session-local 
 3. Render stage artifacts into `state/stage.*`:
    - X11/unknown: shader + picom + palette artifacts
    - Wayland: degraded palette artifacts only (no shader/picom targets)
+   - Optional fonts/AA: session-local `fontconfig.conf` when profile requests it
 4. Validate generated stage:
    - X11/unknown: shader static checks + artifact checks
    - Wayland: degraded artifact checks (and assert shader/picom absence)
@@ -95,3 +96,10 @@ RetroFX is a profile-driven renderer that generates deterministic session-local 
 - `tty`: functional profile-scoped backend with safe mock/apply/off behavior and rollback backups.
 - `tuigreet`: functional profile-scoped snippet generation (`active/tuigreet.conf`).
 - Wayland: degraded support implemented with honest capability reporting (no global post-process shader pipeline).
+
+## Typography Scope
+
+- Font family and AA settings are optional profile fields (`[fonts]`, `[font_aa]`).
+- RetroFX generates `active/fontconfig.conf` only when requested.
+- Session integration uses `FONTCONFIG_FILE` opt-in export (`scripts/integrate/retrofx-env.sh`).
+- No global fontconfig or desktop settings are modified by default.

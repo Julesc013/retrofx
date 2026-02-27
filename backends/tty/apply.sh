@@ -6,6 +6,7 @@ ROOT_DIR="$(CDPATH= cd -- "$SCRIPT_DIR/../.." && pwd)"
 STATE_DIR="$ROOT_DIR/state"
 TTY_BACKUPS_DIR="$STATE_DIR/tty-backups"
 TTY_CURRENT_FILE="$STATE_DIR/tty-current.env"
+TTY_CURRENT_FONT_FILE="$STATE_DIR/tty-current-font.env"
 ACTIVE_DIR_DEFAULT="$ROOT_DIR/active"
 DEFAULT_TTY_DEVICE="${RETROFX_TTY_DEVICE:-/dev/tty}"
 
@@ -37,6 +38,124 @@ USAGE
 
 ensure_dirs() {
   mkdir -p "$STATE_DIR" "$TTY_BACKUPS_DIR"
+}
+
+load_profile_font_tty() {
+  local active_dir="$1"
+  local env_file="$active_dir/profile.env"
+  local font_name=""
+
+  if [[ -f "$env_file" ]]; then
+    # shellcheck source=/dev/null
+    source "$env_file"
+    font_name="${FONT_TTY:-}"
+  fi
+
+  printf '%s' "$font_name"
+}
+
+clear_previous_font_backup_marker() {
+  local old_backup=""
+  if [[ -f "$TTY_CURRENT_FONT_FILE" ]]; then
+    # shellcheck source=/dev/null
+    source "$TTY_CURRENT_FONT_FILE" || true
+    old_backup="${FONT_BACKUP:-}"
+    [[ -n "$old_backup" ]] && rm -f "$old_backup"
+  fi
+  rm -f "$TTY_CURRENT_FONT_FILE"
+}
+
+apply_tty_font_if_requested() {
+  local active_dir="$1"
+  local mode="$2"
+  local font_name=""
+  local font_backup=""
+
+  font_name="$(load_profile_font_tty "$active_dir")"
+  [[ -n "$font_name" ]] || return 0
+
+  case "$mode" in
+    mock)
+      log "mock mode: skipping tty font apply for '$font_name'"
+      return 0
+      ;;
+    apply)
+      ;;
+    *)
+      return 0
+      ;;
+  esac
+
+  if ! command -v setfont >/dev/null 2>&1; then
+    warn "profile requested tty font '$font_name' but setfont is unavailable; skipping font apply"
+    return 0
+  fi
+
+  font_backup="$TTY_BACKUPS_DIR/tty-font-$(date -u +%Y%m%d-%H%M%S)-pid$$.psf"
+  if ! setfont -C "$DEFAULT_TTY_DEVICE" -O "$font_backup" >/dev/null 2>&1; then
+    warn "unable to back up current tty font; skipping apply of '$font_name'"
+    rm -f "$font_backup"
+    return 0
+  fi
+
+  if ! setfont -C "$DEFAULT_TTY_DEVICE" "$font_name" >/dev/null 2>&1; then
+    warn "failed to apply tty font '$font_name'; restoring previous font"
+    if ! setfont -C "$DEFAULT_TTY_DEVICE" "$font_backup" >/dev/null 2>&1; then
+      warn "failed to restore previous tty font from backup"
+    fi
+    rm -f "$font_backup"
+    return 0
+  fi
+
+  clear_previous_font_backup_marker
+  {
+    printf 'FONT_BACKUP=%q\n' "$font_backup"
+    printf 'FONT_NAME=%q\n' "$font_name"
+  } >"$TTY_CURRENT_FONT_FILE"
+  log "applied tty font '$font_name'"
+  return 0
+}
+
+restore_previous_tty_font() {
+  local mode="$1"
+  local font_backup=""
+  local font_name=""
+
+  [[ -f "$TTY_CURRENT_FONT_FILE" ]] || return 0
+  # shellcheck source=/dev/null
+  source "$TTY_CURRENT_FONT_FILE" || true
+  font_backup="${FONT_BACKUP:-}"
+  font_name="${FONT_NAME:-previous}"
+
+  if [[ -z "$font_backup" || ! -f "$font_backup" ]]; then
+    rm -f "$TTY_CURRENT_FONT_FILE"
+    return 0
+  fi
+
+  case "$mode" in
+    mock)
+      log "mock mode: skipped tty font restore for '$font_name'"
+      rm -f "$font_backup" "$TTY_CURRENT_FONT_FILE"
+      return 0
+      ;;
+    apply)
+      ;;
+    *)
+      return 0
+      ;;
+  esac
+
+  if ! command -v setfont >/dev/null 2>&1; then
+    warn "setfont unavailable; cannot restore previous tty font backup"
+    return 0
+  fi
+
+  if setfont -C "$DEFAULT_TTY_DEVICE" "$font_backup" >/dev/null 2>&1; then
+    log "restored previous tty font"
+    rm -f "$font_backup" "$TTY_CURRENT_FONT_FILE"
+  else
+    warn "failed to restore tty font from $font_backup"
+  fi
 }
 
 write_builtin_vga_palette_env() {
@@ -237,6 +356,8 @@ cmd_apply() {
       ;;
   esac
 
+  apply_tty_font_if_requested "$active_dir" "$mode"
+
   return 0
 }
 
@@ -273,6 +394,8 @@ cmd_off() {
       log "restored tty palette from $restore_file"
       ;;
   esac
+
+  restore_previous_tty_font "$mode"
 
   if [[ -n "$latest" ]]; then
     rm -f "$TTY_BACKUPS_DIR/$latest"

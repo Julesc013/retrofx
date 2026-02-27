@@ -1,0 +1,36 @@
+name = "CRT Green Fonts + AA"
+version = 1
+description = "CRT green profile with session-local terminal/UI font and AA overrides."
+tags = ["crt", "green", "fonts", "aa", "session-local"]
+author = "RetroFX Core Pack"
+license = "CC0-1.0"
+
+[mode]
+type = "monochrome"
+
+[monochrome]
+bands = 8
+phosphor = "green"
+hotcore = false
+
+[effects]
+blur_strength = 2
+scanlines = true
+flicker = false
+dither = "ordered"
+vignette = true
+
+[scope]
+x11 = true
+tty = false
+tuigreet = false
+
+[fonts]
+tty = "ter-v16n"
+terminal = "Terminus Nerd Font"
+terminal_fallback = ["DejaVu Sans Mono", "Noto Color Emoji"]
+ui = "Inter"
+
+[font_aa]
+antialias = "off"
+subpixel = "none"

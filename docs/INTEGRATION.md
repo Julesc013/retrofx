@@ -12,11 +12,12 @@ RetroFX now ships optional wrappers in `scripts/integrate/`:
 1. Picks profile in this order:
    - explicit argument
    - `RETROFX_PROFILE` env
-   - `crt-green-4band` if present
+   - `crt-green-p1-4band` if present
    - `passthrough` fallback
 2. Runs `./scripts/retrofx apply <profile>`
 3. Starts picom with `active/picom.conf` when available
-4. `exec i3`
+4. Applies session-local font hook (`FONTCONFIG_FILE`) when `active/fontconfig.conf` exists
+5. `exec i3`
 
 If `retrofx apply` fails, it logs a warning and still starts plain i3.
 
@@ -24,6 +25,12 @@ Run directly from repo:
 
 ```bash
 ./scripts/integrate/i3-retro-session.sh
+```
+
+If you launch i3 manually and still want RetroFX font overrides in that shell/session:
+
+```bash
+eval "$(./scripts/integrate/retrofx-env.sh)"
 ```
 
 ## User-Local Xsession Entry (No Root)
@@ -70,6 +77,7 @@ These scripts print suggested env vars and do not apply system changes:
 
 - `./scripts/integrate/x11-env.sh`
 - `./scripts/integrate/wayland-env.sh`
+- `./scripts/integrate/retrofx-env.sh` (session-local `FONTCONFIG_FILE` for RetroFX generated `active/fontconfig.conf`)
 
 Example:
 

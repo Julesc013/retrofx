@@ -27,9 +27,14 @@ Support level: degraded (honest capability mode)
 - RetroFX does not claim wlroots/sway-wide shader compositing.
 - RetroFX still provides:
   - terminal palette artifacts (`xresources`, `semantic.env`, `tty-palette.env`)
+  - session-local fontconfig output (`active/fontconfig.conf`) when requested
   - optional TTY backend
   - optional tuigreet snippet generation
   - optional toolkit env suggestion scripts (`scripts/integrate/*-env.sh`)
+
+Font note:
+
+- `FONTCONFIG_FILE` can affect Wayland and Xwayland clients launched from that environment, but behavior varies by toolkit/app.
 
 Out of scope:
 

@@ -15,12 +15,18 @@ Pass criteria:
 - shader static checks pass
 - Wayland degraded apply path omits `active/picom.conf` and `active/shader.glsl`
 - profile pack discovery works (`list`, `search`, `info`)
+- font-enabled profile paths generate:
+  - `active/fontconfig.conf` (when requested)
+  - `active/alacritty.toml`
 - non-interactive wizard path works (`RETROFX_WIZARD_NONINTERACTIVE=1`)
 - semantic ANSI mapping files are generated and valid
 - TTY mock-mode backend checks pass (no console access needed)
 - tuigreet snippet generation check passes
 - doctor capability output includes expected X11/Wayland strings
 - `apply -> off` restores passthrough profile state
+- export commands write target files:
+  - `retrofx export alacritty ...`
+  - `retrofx export xresources ...`
 
 ## Manual Command Checks
 

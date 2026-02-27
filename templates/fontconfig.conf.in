@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<!DOCTYPE fontconfig SYSTEM "urn:fontconfig:fonts.dtd">
+<fontconfig>
+  <!-- RetroFX session-local fontconfig generated from profile settings. -->
+  <!-- antialias=@AA_MODE@ subpixel=@SUBPIXEL_MODE@ -->
+
+  @AA_BLOCK@
+  @SUBPIXEL_BLOCK@
+  @MONOSPACE_BLOCK@
+  @UI_BLOCK@
+  @FALLBACK_BLOCK@
+</fontconfig>

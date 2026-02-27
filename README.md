@@ -27,6 +27,7 @@ Additional docs:
 - `docs/ARCHITECTURE.md`
 - `docs/PROFILE_SPEC.md`
 - `docs/PALETTES.md`
+- `docs/FONTS.md`
 - `docs/CAPABILITIES.md`
 - `docs/INTEGRATION.md`
 - `docs/TESTING.md`

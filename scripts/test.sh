@@ -77,6 +77,8 @@ validate_active_files() {
   require_file "$ACTIVE_DIR/profile.toml"
   require_file "$ACTIVE_DIR/profile.env"
   require_file "$ACTIVE_DIR/xresources"
+  require_file "$ACTIVE_DIR/Xresources"
+  require_file "$ACTIVE_DIR/alacritty.toml"
   require_file "$ACTIVE_DIR/meta"
   require_file "$ACTIVE_DIR/semantic.env"
   require_file "$ACTIVE_DIR/tty-palette.env"
@@ -254,7 +256,7 @@ mkdir -p "$TEST_TMP_DIR"
 
 log "running shellcheck when available"
 if command -v shellcheck >/dev/null 2>&1; then
-  shellcheck "$RETROFX" "$ROOT_DIR/scripts/test.sh"
+  shellcheck "$RETROFX" "$ROOT_DIR/scripts/test.sh" "$ROOT_DIR/backends/tty/apply.sh" "$ROOT_DIR/scripts/integrate/retrofx-env.sh"
 else
   warn "shellcheck not installed; skipping"
 fi
@@ -273,6 +275,10 @@ log "checking info command"
 info_output="$(run_retrofx_x11 info crt-green-p1-4band)"
 assert_contains "$info_output" "Profile: crt-green-p1-4band"
 assert_contains "$info_output" "Mode"
+info_font_output="$(run_retrofx_x11 info crt-green-fonts-aa)"
+assert_contains "$info_font_output" "Profile: crt-green-fonts-aa"
+assert_contains "$info_font_output" "Fonts"
+assert_contains "$info_font_output" "Font AA"
 info_c64_output="$(run_retrofx_x11 info c64)"
 assert_contains "$info_c64_output" "Profile: c64"
 assert_contains "$info_c64_output" "kind = custom"
@@ -281,8 +287,11 @@ log "checking export commands"
 export_xr_path="$TEST_TMP_DIR/exported.Xresources"
 run_retrofx_x11 export xresources crt-green-p1-4band "$export_xr_path"
 require_file "$export_xr_path"
-export_alacritty_output="$(run_retrofx_x11 export alacritty crt-green-p1-4band "$TEST_TMP_DIR/alacritty.yml" 2>&1)"
-assert_contains "$export_alacritty_output" "Export not yet supported in this build."
+export_alacritty_path="$TEST_TMP_DIR/exported.alacritty.toml"
+run_retrofx_x11 export alacritty crt-green-p1-4band "$export_alacritty_path"
+require_file "$export_alacritty_path"
+grep -q '^\[colors.primary\]$' "$export_alacritty_path" || die "exported alacritty file missing colors.primary block"
+grep -q '^\[font.normal\]$' "$export_alacritty_path" || die "exported alacritty file missing font.normal block"
 
 profiles=("$PROFILES_DIR"/*.toml)
 if [[ ! -e "${profiles[0]}" ]]; then
@@ -307,6 +316,16 @@ log "applying pack profile by id resolution"
 run_retrofx_x11 apply crt-green-p1-4band
 validate_active_files
 assert_contains "$(cat "$ACTIVE_DIR/profile.env")" "PROFILE_ID=crt-green-p1-4band"
+
+log "fonts + aa generation checks"
+run_retrofx_x11 apply crt-green-fonts-aa
+validate_active_files
+require_file "$ACTIVE_DIR/fontconfig.conf"
+grep -q '<bool>false</bool>' "$ACTIVE_DIR/fontconfig.conf" || die "fontconfig antialias mapping mismatch"
+grep -q '<const>none</const>' "$ACTIVE_DIR/fontconfig.conf" || die "fontconfig subpixel mapping mismatch"
+grep -q 'Terminus Nerd Font' "$ACTIVE_DIR/fontconfig.conf" || die "fontconfig missing terminal family override"
+grep -q 'family = "Terminus Nerd Font"' "$ACTIVE_DIR/alacritty.toml" || die "alacritty missing terminal font family"
+grep -q 'terminal_fallback: DejaVu Sans Mono, Noto Color Emoji' "$ACTIVE_DIR/alacritty.toml" || die "alacritty missing fallback comment"
 
 log "static shader checks: monochrome profile"
 mono_profile="$TEST_TMP_DIR/mono-check.toml"
@@ -647,6 +666,7 @@ assert_contains "$doctor_wayland_output" "Wayland backend: degraded outputs only
 log "verifying apply -> off returns to passthrough baseline"
 run_retrofx_x11 apply passthrough
 baseline_hash="$(hash_file "$ACTIVE_DIR/profile.toml")"
+[[ ! -f "$ACTIVE_DIR/fontconfig.conf" ]] || die "passthrough should not generate fontconfig.conf by default"
 run_retrofx_x11 apply "$mono_profile"
 run_retrofx_x11 off
 post_off_hash="$(hash_file "$ACTIVE_DIR/profile.toml")"

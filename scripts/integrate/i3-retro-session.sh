@@ -5,9 +5,11 @@ SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(CDPATH= cd -- "$SCRIPT_DIR/../.." && pwd)"
 RETROFX="$ROOT_DIR/scripts/retrofx"
 PROFILES_DIR="$ROOT_DIR/profiles"
+PROFILES_PACKS_DIR="$PROFILES_DIR/packs"
 ACTIVE_DIR="$ROOT_DIR/active"
+RETROFX_ENV_HELPER="$ROOT_DIR/scripts/integrate/retrofx-env.sh"
 
-readonly DEFAULT_PRIMARY_PROFILE="crt-green-4band"
+readonly DEFAULT_PRIMARY_PROFILE="crt-green-p1-4band"
 readonly DEFAULT_FALLBACK_PROFILE="passthrough"
 
 log() {
@@ -20,7 +22,12 @@ warn() {
 
 profile_exists() {
   local ref="$1"
-  [[ -f "$PROFILES_DIR/$ref.toml" || -f "$PROFILES_DIR/$ref" || -f "$ref" ]]
+  [[ -f "$PROFILES_DIR/$ref.toml" || -f "$PROFILES_DIR/$ref" || -f "$ref" ]] && return 0
+  [[ -f "$PROFILES_PACKS_DIR/$ref.toml" || -f "$PROFILES_PACKS_DIR/$ref" ]] && return 0
+  if [[ -d "$PROFILES_PACKS_DIR" ]]; then
+    find "$PROFILES_PACKS_DIR" -type f -name '*.toml' -printf '%f\n' 2>/dev/null | sed 's/\.toml$//' | grep -Fxq "$ref" && return 0
+  fi
+  return 1
 }
 
 pick_profile() {
@@ -106,6 +113,9 @@ main() {
   fi
 
   if [[ "$apply_ok" -eq 1 ]]; then
+    if [[ -x "$RETROFX_ENV_HELPER" ]]; then
+      eval "$("$RETROFX_ENV_HELPER")" || warn "failed to apply retrofx font environment helper"
+    fi
     start_picom_if_possible
   fi
 

@@ -68,6 +68,13 @@ declare CFG_scope_x11="true"
 declare CFG_scope_tty="false"
 declare CFG_scope_tuigreet="false"
 
+declare CFG_fonts_tty=""
+declare CFG_fonts_terminal=""
+declare CFG_fonts_terminal_fallback=""
+declare CFG_fonts_ui=""
+declare CFG_fontaa_antialias="default"
+declare CFG_fontaa_subpixel="default"
+
 declare CFG_phosphor_r="1.000000"
 declare CFG_phosphor_g="1.000000"
 declare CFG_phosphor_b="1.000000"
@@ -170,6 +177,16 @@ trim() {
   local s="$1"
   s="${s#"${s%%[![:space:]]*}"}"
   s="${s%"${s##*[![:space:]]}"}"
+  printf '%s' "$s"
+}
+
+xml_escape() {
+  local s="$1"
+  s="${s//&/&amp;}"
+  s="${s//</&lt;}"
+  s="${s//>/&gt;}"
+  s="${s//\"/&quot;}"
+  s="${s//\'/&apos;}"
   printf '%s' "$s"
 }
 
@@ -405,6 +422,13 @@ reset_config() {
   CFG_scope_tty="false"
   CFG_scope_tuigreet="false"
 
+  CFG_fonts_tty=""
+  CFG_fonts_terminal=""
+  CFG_fonts_terminal_fallback=""
+  CFG_fonts_ui=""
+  CFG_fontaa_antialias="default"
+  CFG_fontaa_subpixel="default"
+
   CFG_phosphor_r="1.000000"
   CFG_phosphor_g="1.000000"
   CFG_phosphor_b="1.000000"
@@ -616,6 +640,58 @@ set_cfg_value() {
           ;;
       esac
       ;;
+    fonts)
+      case "$key" in
+        tty)
+          val="$(toml_string "$raw")" || die "$ctx: invalid fonts.tty"
+          CFG_fonts_tty="$val"
+          ;;
+        terminal)
+          val="$(toml_string "$raw")" || die "$ctx: invalid fonts.terminal"
+          CFG_fonts_terminal="$val"
+          ;;
+        terminal_fallback)
+          val="$(parse_string_array "$raw")" || die "$ctx: fonts.terminal_fallback must be an array of strings"
+          CFG_fonts_terminal_fallback="$val"
+          ;;
+        ui)
+          val="$(toml_string "$raw")" || die "$ctx: invalid fonts.ui"
+          CFG_fonts_ui="$val"
+          ;;
+        *)
+          die "$ctx: unknown key 'fonts.$key'"
+          ;;
+      esac
+      ;;
+    font_aa)
+      case "$key" in
+        antialias)
+          val="$(toml_string "$raw")" || die "$ctx: invalid font_aa.antialias"
+          case "$val" in
+            default | on | off)
+              CFG_fontaa_antialias="$val"
+              ;;
+            *)
+              die "$ctx: font_aa.antialias must be default|on|off"
+              ;;
+          esac
+          ;;
+        subpixel)
+          val="$(toml_string "$raw")" || die "$ctx: invalid font_aa.subpixel"
+          case "$val" in
+            default | rgb | bgr | none)
+              CFG_fontaa_subpixel="$val"
+              ;;
+            *)
+              die "$ctx: font_aa.subpixel must be default|rgb|bgr|none"
+              ;;
+          esac
+          ;;
+        *)
+          die "$ctx: unknown key 'font_aa.$key'"
+          ;;
+      esac
+      ;;
     colors)
       case "$key" in
         background)
@@ -676,7 +752,7 @@ parse_profile() {
     if [[ "$line" =~ ^\[([A-Za-z0-9_]+)\]$ ]]; then
       section="${BASH_REMATCH[1]}"
       case "$section" in
-        mode | monochrome | palette | effects | scope | colors | rules)
+        mode | monochrome | palette | effects | scope | fonts | font_aa | colors | rules)
           ;;
         *)
           die "$profile_path:$line_no: unknown section [$section]"
@@ -1133,6 +1209,13 @@ write_profile_env() {
     printf 'SCOPE_TTY=%q\n' "$CFG_scope_tty"
     printf 'SCOPE_TUIGREET=%q\n' "$CFG_scope_tuigreet"
 
+    printf 'FONT_TTY=%q\n' "$CFG_fonts_tty"
+    printf 'FONT_TERMINAL=%q\n' "$CFG_fonts_terminal"
+    printf 'FONT_TERMINAL_FALLBACK=%q\n' "$CFG_fonts_terminal_fallback"
+    printf 'FONT_UI=%q\n' "$CFG_fonts_ui"
+    printf 'FONT_AA_ANTIALIAS=%q\n' "$CFG_fontaa_antialias"
+    printf 'FONT_AA_SUBPIXEL=%q\n' "$CFG_fontaa_subpixel"
+
     printf 'PHOSPHOR_R=%q\n' "$CFG_phosphor_r"
     printf 'PHOSPHOR_G=%q\n' "$CFG_phosphor_g"
     printf 'PHOSPHOR_B=%q\n' "$CFG_phosphor_b"
@@ -1359,6 +1442,145 @@ render_xresources() {
   done <"$TEMPLATES_DIR/xresources.in"
 }
 
+render_alacritty() {
+  local out_file="$1"
+  local font_family font_size fallback_csv fallback_comment
+
+  font_family="${CFG_fonts_terminal:-monospace}"
+  font_size="11.0"
+  fallback_csv="${CFG_fonts_terminal_fallback:-}"
+  fallback_comment=""
+  if [[ -n "$fallback_csv" ]]; then
+    fallback_comment="# terminal_fallback: ${fallback_csv//,/, }"
+  fi
+
+  {
+    printf '# RetroFX generated Alacritty config\n'
+    printf '# Source profile: %s\n' "$CFG_name"
+    [[ -n "$fallback_comment" ]] && printf '%s\n' "$fallback_comment"
+    printf '\n[font]\n'
+    printf 'size = %s\n' "$font_size"
+    printf '\n[font.normal]\n'
+    printf 'family = "%s"\n' "$font_family"
+    printf 'style = "Regular"\n'
+    printf '\n[cursor]\n'
+    printf 'style = { shape = "Block", blinking = "Off" }\n'
+    printf '\n[colors.primary]\n'
+    printf 'background = "%s"\n' "$SEM_BACKGROUND"
+    printf 'foreground = "%s"\n' "$SEM_NORMAL"
+    printf '\n[colors.cursor]\n'
+    printf 'text = "%s"\n' "$SEM_BACKGROUND"
+    printf 'cursor = "%s"\n' "$SEM_BRIGHT"
+    printf '\n[colors.selection]\n'
+    printf 'text = "%s"\n' "$SEM_BACKGROUND"
+    printf 'background = "%s"\n' "$SEM_BRIGHT"
+    printf '\n[colors.normal]\n'
+    printf 'black = "%s"\n' "${ANSI_HEX[0]}"
+    printf 'red = "%s"\n' "${ANSI_HEX[1]}"
+    printf 'green = "%s"\n' "${ANSI_HEX[2]}"
+    printf 'yellow = "%s"\n' "${ANSI_HEX[3]}"
+    printf 'blue = "%s"\n' "${ANSI_HEX[4]}"
+    printf 'magenta = "%s"\n' "${ANSI_HEX[5]}"
+    printf 'cyan = "%s"\n' "${ANSI_HEX[6]}"
+    printf 'white = "%s"\n' "${ANSI_HEX[7]}"
+    printf '\n[colors.bright]\n'
+    printf 'black = "%s"\n' "${ANSI_HEX[8]}"
+    printf 'red = "%s"\n' "${ANSI_HEX[9]}"
+    printf 'green = "%s"\n' "${ANSI_HEX[10]}"
+    printf 'yellow = "%s"\n' "${ANSI_HEX[11]}"
+    printf 'blue = "%s"\n' "${ANSI_HEX[12]}"
+    printf 'magenta = "%s"\n' "${ANSI_HEX[13]}"
+    printf 'cyan = "%s"\n' "${ANSI_HEX[14]}"
+    printf 'white = "%s"\n' "${ANSI_HEX[15]}"
+  } >"$out_file"
+}
+
+fonts_requested() {
+  if [[ -n "$CFG_fonts_tty" || -n "$CFG_fonts_terminal" || -n "$CFG_fonts_terminal_fallback" || -n "$CFG_fonts_ui" ]]; then
+    return 0
+  fi
+  if [[ "$CFG_fontaa_antialias" != "default" || "$CFG_fontaa_subpixel" != "default" ]]; then
+    return 0
+  fi
+  return 1
+}
+
+render_fontconfig() {
+  local out_file="$1"
+  local line aa_block subpixel_block mono_block ui_block fallback_block fallback_item
+  local aa_value subpixel_value fallback_csv
+  local esc_terminal esc_ui esc_item
+  local -a fallback_list=()
+
+  case "$CFG_fontaa_antialias" in
+    on)
+      aa_value='true'
+      aa_block='<match target="font"><edit name="antialias" mode="assign"><bool>true</bool></edit></match>'
+      ;;
+    off)
+      aa_value='false'
+      aa_block='<match target="font"><edit name="antialias" mode="assign"><bool>false</bool></edit></match>'
+      ;;
+    *)
+      aa_value='default'
+      aa_block='<!-- antialias: default (fontconfig/system setting) -->'
+      ;;
+  esac
+
+  case "$CFG_fontaa_subpixel" in
+    rgb | bgr | none)
+      subpixel_value="$CFG_fontaa_subpixel"
+      subpixel_block="<match target=\"font\"><edit name=\"rgba\" mode=\"assign\"><const>${subpixel_value}</const></edit></match>"
+      ;;
+    *)
+      subpixel_value='default'
+      subpixel_block='<!-- subpixel: default (fontconfig/system setting) -->'
+      ;;
+  esac
+
+  if [[ -n "$CFG_fonts_terminal" ]]; then
+    esc_terminal="$(xml_escape "$CFG_fonts_terminal")"
+    mono_block="<match target=\"pattern\"><test qual=\"any\" name=\"family\"><string>monospace</string></test><edit name=\"family\" mode=\"prepend\"><string>${esc_terminal}</string></edit></match>"
+  else
+    mono_block='<!-- terminal monospace family: default -->'
+  fi
+
+  if [[ -n "$CFG_fonts_ui" ]]; then
+    esc_ui="$(xml_escape "$CFG_fonts_ui")"
+    ui_block="<match target=\"pattern\"><test qual=\"any\" name=\"family\"><string>sans-serif</string></test><edit name=\"family\" mode=\"prepend\"><string>${esc_ui}</string></edit></match>"
+  else
+    ui_block='<!-- ui family: default -->'
+  fi
+
+  fallback_block=''
+  fallback_csv="${CFG_fonts_terminal_fallback:-}"
+  if [[ -n "$fallback_csv" ]]; then
+    IFS=',' read -r -a fallback_list <<<"$fallback_csv"
+    fallback_block='<match target="pattern"><test qual="any" name="family"><string>monospace</string></test>'
+    for fallback_item in "${fallback_list[@]}"; do
+      fallback_item="$(trim "$fallback_item")"
+      [[ -z "$fallback_item" ]] && continue
+      esc_item="$(xml_escape "$fallback_item")"
+      fallback_block+="<edit name=\"family\" mode=\"append\"><string>${esc_item}</string></edit>"
+    done
+    fallback_block+='</match>'
+  else
+    fallback_block='<!-- terminal fallback list: none -->'
+  fi
+
+  : >"$out_file"
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    line="${line//@AA_MODE@/$aa_value}"
+    line="${line//@SUBPIXEL_MODE@/$subpixel_value}"
+    line="${line//@AA_BLOCK@/$aa_block}"
+    line="${line//@SUBPIXEL_BLOCK@/$subpixel_block}"
+    line="${line//@MONOSPACE_BLOCK@/$mono_block}"
+    line="${line//@UI_BLOCK@/$ui_block}"
+    line="${line//@FALLBACK_BLOCK@/$fallback_block}"
+    printf '%s\n' "$line" >>"$out_file"
+  done <"$TEMPLATES_DIR/fontconfig.conf.in"
+}
+
 render_color_artifacts() {
   local stage_dir="$1"
 
@@ -1367,6 +1589,14 @@ render_color_artifacts() {
   write_semantic_env "$stage_dir/tty-palette.env"
   write_tty_palette_text "$stage_dir/tty-palette.txt"
   render_xresources "$stage_dir/xresources"
+  cp "$stage_dir/xresources" "$stage_dir/Xresources"
+  render_alacritty "$stage_dir/alacritty.toml"
+
+  if fonts_requested; then
+    render_fontconfig "$stage_dir/fontconfig.conf"
+  else
+    rm -f "$stage_dir/fontconfig.conf"
+  fi
 }
 
 declare -a CUSTOM_PALETTE_LINES=()
@@ -1776,10 +2006,16 @@ validate_stage_outputs() {
   [[ -f "$stage_dir/profile.toml" ]] || return 1
   [[ -f "$stage_dir/profile.env" ]] || return 1
   [[ -f "$stage_dir/xresources" ]] || return 1
+  [[ -f "$stage_dir/Xresources" ]] || return 1
+  [[ -f "$stage_dir/alacritty.toml" ]] || return 1
   [[ -f "$stage_dir/semantic.env" ]] || return 1
   [[ -f "$stage_dir/tty-palette.env" ]] || return 1
   [[ -f "$stage_dir/tty-palette.txt" ]] || return 1
   [[ -f "$stage_dir/meta" ]] || return 1
+
+  if fonts_requested; then
+    [[ -f "$stage_dir/fontconfig.conf" ]] || return 1
+  fi
 
   if [[ "$session_type" == "wayland" ]]; then
     if [[ -f "$stage_dir/picom.conf" || -f "$stage_dir/shader.glsl" ]]; then
@@ -2259,6 +2495,28 @@ cmd_info() {
     fi
   fi
 
+  if [[ -n "$CFG_fonts_tty" || -n "$CFG_fonts_terminal" || -n "$CFG_fonts_terminal_fallback" || -n "$CFG_fonts_ui" ]]; then
+    printf '\nFonts\n'
+    if [[ -n "$CFG_fonts_tty" ]]; then
+      printf '  tty = %s\n' "$CFG_fonts_tty"
+    fi
+    if [[ -n "$CFG_fonts_terminal" ]]; then
+      printf '  terminal = %s\n' "$CFG_fonts_terminal"
+    fi
+    if [[ -n "$CFG_fonts_terminal_fallback" ]]; then
+      printf '  terminal_fallback = %s\n' "$(format_tags_csv "$CFG_fonts_terminal_fallback")"
+    fi
+    if [[ -n "$CFG_fonts_ui" ]]; then
+      printf '  ui = %s\n' "$CFG_fonts_ui"
+    fi
+  fi
+
+  if [[ "$CFG_fontaa_antialias" != "default" || "$CFG_fontaa_subpixel" != "default" ]]; then
+    printf '\nFont AA\n'
+    printf '  antialias = %s\n' "$CFG_fontaa_antialias"
+    printf '  subpixel = %s\n' "$CFG_fontaa_subpixel"
+  fi
+
   printf '\nScope\n'
   printf '  x11 = %s\n' "$CFG_scope_x11"
   printf '  tty = %s\n' "$CFG_scope_tty"
@@ -2285,7 +2543,13 @@ cmd_export() {
       log "exported xresources to $out_path"
       ;;
     alacritty)
-      printf 'Export not yet supported in this build.\n'
+      build_ansi_palette
+      out_dir="$(dirname -- "$out_path")"
+      mkdir -p "$out_dir"
+      tmp_out="$(mktemp "$out_dir/.retrofx-alacritty.XXXXXX")"
+      render_alacritty "$tmp_out"
+      mv "$tmp_out" "$out_path"
+      log "exported alacritty to $out_path"
       ;;
     *)
       die "export format must be 'alacritty' or 'xresources'"
