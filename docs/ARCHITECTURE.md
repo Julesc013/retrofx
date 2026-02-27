@@ -40,9 +40,35 @@ RetroFX is a profile-driven renderer that generates deterministic session-local 
 - Logging failures are best-effort and never fail user commands.
 - `retrofx off` always maps to passthrough mode (`profiles/passthrough.toml` or built-in fallback).
 
+## Rendering Pipeline (Formal Order)
+
+Shader execution follows this strict order:
+
+1. Linearize input color (`sRGB -> linear`)
+2. Apply tone transform / tint preparation in linear space
+3. Quantize (monochrome or palette path)
+4. Apply ordered dithering (only when quantization is active)
+5. Apply scanline modulation
+6. Apply flicker modulation
+7. Apply vignette modulation
+8. Encode output (`linear -> sRGB`)
+
 ## Backend Status
 
 - `x11-picom`: functional in Phase 1 (config generation/check/run hook).
 - `tty`: scaffold only (no-op with messaging).
 - `tuigreet`: scaffold only (no-op with messaging).
 - Wayland: documented as degraded future backend (not active in Phase 1).
+
+## Rendering Complexity Guarantees
+
+- Monochrome quantization: `O(1)`
+- VGA16 quantization: `O(16)` (bounded loop with max 16 comparisons)
+- cube256 quantization: `O(1)` (arithmetic mapping, no 256-entry search loop)
+- Ordered dithering (Bayer 4x4): `O(1)`
+- Scanlines: `O(1)`
+- Flicker: `O(1)`
+- Vignette: `O(1)`
+- No multi-pass rendering
+- No frame history / temporal buffers
+- No texture lookups beyond the input source texture

@@ -746,7 +746,7 @@ render_shader() {
   local mode_passthrough=0 mode_mono=0 mode_palette=0
   local hotcore=0 enable_dither=0 enable_scanlines=0 enable_flicker=0 enable_vignette=0
   local palette_kind_vga16=0 palette_kind_cube256=0 palette_kind_custom=0
-  local palette_size=16 custom_palette_size=1
+  local mono_bands=2 palette_size=16 custom_palette_size=1
   local custom_block_file line
 
   case "$CFG_mode_type" in
@@ -779,7 +779,20 @@ render_shader() {
       ;;
   esac
 
+  mono_bands="$CFG_monochrome_bands"
+  if ((mono_bands < 2)); then
+    mono_bands=2
+  elif ((mono_bands > 256)); then
+    mono_bands=256
+  fi
+
   palette_size="$CFG_palette_size"
+  if ((palette_size < 2)); then
+    palette_size=2
+  elif ((palette_size > 256)); then
+    palette_size=256
+  fi
+
   custom_block_file="$(mktemp "$STATE_DIR/custom_palette_block.XXXXXX")"
 
   if [[ "$CFG_mode_type" == "palette" && "$CFG_palette_kind" == "custom" ]]; then
@@ -789,8 +802,8 @@ render_shader() {
     if [[ "$custom_path" != /* ]]; then
       custom_path="$profile_dir/$custom_path"
     fi
-    load_custom_palette "$custom_path" "$CFG_palette_size"
-    custom_palette_size="$CFG_palette_size"
+    load_custom_palette "$custom_path" "$palette_size"
+    custom_palette_size="$palette_size"
   else
     CUSTOM_PALETTE_LINES=("    vec3(1.000000, 1.000000, 1.000000)")
     custom_palette_size=1
@@ -820,7 +833,7 @@ render_shader() {
     line="${line//@MODE_MONO@/$mode_mono}"
     line="${line//@MODE_PALETTE@/$mode_palette}"
 
-    line="${line//@MONO_BANDS@/$CFG_monochrome_bands}"
+    line="${line//@MONO_BANDS@/$mono_bands}"
     line="${line//@PHOSPHOR_R@/$CFG_phosphor_r}"
     line="${line//@PHOSPHOR_G@/$CFG_phosphor_g}"
     line="${line//@PHOSPHOR_B@/$CFG_phosphor_b}"
@@ -877,10 +890,99 @@ render_templates() {
   } >"$stage_dir/meta"
 }
 
+validate_generated_shader() {
+  local stage_dir="$1"
+  local shader_file="$stage_dir/shader.glsl"
+  local placeholders open_braces close_braces
+  local -a steps=(
+    "PIPELINE_STEP_1_LINEARIZE"
+    "PIPELINE_STEP_2_TRANSFORM"
+    "PIPELINE_STEP_3_QUANTIZE"
+    "PIPELINE_STEP_4_DITHER"
+    "PIPELINE_STEP_5_SCANLINES"
+    "PIPELINE_STEP_6_FLICKER"
+    "PIPELINE_STEP_7_VIGNETTE"
+    "PIPELINE_STEP_8_ENCODE"
+  )
+  local marker line prev=0
+
+  [[ -f "$shader_file" ]] || {
+    warn "shader validation failed: missing $shader_file"
+    return 1
+  }
+
+  placeholders="$(grep -En '@[A-Z0-9_]+@' "$shader_file" || true)"
+  if [[ -n "$placeholders" ]]; then
+    warn "shader validation failed: unsubstituted placeholders found"
+    printf '%s\n' "$placeholders" >&2
+    return 1
+  fi
+
+  grep -q 'void main()' "$shader_file" || {
+    warn "shader validation failed: missing main()"
+    return 1
+  }
+
+  grep -q 'gl_FragColor' "$shader_file" || {
+    warn "shader validation failed: missing gl_FragColor write"
+    return 1
+  }
+
+  grep -q 'for (i = 0; i < 16; i++)' "$shader_file" || {
+    warn "shader validation failed: VGA16 loop bound missing or modified"
+    return 1
+  }
+
+  if grep -Fq 'for (i = 0; i < 256' "$shader_file"; then
+    warn "shader validation failed: forbidden 256-iteration loop detected"
+    return 1
+  fi
+
+  for marker in "${steps[@]}"; do
+    line="$(grep -n "$marker" "$shader_file" | head -n1 | cut -d: -f1)"
+    if [[ -z "$line" ]]; then
+      warn "shader validation failed: missing marker $marker"
+      return 1
+    fi
+    if ((line <= prev)); then
+      warn "shader validation failed: marker order is invalid at $marker"
+      return 1
+    fi
+    prev="$line"
+  done
+
+  open_braces="$(tr -cd '{' <"$shader_file" | wc -c | awk '{print $1}')"
+  close_braces="$(tr -cd '}' <"$shader_file" | wc -c | awk '{print $1}')"
+  if [[ "$open_braces" != "$close_braces" ]]; then
+    warn "shader validation failed: brace count mismatch ($open_braces vs $close_braces)"
+    return 1
+  fi
+
+  return 0
+}
+
+validate_stage_outputs() {
+  local stage_dir="$1"
+
+  [[ -f "$stage_dir/profile.toml" ]] || return 1
+  [[ -f "$stage_dir/profile.env" ]] || return 1
+  [[ -f "$stage_dir/picom.conf" ]] || return 1
+  [[ -f "$stage_dir/shader.glsl" ]] || return 1
+  [[ -f "$stage_dir/xresources" ]] || return 1
+  [[ -f "$stage_dir/meta" ]] || return 1
+
+  validate_generated_shader "$stage_dir"
+}
+
 validate_stage_with_picom() {
   local stage_dir="$1"
   local log_file="$stage_dir/picom-validate.log"
   local rc=0
+
+  if ! validate_stage_outputs "$stage_dir"; then
+    warn "generated stage validation failed"
+    return 1
+  fi
 
   if ! command -v picom >/dev/null 2>&1; then
     warn "picom not installed; skipping runtime shader validation"
@@ -1275,6 +1377,24 @@ cmd_preview() {
   done
   printf '\n\n'
 
+  printf 'Band indices numeric (%d levels)\n' "$levels"
+  for ((i = 0; i < levels; i++)); do
+    printf '%d ' "$i"
+    if (((i + 1) % 32 == 0)); then
+      printf '\n'
+    fi
+  done
+  printf '\n\n'
+
+  printf 'Quantization demo (input -> band -> output)\n'
+  local sample band_idx band_out
+  for sample in 0 32 64 96 128 160 192 224 255; do
+    band_idx=$(((sample * (levels - 1) + 127) / 255))
+    band_out=$((band_idx * 255 / (levels - 1)))
+    printf '%3d -> %3d -> %3d\n' "$sample" "$band_idx" "$band_out"
+  done
+  printf '\n'
+
   printf 'ANSI 16 swatches\n'
   local code ansi
   for ((code = 0; code < 16; code++)); do
@@ -1287,8 +1407,21 @@ cmd_preview() {
   done
   printf '\n\n'
 
-  printf 'cube256 swatches\n'
   local rr gg bb idx
+  printf 'cube256 index grid (g layers, r rows, b columns)\n'
+  for ((gg = 0; gg < 6; gg++)); do
+    printf 'g=%d\n' "$gg"
+    for ((rr = 0; rr < 6; rr++)); do
+      for ((bb = 0; bb < 6; bb++)); do
+        idx=$((16 + 36 * rr + 6 * gg + bb))
+        printf '%3d ' "$idx"
+      done
+      printf '\n'
+    done
+  done
+  printf '\n'
+
+  printf 'cube256 swatches\n'
   for ((gg = 0; gg < 6; gg++)); do
     for ((rr = 0; rr < 6; rr++)); do
       for ((bb = 0; bb < 6; bb++)); do
@@ -1567,6 +1700,11 @@ cmd_apply() {
   fi
 
   TXN_STAGE_DIR=""
+
+  if [[ ! -f "$ACTIVE_DIR/shader.glsl" ]]; then
+    LAST_ERROR="active/shader.glsl missing after swap"
+    return 1
+  fi
 
   if ! copy_active_to_last_good; then
     LAST_ERROR="failed to update last_good snapshot"
