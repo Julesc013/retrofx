@@ -1,0 +1,25 @@
+name = "Palette 16"
+version = 1
+description = "16-color VGA palette baseline profile."
+tags = ["palette", "16", "vga16"]
+author = "RetroFX Core Pack"
+license = "CC0-1.0"
+
+[mode]
+type = "palette"
+
+[palette]
+kind = "vga16"
+size = 16
+
+[effects]
+blur_strength = 0
+scanlines = false
+flicker = false
+dither = "none"
+vignette = false
+
+[scope]
+x11 = true
+tty = false
+tuigreet = false

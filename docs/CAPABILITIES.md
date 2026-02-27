@@ -7,6 +7,9 @@ Support level: full pipeline (when `picom` + GLX are available)
 - Profile-driven shader generation (`shader.glsl`)
 - Picom config generation (`picom.conf`)
 - Runtime validation checks (best-effort)
+- Structured arithmetic palettes (`2..256` families)
+- Custom palettes up to 32 colors
+- Optional per-window blur exclusion rules via picom config hints
 - Terminal semantic palette artifacts
 - Optional TTY backend (`scope.tty = true`)
 - Optional tuigreet snippet (`scope.tuigreet = true`)
@@ -33,6 +36,7 @@ Out of scope:
 - Universal compositor shader injection for Wayland sessions
 - System-wide GTK/Qt settings mutation
 - Editing `/etc` or root-level display manager configuration by default
+- Guaranteed per-window shader exclusion (picom limitations)
 
 ## TTY
 

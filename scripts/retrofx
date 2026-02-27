@@ -61,6 +61,8 @@ declare CFG_effects_scanlines="false"
 declare CFG_effects_flicker="false"
 declare CFG_effects_dither="none"
 declare CFG_effects_vignette="false"
+declare CFG_effects_scanline_preset=""
+declare CFG_effects_transparency="off"
 
 declare CFG_scope_x11="true"
 declare CFG_scope_tty="false"
@@ -69,6 +71,11 @@ declare CFG_scope_tuigreet="false"
 declare CFG_phosphor_r="1.000000"
 declare CFG_phosphor_g="1.000000"
 declare CFG_phosphor_b="1.000000"
+declare CFG_colors_background=""
+declare CFG_colors_foreground=""
+declare CFG_rules_exclude_wm_class=""
+declare CFG_rules_exclude_wm_name=""
+declare CFG_rules_exclude_opacity_below=""
 
 declare -a ANSI_HEX=()
 declare SEM_BACKGROUND="#000000"
@@ -79,6 +86,13 @@ declare SEM_INFO="#3a5fb0"
 declare SEM_SUCCESS="#00aa00"
 declare SEM_WARNING="#b0a000"
 declare SEM_ERROR="#aa0000"
+declare CFG_bg_tint_hex="#000000"
+declare CFG_fg_tint_hex="#c0c0c0"
+declare CFG_bg_tint_linear_r="0.000000"
+declare CFG_bg_tint_linear_g="0.000000"
+declare CFG_bg_tint_linear_b="0.000000"
+declare CFG_scanline_base="0.985000"
+declare CFG_scanline_amp="0.015000"
 
 now_ts() {
   date -u +%Y-%m-%dT%H:%M:%SZ
@@ -240,6 +254,39 @@ parse_int_range() {
   printf '%s' "$raw"
 }
 
+parse_float_range() {
+  local raw min max
+  raw="$(trim "$1")"
+  min="$2"
+  max="$3"
+
+  if [[ ! "$raw" =~ ^([0-9]+\.[0-9]+|[0-9]+|\.[0-9]+)$ ]]; then
+    return 1
+  fi
+
+  awk -v x="$raw" -v lo="$min" -v hi="$max" 'BEGIN {
+    if (x < lo || x > hi) exit 1;
+    printf "%.6f", x;
+  }' || return 1
+}
+
+parse_hex_color() {
+  local raw
+  raw="$(trim "$1")"
+
+  if [[ "$raw" =~ ^\"#([A-Fa-f0-9]{6})\"$ ]]; then
+    printf '#%s' "${BASH_REMATCH[1],,}"
+    return 0
+  fi
+
+  if [[ "$raw" =~ ^#([A-Fa-f0-9]{6})$ ]]; then
+    printf '#%s' "${BASH_REMATCH[1],,}"
+    return 0
+  fi
+
+  return 1
+}
+
 parse_string_array() {
   local raw inner token val out=""
   raw="$(trim "$1")"
@@ -351,6 +398,8 @@ reset_config() {
   CFG_effects_flicker="false"
   CFG_effects_dither="none"
   CFG_effects_vignette="false"
+  CFG_effects_scanline_preset=""
+  CFG_effects_transparency="off"
 
   CFG_scope_x11="true"
   CFG_scope_tty="false"
@@ -359,6 +408,18 @@ reset_config() {
   CFG_phosphor_r="1.000000"
   CFG_phosphor_g="1.000000"
   CFG_phosphor_b="1.000000"
+  CFG_colors_background=""
+  CFG_colors_foreground=""
+  CFG_rules_exclude_wm_class=""
+  CFG_rules_exclude_wm_name=""
+  CFG_rules_exclude_opacity_below=""
+  CFG_bg_tint_hex="#000000"
+  CFG_fg_tint_hex="#c0c0c0"
+  CFG_bg_tint_linear_r="0.000000"
+  CFG_bg_tint_linear_g="0.000000"
+  CFG_bg_tint_linear_b="0.000000"
+  CFG_scanline_base="0.985000"
+  CFG_scanline_amp="0.015000"
 }
 
 set_cfg_value() {
@@ -459,11 +520,11 @@ set_cfg_value() {
         kind)
           val="$(toml_string "$raw")" || die "$ctx: invalid palette.kind"
           case "$val" in
-            vga16 | cube256 | custom)
+            vga16 | mono2 | mono4 | mono8 | mono16 | cube32 | cube64 | cube128 | cube256 | custom)
               CFG_palette_kind="$val"
               ;;
             *)
-              die "$ctx: palette.kind must be vga16|cube256|custom"
+              die "$ctx: palette.kind must be vga16|mono2|mono4|mono8|mono16|cube32|cube64|cube128|cube256|custom"
               ;;
           esac
           ;;
@@ -509,6 +570,28 @@ set_cfg_value() {
           val="$(parse_bool "$raw")" || die "$ctx: effects.vignette must be true|false"
           CFG_effects_vignette="$val"
           ;;
+        scanline_preset)
+          val="$(toml_string "$raw")" || die "$ctx: invalid effects.scanline_preset"
+          case "$val" in
+            blur_on | blur_off)
+              CFG_effects_scanline_preset="$val"
+              ;;
+            *)
+              die "$ctx: effects.scanline_preset must be blur_on|blur_off"
+              ;;
+          esac
+          ;;
+        transparency)
+          val="$(toml_string "$raw")" || die "$ctx: invalid effects.transparency"
+          case "$val" in
+            off | on | rules)
+              CFG_effects_transparency="$val"
+              ;;
+            *)
+              die "$ctx: effects.transparency must be off|on|rules"
+              ;;
+          esac
+          ;;
         *)
           die "$ctx: unknown key 'effects.$key'"
           ;;
@@ -530,6 +613,40 @@ set_cfg_value() {
           ;;
         *)
           die "$ctx: unknown key 'scope.$key'"
+          ;;
+      esac
+      ;;
+    colors)
+      case "$key" in
+        background)
+          val="$(parse_hex_color "$raw")" || die "$ctx: colors.background must be #RRGGBB"
+          CFG_colors_background="$val"
+          ;;
+        foreground)
+          val="$(parse_hex_color "$raw")" || die "$ctx: colors.foreground must be #RRGGBB"
+          CFG_colors_foreground="$val"
+          ;;
+        *)
+          die "$ctx: unknown key 'colors.$key'"
+          ;;
+      esac
+      ;;
+    rules)
+      case "$key" in
+        exclude_wm_class)
+          val="$(parse_string_array "$raw")" || die "$ctx: rules.exclude_wm_class must be an array of strings"
+          CFG_rules_exclude_wm_class="$val"
+          ;;
+        exclude_wm_name)
+          val="$(parse_string_array "$raw")" || die "$ctx: rules.exclude_wm_name must be an array of strings"
+          CFG_rules_exclude_wm_name="$val"
+          ;;
+        exclude_opacity_below)
+          val="$(parse_float_range "$raw" 0 1)" || die "$ctx: rules.exclude_opacity_below must be 0..1"
+          CFG_rules_exclude_opacity_below="$val"
+          ;;
+        *)
+          die "$ctx: unknown key 'rules.$key'"
           ;;
       esac
       ;;
@@ -559,7 +676,7 @@ parse_profile() {
     if [[ "$line" =~ ^\[([A-Za-z0-9_]+)\]$ ]]; then
       section="${BASH_REMATCH[1]}"
       case "$section" in
-        mode | monochrome | palette | effects | scope)
+        mode | monochrome | palette | effects | scope | colors | rules)
           ;;
         *)
           die "$profile_path:$line_no: unknown section [$section]"
@@ -616,7 +733,37 @@ parse_profile() {
       require_seen "palette.size" "$profile_path: mode=palette requires palette.size"
       if [[ "$CFG_palette_kind" == "custom" ]]; then
         require_seen "palette.custom_file" "$profile_path: palette.kind=custom requires palette.custom_file"
+        if ((CFG_palette_size > 32)); then
+          die "$profile_path: palette.kind=custom supports size up to 32"
+        fi
       fi
+
+      case "$CFG_palette_kind" in
+        mono2)
+          ((CFG_palette_size == 2)) || die "$profile_path: palette.kind=mono2 requires size=2"
+          ;;
+        mono4)
+          ((CFG_palette_size == 4)) || die "$profile_path: palette.kind=mono4 requires size=4"
+          ;;
+        mono8)
+          ((CFG_palette_size == 8)) || die "$profile_path: palette.kind=mono8 requires size=8"
+          ;;
+        mono16)
+          ((CFG_palette_size == 16)) || die "$profile_path: palette.kind=mono16 requires size=16"
+          ;;
+        cube32)
+          ((CFG_palette_size == 32)) || die "$profile_path: palette.kind=cube32 requires size=32"
+          ;;
+        cube64)
+          ((CFG_palette_size == 64)) || die "$profile_path: palette.kind=cube64 requires size=64"
+          ;;
+        cube128)
+          ((CFG_palette_size == 128)) || die "$profile_path: palette.kind=cube128 requires size=128"
+          ;;
+        cube256)
+          ((CFG_palette_size == 256)) || die "$profile_path: palette.kind=cube256 requires size=256"
+          ;;
+      esac
       ;;
     passthrough)
       ;;
@@ -790,6 +937,8 @@ load_profile() {
   local profile_path="$1"
   validate_profile "$profile_path"
   compute_phosphor_rgb
+  compute_color_knobs
+  compute_scanline_knobs
 }
 
 compute_phosphor_rgb() {
@@ -830,6 +979,76 @@ compute_phosphor_rgb() {
   esac
 }
 
+compute_color_knobs() {
+  local bg_hex fg_hex lin
+  local base_scale="0.060000"
+
+  if [[ -n "$CFG_colors_background" ]]; then
+    bg_hex="$CFG_colors_background"
+  else
+    if [[ "$CFG_mode_type" == "monochrome" ]]; then
+      bg_hex="$(awk -v r="$CFG_phosphor_r" -v g="$CFG_phosphor_g" -v b="$CFG_phosphor_b" -v s="$base_scale" 'BEGIN {
+        rr = r * s; gg = g * s; bb = b * s;
+        if (rr < 0.005) rr = 0.005;
+        if (gg < 0.005) gg = 0.005;
+        if (bb < 0.005) bb = 0.005;
+        printf "#%02x%02x%02x", int(rr * 255.0 + 0.5), int(gg * 255.0 + 0.5), int(bb * 255.0 + 0.5);
+      }')"
+    else
+      bg_hex="#060606"
+    fi
+  fi
+
+  if [[ -n "$CFG_colors_foreground" ]]; then
+    fg_hex="$CFG_colors_foreground"
+  else
+    if [[ "$CFG_mode_type" == "monochrome" ]]; then
+      fg_hex="$(awk -v r="$CFG_phosphor_r" -v g="$CFG_phosphor_g" -v b="$CFG_phosphor_b" 'BEGIN {
+        rr = r * 0.90; gg = g * 0.90; bb = b * 0.90;
+        if (rr > 1.0) rr = 1.0;
+        if (gg > 1.0) gg = 1.0;
+        if (bb > 1.0) bb = 1.0;
+        printf "#%02x%02x%02x", int(rr * 255.0 + 0.5), int(gg * 255.0 + 0.5), int(bb * 255.0 + 0.5);
+      }')"
+    else
+      fg_hex="#c0c0c0"
+    fi
+  fi
+
+  CFG_bg_tint_hex="$bg_hex"
+  CFG_fg_tint_hex="$fg_hex"
+
+  lin="$(hex_to_linear_triplet "$CFG_bg_tint_hex")" || die "internal error: invalid background tint color"
+  IFS=',' read -r CFG_bg_tint_linear_r CFG_bg_tint_linear_g CFG_bg_tint_linear_b <<<"$lin"
+}
+
+compute_scanline_knobs() {
+  local preset="$CFG_effects_scanline_preset"
+
+  if [[ -z "$preset" ]]; then
+    if ((CFG_effects_blur_strength > 0)); then
+      preset="blur_on"
+    else
+      preset="blur_off"
+    fi
+  fi
+
+  case "$preset" in
+    blur_on)
+      CFG_scanline_base="0.992000"
+      CFG_scanline_amp="0.008000"
+      ;;
+    blur_off)
+      CFG_scanline_base="0.978000"
+      CFG_scanline_amp="0.022000"
+      ;;
+    *)
+      CFG_scanline_base="0.985000"
+      CFG_scanline_amp="0.015000"
+      ;;
+  esac
+}
+
 float_to_u8() {
   local n="$1"
   awk -v x="$n" 'BEGIN { v = int((x * 255.0) + 0.5); if (v < 0) v = 0; if (v > 255) v = 255; printf "%d", v }'
@@ -845,6 +1064,33 @@ rgb_hex_from_units() {
   gu="$(float_to_u8 "$g")"
   bu="$(float_to_u8 "$b")"
   printf '#%02x%02x%02x' "$ru" "$gu" "$bu"
+}
+
+srgb_component_to_linear() {
+  local c="$1"
+  awk -v x="$c" 'BEGIN { printf "%.6f", (x ^ 2.2) }'
+}
+
+hex_to_unit_triplet() {
+  local hex="${1#\#}"
+  local r g b
+  [[ "${#hex}" -eq 6 ]] || return 1
+  r=$((16#${hex:0:2}))
+  g=$((16#${hex:2:2}))
+  b=$((16#${hex:4:2}))
+  awk -v rr="$r" -v gg="$g" -v bb="$b" 'BEGIN {
+    printf "%.6f,%.6f,%.6f", rr / 255.0, gg / 255.0, bb / 255.0
+  }'
+}
+
+hex_to_linear_triplet() {
+  local units ur ug ub lr lg lb
+  units="$(hex_to_unit_triplet "$1")" || return 1
+  IFS=',' read -r ur ug ub <<<"$units"
+  lr="$(srgb_component_to_linear "$ur")"
+  lg="$(srgb_component_to_linear "$ug")"
+  lb="$(srgb_component_to_linear "$ub")"
+  printf '%s,%s,%s' "$lr" "$lg" "$lb"
 }
 
 write_profile_env() {
@@ -880,6 +1126,8 @@ write_profile_env() {
     printf 'EFFECT_FLICKER=%q\n' "$CFG_effects_flicker"
     printf 'EFFECT_DITHER=%q\n' "$CFG_effects_dither"
     printf 'EFFECT_VIGNETTE=%q\n' "$CFG_effects_vignette"
+    printf 'EFFECT_SCANLINE_PRESET=%q\n' "$CFG_effects_scanline_preset"
+    printf 'EFFECT_TRANSPARENCY=%q\n' "$CFG_effects_transparency"
 
     printf 'SCOPE_X11=%q\n' "$CFG_scope_x11"
     printf 'SCOPE_TTY=%q\n' "$CFG_scope_tty"
@@ -888,6 +1136,11 @@ write_profile_env() {
     printf 'PHOSPHOR_R=%q\n' "$CFG_phosphor_r"
     printf 'PHOSPHOR_G=%q\n' "$CFG_phosphor_g"
     printf 'PHOSPHOR_B=%q\n' "$CFG_phosphor_b"
+    printf 'COLOR_BACKGROUND=%q\n' "$CFG_colors_background"
+    printf 'COLOR_FOREGROUND=%q\n' "$CFG_colors_foreground"
+    printf 'RULES_EXCLUDE_WM_CLASS=%q\n' "$CFG_rules_exclude_wm_class"
+    printf 'RULES_EXCLUDE_WM_NAME=%q\n' "$CFG_rules_exclude_wm_name"
+    printf 'RULES_EXCLUDE_OPACITY_BELOW=%q\n' "$CFG_rules_exclude_opacity_below"
   } >"$out_file"
 }
 
@@ -975,6 +1228,14 @@ set_monochrome_palette() {
   done
 }
 
+set_monochrome_palette_with_bands() {
+  local bands="$1"
+  local old_bands="$CFG_monochrome_bands"
+  CFG_monochrome_bands="$bands"
+  set_monochrome_palette
+  CFG_monochrome_bands="$old_bands"
+}
+
 build_ansi_palette() {
   case "$CFG_mode_type" in
     monochrome)
@@ -985,7 +1246,19 @@ build_ansi_palette() {
         vga16)
           set_vga16_palette
           ;;
-        cube256)
+        mono2)
+          set_monochrome_palette_with_bands 2
+          ;;
+        mono4)
+          set_monochrome_palette_with_bands 4
+          ;;
+        mono8)
+          set_monochrome_palette_with_bands 8
+          ;;
+        mono16)
+          set_monochrome_palette_with_bands 16
+          ;;
+        cube32 | cube64 | cube128 | cube256)
           set_cube256_summary_palette
           ;;
         custom)
@@ -1001,6 +1274,13 @@ build_ansi_palette() {
       set_vga16_palette
       ;;
   esac
+
+  if [[ -n "${CFG_bg_tint_hex:-}" ]]; then
+    ANSI_HEX[0]="$CFG_bg_tint_hex"
+  fi
+  if [[ -n "${CFG_fg_tint_hex:-}" ]]; then
+    ANSI_HEX[7]="$CFG_fg_tint_hex"
+  fi
 
   SEM_BACKGROUND="${ANSI_HEX[0]}"
   SEM_NORMAL="${ANSI_HEX[7]}"
@@ -1095,16 +1375,25 @@ load_custom_palette() {
   local path="$1"
   local wanted="$2"
   local line parsed hex r g b
+  local lr lg lb
 
   CUSTOM_PALETTE_LINES=()
 
   [[ -f "$path" ]] || die "custom palette file not found: $path"
 
+  if ((wanted > 32)); then
+    die "custom palettes support at most 32 colors"
+  fi
+
   while IFS= read -r line || [[ -n "$line" ]]; do
     line="${line%$'\r'}"
-    line="$(strip_inline_comment "$line")"
     line="$(trim "$line")"
     [[ -z "$line" ]] && continue
+
+    # "# " prefix denotes a comment line in custom palette files.
+    if [[ "$line" == "# "* ]]; then
+      continue
+    fi
 
     if [[ "$line" =~ ^#([A-Fa-f0-9]{6})$ ]]; then
       hex="${BASH_REMATCH[1]}"
@@ -1121,7 +1410,10 @@ load_custom_palette() {
     fi
 
     IFS=',' read -r r g b <<<"$parsed"
-    CUSTOM_PALETTE_LINES+=("    vec3(${r}, ${g}, ${b})")
+    lr="$(srgb_component_to_linear "$r")"
+    lg="$(srgb_component_to_linear "$g")"
+    lb="$(srgb_component_to_linear "$b")"
+    CUSTOM_PALETTE_LINES+=("    vec3(${lr}, ${lg}, ${lb})")
 
     if ((${#CUSTOM_PALETTE_LINES[@]} == wanted)); then
       break
@@ -1137,7 +1429,10 @@ render_shader() {
   local out_file="$1"
   local mode_passthrough=0 mode_mono=0 mode_palette=0
   local hotcore=0 enable_dither=0 enable_scanlines=0 enable_flicker=0 enable_vignette=0
-  local palette_kind_vga16=0 palette_kind_cube256=0 palette_kind_custom=0
+  local palette_kind_vga16=0
+  local palette_kind_mono2=0 palette_kind_mono4=0 palette_kind_mono8=0 palette_kind_mono16=0
+  local palette_kind_cube32=0 palette_kind_cube64=0 palette_kind_cube128=0 palette_kind_cube256=0
+  local palette_kind_custom=0
   local mono_bands=2 palette_size=16 custom_palette_size=1
   local custom_block_file line
 
@@ -1162,6 +1457,27 @@ render_shader() {
   case "$CFG_palette_kind" in
     vga16)
       palette_kind_vga16=1
+      ;;
+    mono2)
+      palette_kind_mono2=1
+      ;;
+    mono4)
+      palette_kind_mono4=1
+      ;;
+    mono8)
+      palette_kind_mono8=1
+      ;;
+    mono16)
+      palette_kind_mono16=1
+      ;;
+    cube32)
+      palette_kind_cube32=1
+      ;;
+    cube64)
+      palette_kind_cube64=1
+      ;;
+    cube128)
+      palette_kind_cube128=1
       ;;
     cube256)
       palette_kind_cube256=1
@@ -1235,12 +1551,24 @@ render_shader() {
     line="${line//@ENABLE_SCANLINES@/$enable_scanlines}"
     line="${line//@ENABLE_FLICKER@/$enable_flicker}"
     line="${line//@ENABLE_VIGNETTE@/$enable_vignette}"
+    line="${line//@SCANLINE_BASE@/$CFG_scanline_base}"
+    line="${line//@SCANLINE_AMP@/$CFG_scanline_amp}"
 
     line="${line//@PALETTE_KIND_VGA16@/$palette_kind_vga16}"
+    line="${line//@PALETTE_KIND_MONO2@/$palette_kind_mono2}"
+    line="${line//@PALETTE_KIND_MONO4@/$palette_kind_mono4}"
+    line="${line//@PALETTE_KIND_MONO8@/$palette_kind_mono8}"
+    line="${line//@PALETTE_KIND_MONO16@/$palette_kind_mono16}"
+    line="${line//@PALETTE_KIND_CUBE32@/$palette_kind_cube32}"
+    line="${line//@PALETTE_KIND_CUBE64@/$palette_kind_cube64}"
+    line="${line//@PALETTE_KIND_CUBE128@/$palette_kind_cube128}"
     line="${line//@PALETTE_KIND_CUBE256@/$palette_kind_cube256}"
     line="${line//@PALETTE_KIND_CUSTOM@/$palette_kind_custom}"
     line="${line//@PALETTE_SIZE@/$palette_size}"
     line="${line//@CUSTOM_PALETTE_SIZE@/$custom_palette_size}"
+    line="${line//@BG_TINT_LINEAR_R@/$CFG_bg_tint_linear_r}"
+    line="${line//@BG_TINT_LINEAR_G@/$CFG_bg_tint_linear_g}"
+    line="${line//@BG_TINT_LINEAR_B@/$CFG_bg_tint_linear_b}"
 
     printf '%s\n' "$line" >>"$out_file"
   done <"$TEMPLATES_DIR/shader.glsl.in"
@@ -1252,16 +1580,88 @@ render_picom() {
   local out_file="$1"
   local blur_enabled="false"
   local line
+  local unredir_line="# unredir-if-possible left at picom default."
+  local transparency_block=""
+  local blur_exclude_block=""
+  local rules_note=""
+  local value safe
+  local -a class_rules=()
+  local -a name_rules=()
+  local -a all_rules=()
+  local -a class_items=()
+  local -a name_items=()
+  local idx
 
   if ((CFG_effects_blur_strength > 0)); then
     blur_enabled="true"
   fi
+
+  if [[ -n "$CFG_rules_exclude_wm_class" ]]; then
+    IFS=',' read -r -a class_items <<<"$CFG_rules_exclude_wm_class"
+    for value in "${class_items[@]}"; do
+      value="$(trim "$value")"
+      [[ -z "$value" ]] && continue
+      safe="${value//\'/}"
+      class_rules+=("class_g = '$safe'")
+    done
+  fi
+
+  if [[ -n "$CFG_rules_exclude_wm_name" ]]; then
+    IFS=',' read -r -a name_items <<<"$CFG_rules_exclude_wm_name"
+    for value in "${name_items[@]}"; do
+      value="$(trim "$value")"
+      [[ -z "$value" ]] && continue
+      safe="${value//\'/}"
+      name_rules+=("name = '$safe'")
+    done
+  fi
+
+  all_rules=("${class_rules[@]}" "${name_rules[@]}")
+  if [[ -n "$CFG_rules_exclude_opacity_below" ]]; then
+    all_rules+=("opacity < $CFG_rules_exclude_opacity_below")
+  fi
+
+  if ((${#all_rules[@]} > 0)); then
+    blur_exclude_block=$'blur-background-exclude = [\n'
+    for ((idx = 0; idx < ${#all_rules[@]}; idx++)); do
+      if ((idx == ${#all_rules[@]} - 1)); then
+        blur_exclude_block+="  \"${all_rules[$idx]}\"\n"
+      else
+        blur_exclude_block+="  \"${all_rules[$idx]}\",\n"
+      fi
+    done
+    blur_exclude_block+=$'];'
+    rules_note="# Exclusion rules apply to blur; picom shader exclusion granularity is limited."
+    unredir_line="unredir-if-possible = false;"
+  else
+    blur_exclude_block="# No blur exclusion rules requested."
+  fi
+
+  case "$CFG_effects_transparency" in
+    off)
+      transparency_block=$'detect-client-opacity = false;\ninactive-opacity = 1.0;\nactive-opacity = 1.0;\nframe-opacity = 1.0;'
+      ;;
+    on)
+      transparency_block='detect-client-opacity = true;'
+      ;;
+    rules)
+      transparency_block='detect-client-opacity = true;'
+      unredir_line="unredir-if-possible = false;"
+      ;;
+    *)
+      transparency_block='detect-client-opacity = false;'
+      ;;
+  esac
 
   : >"$out_file"
   while IFS= read -r line || [[ -n "$line" ]]; do
     line="${line//@BLUR_STRENGTH@/$CFG_effects_blur_strength}"
     line="${line//@BLUR_ENABLED@/$blur_enabled}"
     line="${line//@SHADER_PATH@/shader.glsl}"
+    line="${line//@UNREDIR_LINE@/$unredir_line}"
+    line="${line//@TRANSPARENCY_BLOCK@/$transparency_block}"
+    line="${line//@BLUR_EXCLUDE_BLOCK@/$blur_exclude_block}"
+    line="${line//@RULES_NOTE@/$rules_note}"
     printf '%s\n' "$line" >>"$out_file"
   done <"$TEMPLATES_DIR/picom.conf.in"
 }
@@ -1293,7 +1693,7 @@ render_templates() {
 validate_generated_shader() {
   local stage_dir="$1"
   local shader_file="$stage_dir/shader.glsl"
-  local placeholders open_braces close_braces
+  local placeholders open_braces close_braces custom_size
   local -a steps=(
     "PIPELINE_STEP_1_LINEARIZE"
     "PIPELINE_STEP_2_TRANSFORM"
@@ -1336,6 +1736,14 @@ validate_generated_shader() {
   if grep -Fq 'for (i = 0; i < 256' "$shader_file"; then
     warn "shader validation failed: forbidden 256-iteration loop detected"
     return 1
+  fi
+
+  custom_size="$(grep '^#define CUSTOM_PALETTE_SIZE ' "$shader_file" | awk '{print $3}' | head -n1 || true)"
+  if [[ -n "$custom_size" && "$custom_size" =~ ^[0-9]+$ ]]; then
+    if ((custom_size > 32)); then
+      warn "shader validation failed: custom palette size exceeds 32 ($custom_size)"
+      return 1
+    fi
   fi
 
   for marker in "${steps[@]}"; do
@@ -1823,6 +2231,33 @@ cmd_info() {
   printf '  flicker = %s\n' "$CFG_effects_flicker"
   printf '  dither = %s\n' "$CFG_effects_dither"
   printf '  vignette = %s\n' "$CFG_effects_vignette"
+  if [[ -n "$CFG_effects_scanline_preset" ]]; then
+    printf '  scanline_preset = %s\n' "$CFG_effects_scanline_preset"
+  fi
+  printf '  transparency = %s\n' "$CFG_effects_transparency"
+
+  if [[ -n "$CFG_colors_background" || -n "$CFG_colors_foreground" ]]; then
+    printf '\nColors\n'
+    if [[ -n "$CFG_colors_background" ]]; then
+      printf '  background = %s\n' "$CFG_colors_background"
+    fi
+    if [[ -n "$CFG_colors_foreground" ]]; then
+      printf '  foreground = %s\n' "$CFG_colors_foreground"
+    fi
+  fi
+
+  if [[ -n "$CFG_rules_exclude_wm_class" || -n "$CFG_rules_exclude_wm_name" || -n "$CFG_rules_exclude_opacity_below" ]]; then
+    printf '\nRules\n'
+    if [[ -n "$CFG_rules_exclude_wm_class" ]]; then
+      printf '  exclude_wm_class = %s\n' "$(format_tags_csv "$CFG_rules_exclude_wm_class")"
+    fi
+    if [[ -n "$CFG_rules_exclude_wm_name" ]]; then
+      printf '  exclude_wm_name = %s\n' "$(format_tags_csv "$CFG_rules_exclude_wm_name")"
+    fi
+    if [[ -n "$CFG_rules_exclude_opacity_below" ]]; then
+      printf '  exclude_opacity_below = %s\n' "$CFG_rules_exclude_opacity_below"
+    fi
+  fi
 
   printf '\nScope\n'
   printf '  x11 = %s\n' "$CFG_scope_x11"
@@ -2017,6 +2452,9 @@ cmd_preview() {
     CFG_phosphor_r="${PHOSPHOR_R:-$phosphor_r}"
     CFG_phosphor_g="${PHOSPHOR_G:-$phosphor_g}"
     CFG_phosphor_b="${PHOSPHOR_B:-$phosphor_b}"
+    CFG_colors_background="${COLOR_BACKGROUND:-}"
+    CFG_colors_foreground="${COLOR_FOREGROUND:-}"
+    compute_color_knobs
   elif [[ $# -eq 0 ]]; then
     CFG_mode_type="$mode"
     CFG_monochrome_bands="$bands"
@@ -2025,6 +2463,9 @@ cmd_preview() {
     CFG_phosphor_r="$phosphor_r"
     CFG_phosphor_g="$phosphor_g"
     CFG_phosphor_b="$phosphor_b"
+    CFG_colors_background=""
+    CFG_colors_foreground=""
+    compute_color_knobs
   fi
 
   build_ansi_palette

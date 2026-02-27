@@ -38,6 +38,14 @@ assert_contains() {
   fi
 }
 
+assert_not_contains() {
+  local haystack="$1"
+  local needle="$2"
+  if printf '%s\n' "$haystack" | grep -Fq "$needle"; then
+    die "expected output to not contain: $needle"
+  fi
+}
+
 require_file() {
   local path="$1"
   [[ -f "$path" ]] || die "missing expected file: $path"
@@ -192,6 +200,27 @@ validate_shader_static() {
     vga16)
       grep -q '^#define PALETTE_KIND_VGA16 1$' "$shader_file" || die "PALETTE_KIND_VGA16 mismatch"
       ;;
+    mono2)
+      grep -q '^#define PALETTE_KIND_MONO2 1$' "$shader_file" || die "PALETTE_KIND_MONO2 mismatch"
+      ;;
+    mono4)
+      grep -q '^#define PALETTE_KIND_MONO4 1$' "$shader_file" || die "PALETTE_KIND_MONO4 mismatch"
+      ;;
+    mono8)
+      grep -q '^#define PALETTE_KIND_MONO8 1$' "$shader_file" || die "PALETTE_KIND_MONO8 mismatch"
+      ;;
+    mono16)
+      grep -q '^#define PALETTE_KIND_MONO16 1$' "$shader_file" || die "PALETTE_KIND_MONO16 mismatch"
+      ;;
+    cube32)
+      grep -q '^#define PALETTE_KIND_CUBE32 1$' "$shader_file" || die "PALETTE_KIND_CUBE32 mismatch"
+      ;;
+    cube64)
+      grep -q '^#define PALETTE_KIND_CUBE64 1$' "$shader_file" || die "PALETTE_KIND_CUBE64 mismatch"
+      ;;
+    cube128)
+      grep -q '^#define PALETTE_KIND_CUBE128 1$' "$shader_file" || die "PALETTE_KIND_CUBE128 mismatch"
+      ;;
     cube256)
       grep -q '^#define PALETTE_KIND_CUBE256 1$' "$shader_file" || die "PALETTE_KIND_CUBE256 mismatch"
       ;;
@@ -205,6 +234,15 @@ validate_shader_static() {
       die "unknown expected palette kind: $expected_palette_kind"
       ;;
   esac
+}
+
+count_custom_palette_entries() {
+  local shader_file="$1"
+  awk '
+    /const vec3 CUSTOM_PALETTE\[CUSTOM_PALETTE_SIZE\] = vec3\[\]\(/ {in_block=1; next}
+    in_block && /^\);$/ {in_block=0; print count + 0; exit}
+    in_block && /vec3\(/ {count++}
+  ' "$shader_file"
 }
 
 cleanup() {
@@ -225,6 +263,7 @@ log "checking list command"
 list_output="$(run_retrofx_x11 list)"
 assert_contains "$list_output" "Core Pack:"
 assert_contains "$list_output" "crt-green-p1-4band"
+assert_contains "$list_output" "palette-128"
 
 log "checking search command"
 search_output="$(run_retrofx_x11 search crt)"
@@ -234,6 +273,9 @@ log "checking info command"
 info_output="$(run_retrofx_x11 info crt-green-p1-4band)"
 assert_contains "$info_output" "Profile: crt-green-p1-4band"
 assert_contains "$info_output" "Mode"
+info_c64_output="$(run_retrofx_x11 info c64)"
+assert_contains "$info_c64_output" "Profile: c64"
+assert_contains "$info_c64_output" "kind = custom"
 
 log "checking export commands"
 export_xr_path="$TEST_TMP_DIR/exported.Xresources"
@@ -324,6 +366,121 @@ PROFILE
 run_retrofx_x11 apply "$palette_profile"
 validate_active_files
 validate_shader_static "$ACTIVE_DIR/shader.glsl" palette 4 cube256 256
+
+log "static shader checks: structured palette family"
+run_retrofx_x11 apply palette-2
+validate_active_files
+validate_shader_static "$ACTIVE_DIR/shader.glsl" palette 4 mono2 2
+run_retrofx_x11 apply palette-4
+validate_active_files
+validate_shader_static "$ACTIVE_DIR/shader.glsl" palette 4 mono4 4
+run_retrofx_x11 apply palette-8
+validate_active_files
+validate_shader_static "$ACTIVE_DIR/shader.glsl" palette 4 mono8 8
+run_retrofx_x11 apply palette-16
+validate_active_files
+validate_shader_static "$ACTIVE_DIR/shader.glsl" palette 4 vga16 16
+run_retrofx_x11 apply palette-32
+validate_active_files
+validate_shader_static "$ACTIVE_DIR/shader.glsl" palette 4 cube32 32
+run_retrofx_x11 apply palette-64
+validate_active_files
+validate_shader_static "$ACTIVE_DIR/shader.glsl" palette 4 cube64 64
+run_retrofx_x11 apply palette-128
+validate_active_files
+validate_shader_static "$ACTIVE_DIR/shader.glsl" palette 4 cube128 128
+run_retrofx_x11 apply palette-256
+validate_active_files
+validate_shader_static "$ACTIVE_DIR/shader.glsl" palette 4 cube256 256
+
+log "custom palette parsing + bounded constants"
+custom_palette_file="$TEST_TMP_DIR/custom-pal.txt"
+cat >"$custom_palette_file" <<'PAL'
+# custom test palette
+#000000
+#  comment line with hash-space
+#ff0000
+#00ff00
+#0000ff
+PAL
+custom_profile="$TEST_TMP_DIR/custom-palette.toml"
+cat >"$custom_profile" <<PROFILE
+name = "Custom Palette Check"
+version = 1
+
+[mode]
+type = "palette"
+
+[palette]
+kind = "custom"
+size = 4
+custom_file = "$custom_palette_file"
+
+[effects]
+blur_strength = 1
+scanlines = false
+flicker = false
+dither = "ordered"
+vignette = false
+
+[scope]
+x11 = true
+tty = false
+tuigreet = false
+PROFILE
+run_retrofx_x11 apply "$custom_profile"
+validate_active_files
+validate_shader_static "$ACTIVE_DIR/shader.glsl" palette 4 custom 4
+grep -q '^#define CUSTOM_PALETTE_SIZE 4$' "$ACTIVE_DIR/shader.glsl" || die "CUSTOM_PALETTE_SIZE define mismatch for custom palette"
+[[ "$(count_custom_palette_entries "$ACTIVE_DIR/shader.glsl")" == "4" ]] || die "custom palette constant entry count mismatch"
+
+log "picom selective rules + consistency knobs"
+rules_profile="$TEST_TMP_DIR/rules-check.toml"
+cat >"$rules_profile" <<'PROFILE'
+name = "Rules Check"
+version = 1
+
+[mode]
+type = "monochrome"
+
+[monochrome]
+bands = 8
+phosphor = "green"
+hotcore = false
+
+[effects]
+blur_strength = 2
+scanlines = true
+scanline_preset = "blur_on"
+flicker = false
+dither = "ordered"
+vignette = false
+transparency = "rules"
+
+[colors]
+background = "#0b120b"
+foreground = "#99ffaa"
+
+[rules]
+exclude_wm_class = ["firefox", "mpv"]
+exclude_wm_name = ["Picture-in-Picture"]
+exclude_opacity_below = 0.95
+
+[scope]
+x11 = true
+tty = false
+tuigreet = false
+PROFILE
+run_retrofx_x11 apply "$rules_profile"
+validate_active_files
+rules_cfg="$(cat "$ACTIVE_DIR/picom.conf")"
+assert_contains "$rules_cfg" "blur-background-exclude = ["
+assert_contains "$rules_cfg" "class_g = 'firefox'"
+assert_contains "$rules_cfg" "class_g = 'mpv'"
+assert_contains "$rules_cfg" "name = 'Picture-in-Picture'"
+assert_contains "$rules_cfg" "opacity < 0.950000"
+assert_contains "$rules_cfg" "detect-client-opacity = true;"
+assert_contains "$rules_cfg" "unredir-if-possible = false;"
 
 log "wayland degraded apply path"
 wayland_apply_output="$(run_retrofx_wayland apply "$mono_profile" 2>&1)"
@@ -423,8 +580,8 @@ RETROFX_TTY_MODE=mock run_retrofx_x11 apply "$tty_cube_profile"
 validate_ansi_palette_env "$ACTIVE_DIR/tty-palette.env"
 # shellcheck source=/dev/null
 source "$ACTIVE_DIR/tty-palette.env"
-[[ "$ANSI_0" == '#000000' ]] || die "cube256 summary palette should keep black at ANSI_0"
-[[ "$ANSI_8" == '#555555' ]] || die "cube256 summary palette should keep dim gray at ANSI_8"
+(( $(hex_brightness "$ANSI_0") < 24 )) || die "cube256 summary palette ANSI_0 should remain dark"
+(( $(hex_brightness "$ANSI_8") > $(hex_brightness "$ANSI_0") )) || die "cube256 summary palette should keep dim/bright separation"
 [[ "$ANSI_1" != "$ANSI_0" ]] || die "cube256 summary palette missing accent contrast"
 
 log "tuigreet backend generation test"

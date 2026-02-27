@@ -1,0 +1,25 @@
+name = "Palette 128"
+version = 1
+description = "128-color arithmetic palette (4x4x8 deterministic cube)."
+tags = ["palette", "128", "cube128", "structured"]
+author = "RetroFX Core Pack"
+license = "CC0-1.0"
+
+[mode]
+type = "palette"
+
+[palette]
+kind = "cube128"
+size = 128
+
+[effects]
+blur_strength = 1
+scanlines = false
+flicker = false
+dither = "ordered"
+vignette = false
+
+[scope]
+x11 = true
+tty = false
+tuigreet = false

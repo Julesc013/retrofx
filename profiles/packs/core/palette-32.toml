@@ -1,0 +1,25 @@
+name = "Palette 32"
+version = 1
+description = "32-color arithmetic palette (3x3x3 + grayscale blend)."
+tags = ["palette", "32", "cube32", "structured"]
+author = "RetroFX Core Pack"
+license = "CC0-1.0"
+
+[mode]
+type = "palette"
+
+[palette]
+kind = "cube32"
+size = 32
+
+[effects]
+blur_strength = 1
+scanlines = false
+flicker = false
+dither = "ordered"
+vignette = false
+
+[scope]
+x11 = true
+tty = false
+tuigreet = false

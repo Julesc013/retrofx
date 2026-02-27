@@ -1,0 +1,25 @@
+name = "Palette 4"
+version = 1
+description = "4-color palette quantization using structured mono4 arithmetic mapping."
+tags = ["palette", "4", "structured"]
+author = "RetroFX Core Pack"
+license = "CC0-1.0"
+
+[mode]
+type = "palette"
+
+[palette]
+kind = "mono4"
+size = 4
+
+[effects]
+blur_strength = 0
+scanlines = false
+flicker = false
+dither = "ordered"
+vignette = false
+
+[scope]
+x11 = true
+tty = false
+tuigreet = false

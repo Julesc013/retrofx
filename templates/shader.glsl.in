@@ -15,7 +15,8 @@
  * Complexity notes:
  *   - Monochrome path: O(1)
  *   - VGA16 path: O(16)
- *   - cube256 path: O(1), arithmetic quantization (no palette search loop)
+ *   - Structured cube paths (32/64/128/256): O(1), arithmetic quantization
+ *   - Custom palette path: O(N), N <= 32
  */
 
 #define MODE_PASSTHROUGH @MODE_PASSTHROUGH@
@@ -32,12 +33,24 @@
 #define ENABLE_SCANLINES @ENABLE_SCANLINES@
 #define ENABLE_FLICKER @ENABLE_FLICKER@
 #define ENABLE_VIGNETTE @ENABLE_VIGNETTE@
+#define SCANLINE_BASE @SCANLINE_BASE@
+#define SCANLINE_AMP @SCANLINE_AMP@
 
 #define PALETTE_KIND_VGA16 @PALETTE_KIND_VGA16@
+#define PALETTE_KIND_MONO2 @PALETTE_KIND_MONO2@
+#define PALETTE_KIND_MONO4 @PALETTE_KIND_MONO4@
+#define PALETTE_KIND_MONO8 @PALETTE_KIND_MONO8@
+#define PALETTE_KIND_MONO16 @PALETTE_KIND_MONO16@
+#define PALETTE_KIND_CUBE32 @PALETTE_KIND_CUBE32@
+#define PALETTE_KIND_CUBE64 @PALETTE_KIND_CUBE64@
+#define PALETTE_KIND_CUBE128 @PALETTE_KIND_CUBE128@
 #define PALETTE_KIND_CUBE256 @PALETTE_KIND_CUBE256@
 #define PALETTE_KIND_CUSTOM @PALETTE_KIND_CUSTOM@
 #define PALETTE_SIZE @PALETTE_SIZE@
 #define CUSTOM_PALETTE_SIZE @CUSTOM_PALETTE_SIZE@
+#define BG_TINT_LINEAR_R @BG_TINT_LINEAR_R@
+#define BG_TINT_LINEAR_G @BG_TINT_LINEAR_G@
+#define BG_TINT_LINEAR_B @BG_TINT_LINEAR_B@
 
 uniform sampler2D tex;
 uniform float opacity;
@@ -166,61 +179,72 @@ vec3 quantize_vga16(vec3 c, int limit) {
     return best;
 }
 
-/* O(1) arithmetic quantization for cube + grayscale ramp. */
-vec3 quantize_cube256(vec3 c, int size) {
+vec3 quantize_cube_levels(vec3 c, int rl, int gl, int bl) {
+    vec3 cc = clamp(c, 0.0, 1.0);
+    int ri;
+    int gi;
+    int bi;
+    float rf;
+    float gf;
+    float bf;
+
+    rl = clamp_int(rl, 2, 8);
+    gl = clamp_int(gl, 2, 8);
+    bl = clamp_int(bl, 2, 8);
+
+    rf = float(rl - 1);
+    gf = float(gl - 1);
+    bf = float(bl - 1);
+
+    ri = int(floor(cc.r * rf + 0.5));
+    gi = int(floor(cc.g * gf + 0.5));
+    bi = int(floor(cc.b * bf + 0.5));
+
+    ri = clamp_int(ri, 0, rl - 1);
+    gi = clamp_int(gi, 0, gl - 1);
+    bi = clamp_int(bi, 0, bl - 1);
+
+    return vec3(float(ri) / rf, float(gi) / gf, float(bi) / bf);
+}
+
+/* 32-color deterministic scheme: 3x3x3 cube + 5 grayscale levels. */
+vec3 quantize_cube32(vec3 c) {
+    vec3 cc = clamp(c, 0.0, 1.0);
+    vec3 cube = quantize_cube_levels(cc, 3, 3, 3);
+    int gi = int(floor(luminance(cc) * 4.0 + 0.5));
+    vec3 gray;
+    gi = clamp_int(gi, 0, 4);
+    gray = vec3(float(gi) / 4.0);
+    return (dot(cc - gray, cc - gray) < dot(cc - cube, cc - cube)) ? gray : cube;
+}
+
+/* 64-color arithmetic cube: 4x4x4. */
+vec3 quantize_cube64(vec3 c) {
+    return quantize_cube_levels(c, 4, 4, 4);
+}
+
+/* 128-color arithmetic cube: 4x4x8. */
+vec3 quantize_cube128(vec3 c) {
+    return quantize_cube_levels(c, 4, 4, 8);
+}
+
+/* 256-color arithmetic scheme: 6x6x6 cube + 24-step grayscale ramp selection. */
+vec3 quantize_cube256(vec3 c) {
     vec3 cc = clamp(c, 0.0, 1.0);
     vec3 cube;
     vec3 gray;
+    int ri = int(floor(cc.r * 5.0 + 0.5));
+    int gi = int(floor(cc.g * 5.0 + 0.5));
+    int bi = int(floor(cc.b * 5.0 + 0.5));
+    int gri = int(floor(luminance(cc) * 23.0 + 0.5));
 
-    if (size >= 256) {
-        int ri = int(floor(cc.r * 5.0 + 0.5));
-        int gi = int(floor(cc.g * 5.0 + 0.5));
-        int bi = int(floor(cc.b * 5.0 + 0.5));
-        int gri = int(floor(luminance(cc) * 23.0 + 0.5));
+    ri = clamp_int(ri, 0, 5);
+    gi = clamp_int(gi, 0, 5);
+    bi = clamp_int(bi, 0, 5);
+    gri = clamp_int(gri, 0, 23);
 
-        ri = clamp_int(ri, 0, 5);
-        gi = clamp_int(gi, 0, 5);
-        bi = clamp_int(bi, 0, 5);
-        gri = clamp_int(gri, 0, 23);
-
-        cube = vec3(float(ri), float(gi), float(bi)) / 5.0;
-        gray = vec3(float(gri) / 23.0);
-    } else {
-        int safe_size = size;
-        int levels;
-        int gray_levels;
-        float lf;
-        float gf;
-        int ri;
-        int gi;
-        int bi;
-        int gri;
-
-        if (safe_size < 2) {
-            safe_size = 2;
-        }
-
-        levels = int(floor(pow(float(safe_size), 1.0 / 3.0) + 0.5));
-        levels = clamp_int(levels, 2, 6);
-        lf = float(levels - 1);
-
-        ri = int(floor(cc.r * lf + 0.5));
-        gi = int(floor(cc.g * lf + 0.5));
-        bi = int(floor(cc.b * lf + 0.5));
-        ri = clamp_int(ri, 0, levels - 1);
-        gi = clamp_int(gi, 0, levels - 1);
-        bi = clamp_int(bi, 0, levels - 1);
-
-        cube = vec3(float(ri), float(gi), float(bi)) / lf;
-
-        gray_levels = int(floor(float(safe_size) / float(levels * levels)));
-        gray_levels = clamp_int(gray_levels, 2, 24);
-        gf = float(gray_levels - 1);
-        gri = int(floor(luminance(cc) * gf + 0.5));
-        gri = clamp_int(gri, 0, gray_levels - 1);
-        gray = vec3(float(gri) / gf);
-    }
-
+    cube = vec3(float(ri), float(gi), float(bi)) / 5.0;
+    gray = vec3(float(gri) / 23.0);
     return (dot(cc - gray, cc - gray) < dot(cc - cube, cc - cube)) ? gray : cube;
 }
 
@@ -244,8 +268,22 @@ vec3 quantize_custom(vec3 c) {
 vec3 quantize_palette(vec3 c) {
 #if PALETTE_KIND_VGA16 == 1
     return quantize_vga16(c, PALETTE_SIZE);
+#elif PALETTE_KIND_MONO2 == 1
+    return vec3(quantize_1d(luminance(c), 2));
+#elif PALETTE_KIND_MONO4 == 1
+    return vec3(quantize_1d(luminance(c), 4));
+#elif PALETTE_KIND_MONO8 == 1
+    return vec3(quantize_1d(luminance(c), 8));
+#elif PALETTE_KIND_MONO16 == 1
+    return vec3(quantize_1d(luminance(c), 16));
+#elif PALETTE_KIND_CUBE32 == 1
+    return quantize_cube32(c);
+#elif PALETTE_KIND_CUBE64 == 1
+    return quantize_cube64(c);
+#elif PALETTE_KIND_CUBE128 == 1
+    return quantize_cube128(c);
 #elif PALETTE_KIND_CUBE256 == 1
-    return quantize_cube256(c, PALETTE_SIZE);
+    return quantize_cube256(c);
 #elif PALETTE_KIND_CUSTOM == 1
     return quantize_custom(c);
 #else
@@ -275,7 +313,8 @@ void main() {
         float y = luminance(lin);
         float q = quantize_1d(y, MONO_BANDS);
         vec3 phosphor = vec3(PHOSPHOR_R, PHOSPHOR_G, PHOSPHOR_B);
-        outc = phosphor * q;
+        vec3 bg_tint = vec3(BG_TINT_LINEAR_R, BG_TINT_LINEAR_G, BG_TINT_LINEAR_B);
+        outc = mix(bg_tint, phosphor * q, q);
 #if HOTCORE == 1
         {
             float core = smoothstep(0.72, 1.0, q);
@@ -303,7 +342,7 @@ void main() {
     /* PIPELINE_STEP_5_SCANLINES */
 #if ENABLE_SCANLINES == 1
     {
-        float s = 0.985 + 0.015 * sin((gl_FragCoord.y + 0.5) * 3.14159265);
+        float s = SCANLINE_BASE + SCANLINE_AMP * sin((gl_FragCoord.y + 0.5) * 3.14159265);
         outc *= s;
     }
 #endif

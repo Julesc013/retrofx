@@ -17,6 +17,7 @@ Discover built-in pack profiles:
 ./scripts/retrofx list
 ./scripts/retrofx search crt
 ./scripts/retrofx info crt-green-p1-4band
+./scripts/retrofx info c64
 ```
 
 ## Apply / Off
@@ -57,6 +58,11 @@ Run the wizard:
 ```
 
 Profiles created by the wizard are saved under `profiles/user/`.
+
+## Palette Notes
+
+- Structured palette profiles (`palette-2` .. `palette-256`) are optimized and fast.
+- Custom palettes are supported up to 32 colors (see `palettes/c64.txt` and `docs/PALETTES.md`).
 
 ## Wayland Note (Degraded Mode)
 

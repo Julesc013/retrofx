@@ -1,0 +1,25 @@
+name = "Palette 64"
+version = 1
+description = "64-color arithmetic palette (4x4x4 cube)."
+tags = ["palette", "64", "cube64", "structured"]
+author = "RetroFX Core Pack"
+license = "CC0-1.0"
+
+[mode]
+type = "palette"
+
+[palette]
+kind = "cube64"
+size = 64
+
+[effects]
+blur_strength = 1
+scanlines = false
+flicker = false
+dither = "ordered"
+vignette = false
+
+[scope]
+x11 = true
+tty = false
+tuigreet = false

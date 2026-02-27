@@ -1,0 +1,26 @@
+name = "C64 Palette"
+version = 1
+description = "Commodore 64 inspired fixed custom palette."
+tags = ["c64", "custom", "palette", "retro"]
+author = "RetroFX Core Pack"
+license = "CC0-1.0"
+
+[mode]
+type = "palette"
+
+[palette]
+kind = "custom"
+size = 16
+custom_file = "../../../palettes/c64.txt"
+
+[effects]
+blur_strength = 1
+scanlines = false
+flicker = false
+dither = "ordered"
+vignette = false
+
+[scope]
+x11 = true
+tty = false
+tuigreet = false

@@ -34,9 +34,11 @@ Profiles are TOML files under:
 
 ### `[palette]` (required when `mode.type = "palette"`)
 
-- `kind` = `vga16` | `cube256` | `custom`
+- `kind` = `vga16` | `mono2` | `mono4` | `mono8` | `mono16` | `cube32` | `cube64` | `cube128` | `cube256` | `custom`
 - `size` = integer `2..256`
 - `custom_file` = optional path (required for `kind = "custom"`)
+  - custom palettes are limited to `2..32` colors
+  - for structured kinds, size must match kind (`mono2=2`, `cube64=64`, etc.)
 
 ### `[effects]` (required)
 
@@ -45,12 +47,25 @@ Profiles are TOML files under:
 - `flicker` = `true` | `false`
 - `dither` = `none` | `ordered`
 - `vignette` = `true` | `false`
+- `scanline_preset` = optional `blur_on` | `blur_off`
+- `transparency` = optional `off` | `on` | `rules` (default `off`)
 
 ### `[scope]` (required)
 
 - `x11` = `true` | `false`
 - `tty` = `true` | `false`
 - `tuigreet` = `true` | `false`
+
+### `[colors]` (optional)
+
+- `background` = `#RRGGBB`
+- `foreground` = `#RRGGBB`
+
+### `[rules]` (optional, X11/picom hints)
+
+- `exclude_wm_class` = array of strings
+- `exclude_wm_name` = array of strings
+- `exclude_opacity_below` = float `0..1`
 
 Scope behavior:
 
