@@ -7,68 +7,82 @@ RetroFX is a profile-driven renderer that generates deterministic session-local 
 - Deterministic generation from `profiles/*.toml`.
 - Atomic apply: generate to temp -> validate -> backup -> rename swap.
 - Fail-safe behavior: rollback to `state/last_good/` on failed transactions.
-- Modular backends: profile scope controls X11/TTY/tuigreet hooks.
-- Performance-first shader path: ordered dithering only, lightweight effects.
+- Scoped backends: X11, TTY, and tuigreet are applied only when enabled in profile scope.
+- Performance discipline: single-pass shader pipeline with bounded operations.
 
 ## Repository Roles
 
-- `scripts/retrofx`: CLI entrypoint and orchestrator.
-- `scripts/test.sh`: minimal regression harness.
-- `profiles/*.toml`: strict v1 profile definitions.
+- `scripts/retrofx`: CLI entrypoint, profile parser, renderer, and transaction orchestrator.
+- `scripts/test.sh`: regression harness including static shader checks and backend mock checks.
 - `templates/*`: static templates rendered into active artifacts.
-- `active/`: currently active generated config.
-- `state/backups/`: timestamped backups of previous `active/` (pruned to last N, default 10).
-- `state/last_good/`: canonical rollback snapshot.
-- `state/logs/retrofx.log`: append-only operational audit log.
-- `backends/*`: backend-specific apply hooks.
+- `active/`: currently active generated config set.
+- `state/backups/`: timestamped active snapshots (pruned to last N, default 10).
+- `state/last_good/`: canonical rollback snapshot for failed apply.
+- `state/logs/retrofx.log`: append-only audit log.
+- `state/tty-backups/`: tty palette rollback stack.
+- `backends/*`: backend-specific apply/off logic.
 
 ## Apply Transaction
 
-1. Parse and validate profile with strict schema and unknown-key rejection.
-2. Render shader/picom/xresources/profile metadata into `state/stage.*`.
-3. Validate with a picom test instance when runtime conditions allow.
-4. Backup current `active/` to `state/backups/<timestamp>-<profile>/`.
-5. Atomically rename staged output into `active/`.
-6. Refresh `state/last_good/` from new `active/`.
-7. Prune backup retention.
-8. Trigger backend hooks for enabled scopes.
+1. Parse and validate profile.
+2. Render shader/picom/xresources/semantic artifacts into `state/stage.*`.
+3. Validate generated stage (including shader markers and placeholder checks).
+4. Optionally runtime-validate with picom when environment allows.
+5. Backup current `active/`.
+6. Atomically swap stage into `active/`.
+7. Apply scoped backends (`x11`, `tty`, `tuigreet`).
+8. Persist new `state/last_good/` snapshot.
 
 ## Failure Handling
 
-- Parse/render/validation failure: transaction aborts and rollback is attempted from `state/last_good/`.
-- Swap failure: previous `active/` is restored immediately.
-- Logging failures are best-effort and never fail user commands.
-- `retrofx off` always maps to passthrough mode (`profiles/passthrough.toml` or built-in fallback).
+- Parse/render/validation failure: abort and rollback to `state/last_good/` when available.
+- Swap failure: restore previous `active/` snapshot immediately.
+- TTY backend failure: treated as critical when scoped, triggers rollback.
+- Tuigreet backend failure: non-critical, logged warning only.
+- Logging failures are best-effort and never fail commands.
 
 ## Rendering Pipeline (Formal Order)
 
-Shader execution follows this strict order:
-
 1. Linearize input color (`sRGB -> linear`)
-2. Apply tone transform / tint preparation in linear space
-3. Quantize (monochrome or palette path)
-4. Apply ordered dithering (only when quantization is active)
-5. Apply scanline modulation
-6. Apply flicker modulation
-7. Apply vignette modulation
+2. Transform / tint preparation
+3. Quantize (mode-specific)
+4. Ordered dither (when enabled and quantization active)
+5. Scanlines
+6. Flicker
+7. Vignette
 8. Encode output (`linear -> sRGB`)
-
-## Backend Status
-
-- `x11-picom`: functional in Phase 1 (config generation/check/run hook).
-- `tty`: scaffold only (no-op with messaging).
-- `tuigreet`: scaffold only (no-op with messaging).
-- Wayland: documented as degraded future backend (not active in Phase 1).
 
 ## Rendering Complexity Guarantees
 
 - Monochrome quantization: `O(1)`
-- VGA16 quantization: `O(16)` (bounded loop with max 16 comparisons)
-- cube256 quantization: `O(1)` (arithmetic mapping, no 256-entry search loop)
-- Ordered dithering (Bayer 4x4): `O(1)`
+- VGA16 quantization: `O(16)` (bounded loop)
+- cube256 quantization: `O(1)` (arithmetic mapping)
+- Ordered dither: `O(1)`
 - Scanlines: `O(1)`
 - Flicker: `O(1)`
 - Vignette: `O(1)`
-- No multi-pass rendering
-- No frame history / temporal buffers
-- No texture lookups beyond the input source texture
+- No multi-pass, no frame history, no extra texture lookups
+
+## Semantic Color Preservation Strategy
+
+- A shared ANSI16 semantic palette is generated once per profile and reused by X11 terminal resources, TTY backend, and tuigreet theme snippet.
+- Semantic roles are fixed to stable ANSI slots:
+  - `background -> color0`
+  - `normal -> color7`
+  - `dim -> color8`
+  - `bright -> color15`
+  - `info -> color4`
+  - `success -> color2`
+  - `warning -> color3`
+  - `error -> color1`
+- Monochrome mode preserves meaning by ordered intensity mapping:
+  - error >= warning >= success >= info
+- Palette modes preserve hue whenever possible (notably vga16 and cube256 summary palette).
+- TTY is constrained to 16 colors, so semantic fidelity is preserved by slot strategy rather than full gamut matching.
+
+## Backend Status
+
+- `x11-picom`: functional profile-scoped backend.
+- `tty`: functional profile-scoped backend with safe mock/apply/off behavior and rollback backups.
+- `tuigreet`: functional profile-scoped snippet generation (`active/tuigreet.conf`).
+- Wayland: degraded future backend (not implemented here).

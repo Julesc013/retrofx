@@ -64,6 +64,16 @@ declare CFG_phosphor_r="1.000000"
 declare CFG_phosphor_g="1.000000"
 declare CFG_phosphor_b="1.000000"
 
+declare -a ANSI_HEX=()
+declare SEM_BACKGROUND="#000000"
+declare SEM_NORMAL="#c0c0c0"
+declare SEM_DIM="#606060"
+declare SEM_BRIGHT="#ffffff"
+declare SEM_INFO="#3a5fb0"
+declare SEM_SUCCESS="#00aa00"
+declare SEM_WARNING="#b0a000"
+declare SEM_ERROR="#aa0000"
+
 now_ts() {
   date -u +%Y-%m-%dT%H:%M:%SZ
 }
@@ -680,21 +690,202 @@ write_profile_env() {
   } >"$out_file"
 }
 
+hex_from_u8_triplet() {
+  local r="$1"
+  local g="$2"
+  local b="$3"
+  printf '#%02x%02x%02x' "$r" "$g" "$b"
+}
+
+hex_to_rgb_triplet() {
+  local hex="${1#\#}"
+  local r g b
+  [[ "${#hex}" -eq 6 ]] || return 1
+  r=$((16#${hex:0:2}))
+  g=$((16#${hex:2:2}))
+  b=$((16#${hex:4:2}))
+  printf '%d,%d,%d' "$r" "$g" "$b"
+}
+
+brightness_from_hex() {
+  local hex="${1#\#}"
+  local r g b
+  [[ "${#hex}" -eq 6 ]] || return 1
+  r=$((16#${hex:0:2}))
+  g=$((16#${hex:2:2}))
+  b=$((16#${hex:4:2}))
+  printf '%d' $(((299 * r + 587 * g + 114 * b) / 1000))
+}
+
+mono_hex_for_fraction() {
+  local frac="$1"
+  awk \
+    -v f="$frac" \
+    -v bands="$CFG_monochrome_bands" \
+    -v pr="$CFG_phosphor_r" \
+    -v pg="$CFG_phosphor_g" \
+    -v pb="$CFG_phosphor_b" '
+    BEGIN {
+      if (bands < 2) bands = 2;
+      if (bands > 256) bands = 256;
+      if (f < 0.0) f = 0.0;
+      if (f > 1.0) f = 1.0;
+      q = int((f * (bands - 1)) + 0.5) / (bands - 1);
+      r = int((q * pr * 255.0) + 0.5);
+      g = int((q * pg * 255.0) + 0.5);
+      b = int((q * pb * 255.0) + 0.5);
+      if (r < 0) r = 0; if (r > 255) r = 255;
+      if (g < 0) g = 0; if (g > 255) g = 255;
+      if (b < 0) b = 0; if (b > 255) b = 255;
+      printf "#%02x%02x%02x", r, g, b;
+    }'
+}
+
+set_vga16_palette() {
+  ANSI_HEX=(
+    "#000000" "#aa0000" "#00aa00" "#aa5500"
+    "#0000aa" "#aa00aa" "#00aaaa" "#aaaaaa"
+    "#555555" "#ff5555" "#55ff55" "#ffff55"
+    "#5555ff" "#ff55ff" "#55ffff" "#ffffff"
+  )
+}
+
+set_cube256_summary_palette() {
+  ANSI_HEX=(
+    "#000000" "#cc0000" "#00cc00" "#cccc00"
+    "#0000cc" "#cc00cc" "#00cccc" "#d0d0d0"
+    "#555555" "#ff4444" "#44ff44" "#ffff44"
+    "#4444ff" "#ff44ff" "#44ffff" "#ffffff"
+  )
+}
+
+set_monochrome_palette() {
+  local -a fractions=(
+    "0.00" "1.00" "0.60" "0.82"
+    "0.45" "0.70" "0.66" "0.76"
+    "0.28" "1.00" "0.78" "0.90"
+    "0.58" "0.86" "0.84" "1.00"
+  )
+  local i
+
+  ANSI_HEX=()
+  for ((i = 0; i < 16; i++)); do
+    ANSI_HEX+=("$(mono_hex_for_fraction "${fractions[$i]}")")
+  done
+}
+
+build_ansi_palette() {
+  case "$CFG_mode_type" in
+    monochrome)
+      set_monochrome_palette
+      ;;
+    palette)
+      case "$CFG_palette_kind" in
+        vga16)
+          set_vga16_palette
+          ;;
+        cube256)
+          set_cube256_summary_palette
+          ;;
+        custom)
+          # 16-color TTY/ANSI summary fallback for custom palettes.
+          set_cube256_summary_palette
+          ;;
+      esac
+      ;;
+    passthrough)
+      set_vga16_palette
+      ;;
+    *)
+      set_vga16_palette
+      ;;
+  esac
+
+  SEM_BACKGROUND="${ANSI_HEX[0]}"
+  SEM_NORMAL="${ANSI_HEX[7]}"
+  SEM_DIM="${ANSI_HEX[8]}"
+  SEM_BRIGHT="${ANSI_HEX[15]}"
+  SEM_INFO="${ANSI_HEX[4]}"
+  SEM_SUCCESS="${ANSI_HEX[2]}"
+  SEM_WARNING="${ANSI_HEX[3]}"
+  SEM_ERROR="${ANSI_HEX[1]}"
+}
+
+write_semantic_env() {
+  local out_file="$1"
+  local i
+
+  {
+    for ((i = 0; i < 16; i++)); do
+      printf 'ANSI_%d=%q\n' "$i" "${ANSI_HEX[$i]}"
+    done
+    printf 'SEM_BACKGROUND=%q\n' "$SEM_BACKGROUND"
+    printf 'SEM_NORMAL=%q\n' "$SEM_NORMAL"
+    printf 'SEM_DIM=%q\n' "$SEM_DIM"
+    printf 'SEM_BRIGHT=%q\n' "$SEM_BRIGHT"
+    printf 'SEM_INFO=%q\n' "$SEM_INFO"
+    printf 'SEM_SUCCESS=%q\n' "$SEM_SUCCESS"
+    printf 'SEM_WARNING=%q\n' "$SEM_WARNING"
+    printf 'SEM_ERROR=%q\n' "$SEM_ERROR"
+    printf 'MODE_TYPE=%q\n' "$CFG_mode_type"
+    printf 'MONO_BANDS=%q\n' "$CFG_monochrome_bands"
+    printf 'PALETTE_KIND=%q\n' "$CFG_palette_kind"
+    printf 'PALETTE_SIZE=%q\n' "$CFG_palette_size"
+  } >"$out_file"
+}
+
+write_tty_palette_text() {
+  local out_file="$1"
+  local i
+
+  {
+    printf '# RetroFX ANSI16 palette\n'
+    printf '# index hex\n'
+    for ((i = 0; i < 16; i++)); do
+      printf '%d %s\n' "$i" "${ANSI_HEX[$i]}"
+    done
+    printf '# semantic\n'
+    printf 'background %s\n' "$SEM_BACKGROUND"
+    printf 'normal %s\n' "$SEM_NORMAL"
+    printf 'dim %s\n' "$SEM_DIM"
+    printf 'bright %s\n' "$SEM_BRIGHT"
+    printf 'info %s\n' "$SEM_INFO"
+    printf 'success %s\n' "$SEM_SUCCESS"
+    printf 'warning %s\n' "$SEM_WARNING"
+    printf 'error %s\n' "$SEM_ERROR"
+  } >"$out_file"
+}
+
 render_xresources() {
   local out_file="$1"
-  local fg_hex bg_hex accent_hex
-
-  fg_hex="$(rgb_hex_from_units "$CFG_phosphor_r" "$CFG_phosphor_g" "$CFG_phosphor_b")"
-  bg_hex="#000000"
-  accent_hex="$(rgb_hex_from_units "$(awk -v r="$CFG_phosphor_r" 'BEGIN{printf "%.6f", r * 0.45}')" "$(awk -v g="$CFG_phosphor_g" 'BEGIN{printf "%.6f", g * 0.55}')" "$(awk -v b="$CFG_phosphor_b" 'BEGIN{printf "%.6f", b * 0.45}')")"
+  local line i placeholder
 
   : >"$out_file"
   while IFS= read -r line || [[ -n "$line" ]]; do
-    line="${line//@FG_HEX@/$fg_hex}"
-    line="${line//@BG_HEX@/$bg_hex}"
-    line="${line//@ACCENT_HEX@/$accent_hex}"
+    for ((i = 0; i < 16; i++)); do
+      placeholder="@ANSI${i}@"
+      line="${line//$placeholder/${ANSI_HEX[$i]}}"
+    done
+    line="${line//@SEM_BACKGROUND@/$SEM_BACKGROUND}"
+    line="${line//@SEM_NORMAL@/$SEM_NORMAL}"
+    line="${line//@SEM_DIM@/$SEM_DIM}"
+    line="${line//@SEM_BRIGHT@/$SEM_BRIGHT}"
+    line="${line//@SEM_INFO@/$SEM_INFO}"
+    line="${line//@SEM_SUCCESS@/$SEM_SUCCESS}"
+    line="${line//@SEM_WARNING@/$SEM_WARNING}"
+    line="${line//@SEM_ERROR@/$SEM_ERROR}"
     printf '%s\n' "$line" >>"$out_file"
   done <"$TEMPLATES_DIR/xresources.in"
+}
+
+render_color_artifacts() {
+  local stage_dir="$1"
+
+  build_ansi_palette
+  write_semantic_env "$stage_dir/semantic.env"
+  write_semantic_env "$stage_dir/tty-palette.env"
+  write_tty_palette_text "$stage_dir/tty-palette.txt"
+  render_xresources "$stage_dir/xresources"
 }
 
 declare -a CUSTOM_PALETTE_LINES=()
@@ -882,7 +1073,7 @@ render_templates() {
   write_profile_env "$stage_dir/profile.env"
   render_shader "$stage_dir/shader.glsl"
   render_picom "$stage_dir/picom.conf"
-  render_xresources "$stage_dir/xresources"
+  render_color_artifacts "$stage_dir"
 
   {
     printf 'generated_at=%s\n' "$(now_ts)"
@@ -969,6 +1160,9 @@ validate_stage_outputs() {
   [[ -f "$stage_dir/picom.conf" ]] || return 1
   [[ -f "$stage_dir/shader.glsl" ]] || return 1
   [[ -f "$stage_dir/xresources" ]] || return 1
+  [[ -f "$stage_dir/semantic.env" ]] || return 1
+  [[ -f "$stage_dir/tty-palette.env" ]] || return 1
+  [[ -f "$stage_dir/tty-palette.txt" ]] || return 1
   [[ -f "$stage_dir/meta" ]] || return 1
 
   validate_generated_shader "$stage_dir"
@@ -1154,12 +1348,17 @@ apply_scoped_backends() {
   fi
 
   if [[ "$CFG_scope_tty" == "true" && -x "$BACKEND_TTY" ]]; then
-    "$BACKEND_TTY" apply "$ACTIVE_DIR" || warn "tty backend apply hook reported an issue"
+    if ! "$BACKEND_TTY" apply "$ACTIVE_DIR"; then
+      LAST_ERROR="tty backend apply failed"
+      return 1
+    fi
   fi
 
   if [[ "$CFG_scope_tuigreet" == "true" && -x "$BACKEND_TUIGREET" ]]; then
     "$BACKEND_TUIGREET" apply "$ACTIVE_DIR" || warn "tuigreet backend apply hook reported an issue"
   fi
+
+  return 0
 }
 
 restart_picom_if_running() {
@@ -1341,6 +1540,26 @@ cmd_preview() {
     phosphor_b="${PHOSPHOR_B:-1.000000}"
   fi
 
+  if [[ $# -eq 0 && -f "$ACTIVE_DIR/profile.env" ]]; then
+    CFG_mode_type="${MODE_TYPE:-$mode}"
+    CFG_monochrome_bands="${MONO_BANDS:-$bands}"
+    CFG_palette_kind="${PALETTE_KIND:-vga16}"
+    CFG_palette_size="${PALETTE_SIZE:-16}"
+    CFG_phosphor_r="${PHOSPHOR_R:-$phosphor_r}"
+    CFG_phosphor_g="${PHOSPHOR_G:-$phosphor_g}"
+    CFG_phosphor_b="${PHOSPHOR_B:-$phosphor_b}"
+  elif [[ $# -eq 0 ]]; then
+    CFG_mode_type="$mode"
+    CFG_monochrome_bands="$bands"
+    CFG_palette_kind="vga16"
+    CFG_palette_size="16"
+    CFG_phosphor_r="$phosphor_r"
+    CFG_phosphor_g="$phosphor_g"
+    CFG_phosphor_b="$phosphor_b"
+  fi
+
+  build_ansi_palette
+
   printf 'Grayscale ramp\n'
   local i v
   for ((i = 0; i < 32; i++)); do
@@ -1394,6 +1613,40 @@ cmd_preview() {
     printf '%3d -> %3d -> %3d\n' "$sample" "$band_idx" "$band_out"
   done
   printf '\n'
+
+  printf 'Derived ANSI16 palette (profile-based)\n'
+  local i ansi_hex rgb
+  for ((i = 0; i < 16; i++)); do
+    ansi_hex="${ANSI_HEX[$i]}"
+    rgb="$(hex_to_rgb_triplet "$ansi_hex")"
+    IFS=',' read -r r g b <<<"$rgb"
+    printf '%02d %-8s ' "$i" "$ansi_hex"
+    preview_truecolor_block "$r" "$g" "$b"
+    printf '\n'
+  done
+  printf '\n'
+
+  printf 'Semantic color table\n'
+  printf 'background %s\n' "$SEM_BACKGROUND"
+  printf 'normal     %s\n' "$SEM_NORMAL"
+  printf 'dim        %s\n' "$SEM_DIM"
+  printf 'bright     %s\n' "$SEM_BRIGHT"
+  printf 'info       %s\n' "$SEM_INFO"
+  printf 'success    %s\n' "$SEM_SUCCESS"
+  printf 'warning    %s\n' "$SEM_WARNING"
+  printf 'error      %s\n' "$SEM_ERROR"
+  printf '\n'
+
+  if [[ "$mode" == "monochrome" ]]; then
+    printf 'Monochrome band-to-ANSI mapping\n'
+    local lum_from_hex
+    for ((i = 0; i < 16; i++)); do
+      lum_from_hex="$(brightness_from_hex "${ANSI_HEX[$i]}")"
+      band_idx=$(((lum_from_hex * (levels - 1) + 127) / 255))
+      printf 'ansi%-2d -> band %-3d (%s)\n' "$i" "$band_idx" "${ANSI_HEX[$i]}"
+    done
+    printf '\n'
+  fi
 
   printf 'ANSI 16 swatches\n'
   local code ansi
@@ -1703,23 +1956,33 @@ cmd_apply() {
 
   if [[ ! -f "$ACTIVE_DIR/shader.glsl" ]]; then
     LAST_ERROR="active/shader.glsl missing after swap"
+    restore_last_good || true
+    TXN_ACTIVE=0
+    return 1
+  fi
+
+  prune_backups "$BACKUP_KEEP"
+
+  if ! apply_scoped_backends; then
+    restore_last_good || true
+    TXN_ACTIVE=0
     return 1
   fi
 
   if ! copy_active_to_last_good; then
     LAST_ERROR="failed to update last_good snapshot"
+    restore_last_good || true
+    TXN_ACTIVE=0
     return 1
   fi
 
-  prune_backups "$BACKUP_KEEP"
-  apply_scoped_backends
   restart_picom_if_running || true
 
   TXN_ACTIVE=0
   log "applied profile '$profile_id'"
 }
 
-cmd_off() {
+cmd_off_profile() {
   ensure_dirs
   if [[ -f "$PROFILES_DIR/passthrough.toml" ]]; then
     cmd_apply "passthrough"
@@ -1738,12 +2001,46 @@ cmd_off() {
   rm -f "$tmp"
 }
 
+cmd_off_tty() {
+  ensure_dirs
+  if [[ ! -x "$BACKEND_TTY" ]]; then
+    warn "tty backend is unavailable"
+    return 0
+  fi
+  "$BACKEND_TTY" off "$ACTIVE_DIR"
+}
+
+cmd_off() {
+  local mode="${1:---profile}"
+  local rc=0
+  case "$mode" in
+    --profile)
+      cmd_off_profile
+      ;;
+    --tty)
+      cmd_off_tty
+      ;;
+    --all)
+      if ! cmd_off_profile; then
+        rc=1
+      fi
+      if ! cmd_off_tty; then
+        rc=1
+      fi
+      return "$rc"
+      ;;
+    *)
+      die "off accepts only --tty or --all"
+      ;;
+  esac
+}
+
 usage() {
   cat <<'USAGE'
 Usage:
   retrofx list
   retrofx apply <profile>
-  retrofx off
+  retrofx off [--tty|--all]
   retrofx doctor
   retrofx preview [profile]
   retrofx new
@@ -1772,10 +2069,25 @@ main() {
       cmd_apply "$1"
       ;;
     off)
-      audit_begin "off" "passthrough"
       shift
-      [[ "$#" -eq 0 ]] || die "off takes no arguments"
-      cmd_off
+      if [[ "$#" -gt 1 ]]; then
+        die "off takes zero or one option: --tty|--all"
+      fi
+      case "${1:---profile}" in
+        --profile)
+          audit_begin "off" "passthrough"
+          ;;
+        --tty)
+          audit_begin "off" "tty"
+          ;;
+        --all)
+          audit_begin "off" "all"
+          ;;
+        *)
+          die "off accepts only --tty or --all"
+          ;;
+      esac
+      cmd_off "${1:---profile}"
       ;;
     doctor)
       audit_begin "doctor" "-"

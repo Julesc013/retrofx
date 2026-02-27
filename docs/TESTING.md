@@ -1,8 +1,8 @@
 # RetroFX Testing
 
-Run tests from the repository root.
+Run tests from repository root.
 
-## Quick Regression Run
+## Full Regression
 
 ```bash
 ./scripts/test.sh
@@ -11,10 +11,12 @@ Run tests from the repository root.
 Pass criteria:
 
 - command exits `0`
-- each profile in `profiles/*.toml` applies successfully
-- `active/` contains `profile.toml`, `profile.env`, `picom.conf`, `shader.glsl`, `xresources`, and `meta`
-- `apply -> off` returns to passthrough profile state
-- `state/logs/retrofx.log` exists and receives entries
+- profile applies generate expected active artifacts
+- shader static checks pass
+- semantic ANSI mapping files are generated and valid
+- TTY mock-mode backend checks pass (no console access needed)
+- tuigreet snippet generation check passes
+- `apply -> off` restores passthrough profile state
 
 ## Manual Command Checks
 
@@ -27,23 +29,32 @@ Pass criteria:
 ## Optional Static Analysis
 
 ```bash
-shellcheck scripts/retrofx scripts/test.sh
+shellcheck scripts/retrofx scripts/test.sh backends/tty/apply.sh backends/tuigreet/apply.sh
 ```
 
-If `shellcheck` is unavailable, tests continue and print a skip message.
+If `shellcheck` is unavailable, tests continue with a skip message.
+
+## TTY Backend Test Mode
+
+Use mock mode to avoid real console writes:
+
+```bash
+RETROFX_TTY_MODE=mock ./scripts/retrofx apply <profile-with-tty-scope>
+```
+
+Mock mode still validates palette generation, semantic mapping, and rollback files.
 
 ## Troubleshooting
 
 - `picom not installed`
   - Expected in headless/minimal environments.
-  - Runtime shader validation is skipped; generation and atomic swap should still work.
+  - Runtime shader validation is skipped; static validation still runs.
 - `DISPLAY is not set`
-  - Not in an X11 session.
-  - `doctor` should warn, and `apply` should still render configs without launching runtime validation.
-- shader/picom validation failure
-  - `apply` fails safely.
-  - RetroFX keeps or restores `active/` from `state/last_good/`.
-  - Check `state/logs/retrofx.log` and stderr output for details.
+  - X11 runtime checks are skipped.
+- `tty backend apply failed`
+  - Use `RETROFX_TTY_MODE=mock` for non-console sessions.
+  - Check `state/tty-backups/` and `state/tty-current.env`.
+- `tuigreet backend` warning
+  - Main apply still succeeds; inspect `active/semantic.env` and `active/tuigreet.conf` generation preconditions.
 - profile parse failure
   - Unknown keys/sections or invalid values are rejected.
-  - Fix profile TOML and rerun `./scripts/retrofx apply <profile>`.

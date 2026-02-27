@@ -1,23 +1,26 @@
 ! RetroFX generated terminal colors (session-local use)
-*.foreground: @FG_HEX@
-*.background: @BG_HEX@
-*.cursorColor: @FG_HEX@
+! ANSI palette is profile-derived and semantically aligned with TTY backend.
 
-*.color0:  #000000
-*.color8:  #303030
+*.foreground: @SEM_NORMAL@
+*.background: @SEM_BACKGROUND@
+*.cursorColor: @SEM_BRIGHT@
 
-*.color1:  @ACCENT_HEX@
-*.color2:  @FG_HEX@
-*.color3:  #8a8a00
-*.color4:  #3a5fb0
-*.color5:  #8040a0
-*.color6:  #2f7f7f
-*.color7:  #c0c0c0
+*.color0:  @ANSI0@
+*.color1:  @ANSI1@
+*.color2:  @ANSI2@
+*.color3:  @ANSI3@
+*.color4:  @ANSI4@
+*.color5:  @ANSI5@
+*.color6:  @ANSI6@
+*.color7:  @ANSI7@
+*.color8:  @ANSI8@
+*.color9:  @ANSI9@
+*.color10: @ANSI10@
+*.color11: @ANSI11@
+*.color12: @ANSI12@
+*.color13: @ANSI13@
+*.color14: @ANSI14@
+*.color15: @ANSI15@
 
-*.color9:  #aa4444
-*.color10: @FG_HEX@
-*.color11: #b0b000
-*.color12: #6f95ff
-*.color13: #b071d1
-*.color14: #54a9a9
-*.color15: #ffffff
+! semantic roles
+! info=@SEM_INFO@ success=@SEM_SUCCESS@ warning=@SEM_WARNING@ error=@SEM_ERROR@

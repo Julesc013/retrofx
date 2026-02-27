@@ -41,6 +41,12 @@ Profiles are TOML files under `profiles/*.toml`.
 - `tty` = `true` | `false`
 - `tuigreet` = `true` | `false`
 
+Scope behavior:
+
+- `x11=true` applies picom/X11 backend helpers.
+- `tty=true` applies TTY ANSI16 palette backend (or mock mode when console write is unavailable).
+- `tuigreet=true` generates `active/tuigreet.conf` snippet.
+
 ## Strict Parsing Rules
 
 - Unknown sections are rejected.

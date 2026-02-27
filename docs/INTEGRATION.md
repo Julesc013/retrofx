@@ -1,6 +1,6 @@
 # Integration Guide
 
-## X11 + i3 + picom (Phase 1)
+## X11 + i3 + picom
 
 1. Generate active config:
 
@@ -8,29 +8,86 @@
 ./scripts/retrofx apply <profile>
 ```
 
-2. Launch picom with active config from repo-local `active/`:
+2. Launch picom with repo-local active config:
 
 ```bash
 (cd ./active && picom --config picom.conf)
 ```
 
-3. For i3 startup, point your user-level picom command to `active/picom.conf`.
-   Keep all RetroFX artifacts inside this repository.
+3. Point your i3 startup picom command to `active/picom.conf`.
 
-## Disable Effects
+## TTY Backend (Profile Scoped)
+
+Enable in profile:
+
+```toml
+[scope]
+tty = true
+```
+
+Run apply normally:
+
+```bash
+./scripts/retrofx apply <profile>
+```
+
+Behavior:
+
+- Generates ANSI16 semantic palette in `active/tty-palette.env`.
+- Attempts console palette apply when safe.
+- Falls back to mock mode when console write is unavailable.
+- Stores rollback backups under `state/tty-backups/`.
+
+Useful environment controls:
+
+- `RETROFX_TTY_MODE=auto` (default)
+- `RETROFX_TTY_MODE=mock` (no console write, test-safe)
+- `RETROFX_TTY_MODE=apply` or `force` (attempt write)
+- `RETROFX_TTY_DEVICE=/dev/ttyN`
+
+TTY rollback only:
+
+```bash
+./scripts/retrofx off --tty
+```
+
+## Tuigreet Snippet Generation (Profile Scoped)
+
+Enable in profile:
+
+```toml
+[scope]
+tuigreet = true
+```
+
+Apply profile:
+
+```bash
+./scripts/retrofx apply <profile>
+```
+
+Generated file:
+
+- `active/tuigreet.conf`
+
+This file is a user-level snippet and does not modify global greetd config.
+
+## Disable / Rollback
+
+- Default passthrough:
 
 ```bash
 ./scripts/retrofx off
 ```
 
-`off` applies passthrough mode and keeps rollback snapshots.
+- Restore TTY palette only:
 
-## TTY and tuigreet
+```bash
+./scripts/retrofx off --tty
+```
 
-Phase 1 includes only no-op scaffolds (`backends/tty/apply.sh`, `backends/tuigreet/apply.sh`).
-No system palette/theme writes are performed.
+- Passthrough + TTY restore:
 
-## Fonts and AA
-
-RetroFX does not modify global fontconfig or DE defaults.
-Session-local font hooks are intentionally deferred to future phases to avoid cross-DE breakage.
+```bash
+./scripts/retrofx off --all
+```

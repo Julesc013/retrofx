@@ -1,5 +1,9 @@
 # tuigreet backend
 
-Phase 1 scaffold only.
+Phase 2 functional backend.
 
-No tuigreet theme writes are performed yet.
+Responsibilities:
+
+- consume `active/semantic.env`
+- generate `active/tuigreet.conf` snippet
+- avoid global greetd config changes

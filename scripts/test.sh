@@ -38,6 +38,15 @@ line_of() {
   grep -n "$pattern" "$path" | head -n1 | cut -d: -f1
 }
 
+hex_brightness() {
+  local hex="${1#\#}"
+  local r g b
+  r=$((16#${hex:0:2}))
+  g=$((16#${hex:2:2}))
+  b=$((16#${hex:4:2}))
+  printf '%d' $(((299 * r + 587 * g + 114 * b) / 1000))
+}
+
 validate_active_files() {
   require_file "$ACTIVE_DIR/profile.toml"
   require_file "$ACTIVE_DIR/profile.env"
@@ -45,6 +54,50 @@ validate_active_files() {
   require_file "$ACTIVE_DIR/shader.glsl"
   require_file "$ACTIVE_DIR/xresources"
   require_file "$ACTIVE_DIR/meta"
+  require_file "$ACTIVE_DIR/semantic.env"
+  require_file "$ACTIVE_DIR/tty-palette.env"
+  require_file "$ACTIVE_DIR/tty-palette.txt"
+}
+
+validate_ansi_palette_env() {
+  local palette_env="$1"
+  local i key
+
+  require_file "$palette_env"
+  # shellcheck source=/dev/null
+  source "$palette_env"
+
+  for ((i = 0; i < 16; i++)); do
+    key="ANSI_$i"
+    [[ -n "${!key:-}" ]] || die "missing $key in $palette_env"
+    [[ "${!key}" =~ ^#[0-9a-fA-F]{6}$ ]] || die "invalid $key format in $palette_env"
+  done
+
+  [[ -n "${SEM_BACKGROUND:-}" ]] || die "missing SEM_BACKGROUND"
+  [[ -n "${SEM_NORMAL:-}" ]] || die "missing SEM_NORMAL"
+  [[ -n "${SEM_DIM:-}" ]] || die "missing SEM_DIM"
+  [[ -n "${SEM_BRIGHT:-}" ]] || die "missing SEM_BRIGHT"
+  [[ -n "${SEM_INFO:-}" ]] || die "missing SEM_INFO"
+  [[ -n "${SEM_SUCCESS:-}" ]] || die "missing SEM_SUCCESS"
+  [[ -n "${SEM_WARNING:-}" ]] || die "missing SEM_WARNING"
+  [[ -n "${SEM_ERROR:-}" ]] || die "missing SEM_ERROR"
+}
+
+validate_monochrome_semantics() {
+  local palette_env="$1"
+  local b_error b_warning b_success b_info
+
+  # shellcheck source=/dev/null
+  source "$palette_env"
+
+  b_error="$(hex_brightness "$SEM_ERROR")"
+  b_warning="$(hex_brightness "$SEM_WARNING")"
+  b_success="$(hex_brightness "$SEM_SUCCESS")"
+  b_info="$(hex_brightness "$SEM_INFO")"
+
+  ((b_error >= b_warning)) || die "monochrome semantic mapping: error should be >= warning"
+  ((b_warning >= b_success)) || die "monochrome semantic mapping: warning should be >= success"
+  ((b_success >= b_info)) || die "monochrome semantic mapping: success should be >= info"
 }
 
 validate_shader_static() {
@@ -156,13 +209,14 @@ if [[ -z "${DISPLAY:-}" ]] || ! command -v picom >/dev/null 2>&1; then
   warn "X11 or picom unavailable; runtime shader validation is expected to be skipped"
 fi
 
-log "applying each profile and validating generated active files"
+log "applying each repository profile and validating generated active files"
 for profile_path in "${profiles[@]}"; do
   [[ -e "$profile_path" ]] || continue
   profile_name="$(basename "$profile_path" .toml)"
   log "apply $profile_name"
   "$RETROFX" apply "$profile_name"
   validate_active_files
+  validate_ansi_palette_env "$ACTIVE_DIR/tty-palette.env"
 done
 
 log "static shader checks: monochrome profile"
@@ -223,6 +277,136 @@ PROFILE
 "$RETROFX" apply "$palette_profile"
 validate_active_files
 validate_shader_static "$ACTIVE_DIR/shader.glsl" palette 4 cube256 256
+
+log "tty backend mock test: monochrome semantic mapping"
+tty_mono_profile="$TEST_TMP_DIR/tty-mono.toml"
+cat >"$tty_mono_profile" <<'PROFILE'
+name = "TTY Mono Check"
+version = 1
+
+[mode]
+type = "monochrome"
+
+[monochrome]
+bands = 8
+phosphor = "green"
+hotcore = false
+
+[effects]
+blur_strength = 0
+scanlines = false
+flicker = false
+dither = "ordered"
+vignette = false
+
+[scope]
+x11 = false
+tty = true
+tuigreet = false
+PROFILE
+RETROFX_TTY_MODE=mock "$RETROFX" apply "$tty_mono_profile"
+validate_active_files
+validate_ansi_palette_env "$ACTIVE_DIR/tty-palette.env"
+validate_monochrome_semantics "$ACTIVE_DIR/tty-palette.env"
+require_file "$STATE_DIR/tty-current.env"
+
+log "tty backend mock test: vga16 semantic mapping"
+tty_vga_profile="$TEST_TMP_DIR/tty-vga16.toml"
+cat >"$tty_vga_profile" <<'PROFILE'
+name = "TTY VGA16 Check"
+version = 1
+
+[mode]
+type = "palette"
+
+[palette]
+kind = "vga16"
+size = 16
+
+[effects]
+blur_strength = 0
+scanlines = false
+flicker = false
+dither = "none"
+vignette = false
+
+[scope]
+x11 = false
+tty = true
+tuigreet = false
+PROFILE
+RETROFX_TTY_MODE=mock "$RETROFX" apply "$tty_vga_profile"
+# shellcheck source=/dev/null
+source "$ACTIVE_DIR/tty-palette.env"
+[[ "$ANSI_1" == '#aa0000' ]] || die "vga16 semantic mapping mismatch for ANSI_1"
+[[ "$ANSI_2" == '#00aa00' ]] || die "vga16 semantic mapping mismatch for ANSI_2"
+[[ "$ANSI_4" == '#0000aa' ]] || die "vga16 semantic mapping mismatch for ANSI_4"
+
+log "tty backend mock test: cube256 summary palette"
+tty_cube_profile="$TEST_TMP_DIR/tty-cube256.toml"
+cat >"$tty_cube_profile" <<'PROFILE'
+name = "TTY Cube256 Check"
+version = 1
+
+[mode]
+type = "palette"
+
+[palette]
+kind = "cube256"
+size = 256
+
+[effects]
+blur_strength = 0
+scanlines = false
+flicker = false
+dither = "none"
+vignette = false
+
+[scope]
+x11 = false
+tty = true
+tuigreet = false
+PROFILE
+RETROFX_TTY_MODE=mock "$RETROFX" apply "$tty_cube_profile"
+validate_ansi_palette_env "$ACTIVE_DIR/tty-palette.env"
+# shellcheck source=/dev/null
+source "$ACTIVE_DIR/tty-palette.env"
+[[ "$ANSI_0" == '#000000' ]] || die "cube256 summary palette should keep black at ANSI_0"
+[[ "$ANSI_8" == '#555555' ]] || die "cube256 summary palette should keep dim gray at ANSI_8"
+[[ "$ANSI_1" != "$ANSI_0" ]] || die "cube256 summary palette missing accent contrast"
+
+log "tuigreet backend generation test"
+tuigreet_profile="$TEST_TMP_DIR/tuigreet-check.toml"
+cat >"$tuigreet_profile" <<'PROFILE'
+name = "Tuigreet Check"
+version = 1
+
+[mode]
+type = "palette"
+
+[palette]
+kind = "vga16"
+size = 16
+
+[effects]
+blur_strength = 0
+scanlines = false
+flicker = false
+dither = "none"
+vignette = false
+
+[scope]
+x11 = false
+tty = false
+tuigreet = true
+PROFILE
+"$RETROFX" apply "$tuigreet_profile"
+require_file "$ACTIVE_DIR/tuigreet.conf"
+grep -q '^background = "#' "$ACTIVE_DIR/tuigreet.conf" || die "tuigreet config missing background color"
+
+log "verifying off --tty restores previous tty palette state in mock mode"
+RETROFX_TTY_MODE=mock "$RETROFX" off --tty
+require_file "$STATE_DIR/tty-current.env"
 
 log "verifying apply -> off returns to passthrough baseline"
 "$RETROFX" apply passthrough

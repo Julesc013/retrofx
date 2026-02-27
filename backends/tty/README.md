@@ -1,5 +1,10 @@
 # tty backend
 
-Phase 1 scaffold only.
+Phase 2 functional backend.
 
-No system-level TTY palette or font changes are performed yet.
+Responsibilities:
+
+- consume `active/tty-palette.env` semantic ANSI16 palette
+- apply palette to Linux console when safe (or mock mode)
+- keep rollback snapshots under `state/tty-backups/`
+- restore prior palette via `off` command
