@@ -176,8 +176,8 @@ validate_shader_static() {
     die "shader contains unsubstituted placeholders"
   fi
 
-  grep -q 'void main()' "$shader_file" || die "shader missing main()"
-  grep -q 'gl_FragColor' "$shader_file" || die "shader missing gl_FragColor"
+  grep -q 'vec4 window_shader()' "$shader_file" || die "shader missing window_shader()"
+  grep -q 'default_post_processing' "$shader_file" || die "shader missing default_post_processing output"
 
   grep -q 'for (i = 0; i < 16; i++)' "$shader_file" || die "vga16 loop bound is missing"
   if grep -Fq 'for (i = 0; i < 256' "$shader_file"; then
@@ -261,9 +261,9 @@ validate_shader_static() {
 count_custom_palette_entries() {
   local shader_file="$1"
   awk '
-    /const vec3 CUSTOM_PALETTE\[CUSTOM_PALETTE_SIZE\] = vec3\[\]\(/ {in_block=1; next}
-    in_block && /^\);$/ {in_block=0; print count + 0; exit}
-    in_block && /vec3\(/ {count++}
+    /vec3 custom_linear\(int idx\)/ {in_block=1; next}
+    in_block && /^\}/ {in_block=0; print count + 0; exit}
+    in_block && /return vec3\(/ {count++}
   ' "$shader_file"
 }
 
@@ -392,11 +392,15 @@ case "$compat_rc" in
     die "compatibility-check returned unexpected exit code: $compat_rc"
     ;;
 esac
-assert_contains "$compat_output" "RetroFX compatibility-check"
+compat_header="$(printf '%s\n' "$compat_output" | head -n1)"
+[[ "$compat_header" == "RetroFX compatibility-check" ]] || die "compatibility-check header mismatch"
 assert_contains "$compat_output" "Shader compile"
 assert_contains "$compat_output" "GLX backend"
 assert_contains "$compat_output" "Blur capability"
 assert_contains "$compat_output" "Degraded mode"
+if ! printf '%s\n' "$compat_output" | grep -Eq 'PASS|FAIL'; then
+  die "compatibility-check output missing PASS/FAIL tokens"
+fi
 
 log "apply hash skip + regeneration checks"
 skip_profile="$TEST_TMP_DIR/skip-check.toml"
@@ -692,6 +696,20 @@ validate_active_files
 validate_shader_static "$ACTIVE_DIR/shader.glsl" palette 4 custom 4
 grep -q '^#define CUSTOM_PALETTE_SIZE 4$' "$ACTIVE_DIR/shader.glsl" || die "CUSTOM_PALETTE_SIZE define mismatch for custom palette"
 [[ "$(count_custom_palette_entries "$ACTIVE_DIR/shader.glsl")" == "4" ]] || die "custom palette constant entry count mismatch"
+
+log "shader glsl110 static safety checks (no array constructors)"
+if grep -Fq 'vec3[' "$ACTIVE_DIR/shader.glsl"; then
+  die "shader contains forbidden vec3[] array declaration/constructor"
+fi
+if grep -Fq 'mat[' "$ACTIVE_DIR/shader.glsl"; then
+  die "shader contains forbidden matrix array declaration/constructor"
+fi
+if grep -Eq '^const[[:space:]]+vec3[[:space:]]+[A-Za-z0-9_]+\[' "$ACTIVE_DIR/shader.glsl"; then
+  die "shader contains forbidden const vec3 array initializer"
+fi
+grep -q 'vga16_linear(' "$ACTIVE_DIR/shader.glsl" || die "shader missing vga16_linear() function"
+grep -q 'custom_linear(' "$ACTIVE_DIR/shader.glsl" || die "shader missing custom_linear() function"
+grep -q 'bayer4(' "$ACTIVE_DIR/shader.glsl" || die "shader missing bayer4() function"
 
 log "picom selective rules + consistency knobs"
 rules_profile="$TEST_TMP_DIR/rules-check.toml"

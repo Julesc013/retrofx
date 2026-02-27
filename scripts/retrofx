@@ -1106,6 +1106,24 @@ detect_wayland() {
   [[ "$(detect_session_type)" == "wayland" ]]
 }
 
+x11_display_accessible() {
+  if ! detect_x11; then
+    return 1
+  fi
+  if [[ -z "${DISPLAY:-}" ]]; then
+    return 1
+  fi
+  if command -v xdpyinfo >/dev/null 2>&1; then
+    xdpyinfo -display "$DISPLAY" >/dev/null 2>&1
+    return $?
+  fi
+  if command -v xset >/dev/null 2>&1; then
+    xset -display "$DISPLAY" q >/dev/null 2>&1
+    return $?
+  fi
+  return 0
+}
+
 detect_session_type() {
   local xdg_type
   xdg_type="$(printf '%s' "${XDG_SESSION_TYPE:-}" | tr '[:upper:]' '[:lower:]')"
@@ -2167,7 +2185,7 @@ load_custom_palette() {
     lr="$(srgb_component_to_linear "$r")"
     lg="$(srgb_component_to_linear "$g")"
     lb="$(srgb_component_to_linear "$b")"
-    CUSTOM_PALETTE_LINES+=("    vec3(${lr}, ${lg}, ${lb})")
+    CUSTOM_PALETTE_LINES+=("vec3(${lr}, ${lg}, ${lb})")
 
     if ((${#CUSTOM_PALETTE_LINES[@]} == wanted)); then
       break
@@ -2189,7 +2207,7 @@ render_shader() {
   local palette_kind_custom=0
   local mono_bands=2 mono_levels=1 mono_inv_levels="1.000000000"
   local palette_size=16 custom_palette_size=1
-  local custom_block_file line
+  local custom_functions_file line
 
   case "$CFG_mode_type" in
     passthrough)
@@ -2258,7 +2276,7 @@ render_shader() {
     palette_size=256
   fi
 
-  custom_block_file="$(mktemp "$STATE_DIR/custom_palette_block.XXXXXX")"
+  custom_functions_file="$(mktemp "$STATE_DIR/custom_palette_functions.XXXXXX")"
 
   if [[ "$CFG_mode_type" == "palette" && "$CFG_palette_kind" == "custom" ]]; then
     local custom_path
@@ -2266,27 +2284,32 @@ render_shader() {
     load_custom_palette "$custom_path" "$palette_size"
     custom_palette_size="$palette_size"
   else
-    CUSTOM_PALETTE_LINES=("    vec3(1.000000, 1.000000, 1.000000)")
+    CUSTOM_PALETTE_LINES=("vec3(1.000000, 1.000000, 1.000000)")
     custom_palette_size=1
   fi
 
   {
-    printf 'const vec3 CUSTOM_PALETTE[CUSTOM_PALETTE_SIZE] = vec3[](\n'
     local i
-    for ((i = 0; i < ${#CUSTOM_PALETTE_LINES[@]}; i++)); do
-      if ((i == ${#CUSTOM_PALETTE_LINES[@]} - 1)); then
-        printf '%s\n' "${CUSTOM_PALETTE_LINES[$i]}"
-      else
-        printf '%s,\n' "${CUSTOM_PALETTE_LINES[$i]}"
-      fi
-    done
-    printf ');\n'
-  } >"$custom_block_file"
+    printf 'int custom_size() {\n'
+    printf '    return %s;\n' "$custom_palette_size"
+    printf '}\n\n'
+    printf 'vec3 custom_linear(int idx) {\n'
+    if ((custom_palette_size <= 1)); then
+      printf '    return %s;\n' "${CUSTOM_PALETTE_LINES[0]}"
+    else
+      printf '    if (idx <= 0) return %s;\n' "${CUSTOM_PALETTE_LINES[0]}"
+      for ((i = 1; i < custom_palette_size - 1; i++)); do
+        printf '    if (idx == %d) return %s;\n' "$i" "${CUSTOM_PALETTE_LINES[$i]}"
+      done
+      printf '    return %s;\n' "${CUSTOM_PALETTE_LINES[$((custom_palette_size - 1))]}"
+    fi
+    printf '}\n'
+  } >"$custom_functions_file"
 
   : >"$out_file"
   while IFS= read -r line || [[ -n "$line" ]]; do
-    if [[ "$line" == "@CUSTOM_PALETTE_BLOCK@" ]]; then
-      cat "$custom_block_file" >>"$out_file"
+    if [[ "$line" == "@CUSTOM_PALETTE_FUNCTIONS@" ]]; then
+      cat "$custom_functions_file" >>"$out_file"
       continue
     fi
 
@@ -2328,7 +2351,7 @@ render_shader() {
     printf '%s\n' "$line" >>"$out_file"
   done <"$TEMPLATES_DIR/shader.glsl.in"
 
-  rm -f "$custom_block_file"
+  rm -f "$custom_functions_file"
 }
 
 render_picom() {
@@ -2486,13 +2509,13 @@ validate_generated_shader() {
     return 1
   fi
 
-  grep -q 'void main()' "$shader_file" || {
-    warn "shader validation failed: missing main()"
+  grep -q 'vec4 window_shader()' "$shader_file" || {
+    warn "shader validation failed: missing window_shader()"
     return 1
   }
 
-  grep -q 'gl_FragColor' "$shader_file" || {
-    warn "shader validation failed: missing gl_FragColor write"
+  grep -q 'default_post_processing' "$shader_file" || {
+    warn "shader validation failed: missing default_post_processing output path"
     return 1
   }
 
@@ -2548,8 +2571,8 @@ validate_shader_template_integrity() {
     "@MONO_LEVELS@"
     "@MONO_INV_LEVELS@"
     "@PALETTE_SIZE@"
-    "@CUSTOM_PALETTE_BLOCK@"
-    "void main()"
+    "@CUSTOM_PALETTE_FUNCTIONS@"
+    "vec4 window_shader()"
   )
 
   [[ -f "$file" ]] || return 1
@@ -2614,8 +2637,8 @@ validate_stage_outputs() {
 validate_stage_with_picom() {
   local stage_dir="$1"
   local session_type="${2:-x11}"
-  local log_file="$stage_dir/picom-validate.log"
-  local rc=0
+  local status=""
+  local excerpt=""
 
   if ! validate_stage_outputs "$stage_dir" "$session_type"; then
     warn "generated stage validation failed"
@@ -2635,8 +2658,8 @@ validate_stage_with_picom() {
     return 0
   fi
 
-  if ! detect_x11; then
-    warn "DISPLAY is not set; skipping runtime shader validation"
+  if ! x11_display_accessible; then
+    warn "DISPLAY is not reachable; skipping runtime shader validation"
     return 0
   fi
 
@@ -2645,33 +2668,41 @@ validate_stage_with_picom() {
     return 0
   fi
 
-  if command -v timeout >/dev/null 2>&1; then
-    (cd "$stage_dir" && timeout 3s picom --config picom.conf --log-file "$log_file" >/dev/null 2>&1) || rc=$?
+  status="$(run_stage_picom_runtime_test "$stage_dir" || true)"
+  if [[ "$status" == "ok" ]]; then
+    return 0
+  fi
+  if [[ "$status" == "compositor-active" ]]; then
+    warn "another compositor is active; skipping validation"
+    return 0
+  fi
+
+  excerpt="$(extract_picom_error_lines "$stage_dir/picom-compat.log")"
+  warn "picom validation failed ($status)"
+  if [[ -n "$excerpt" ]]; then
+    printf '%s\n' "$excerpt" >&2
+    LAST_ERROR="picom validation failed ($status): ${excerpt//$'\n'/ ; }"
   else
-    (cd "$stage_dir" && picom --config picom.conf --log-file "$log_file" >/dev/null 2>&1) || rc=$?
+    LAST_ERROR="picom validation failed ($status)"
   fi
 
-  if [[ "$rc" -ne 0 && "$rc" -ne 124 ]]; then
-    if [[ -f "$log_file" ]] && grep -Eiq 'another composite manager' "$log_file"; then
-      warn "another compositor is active; skipping validation"
-      return 0
-    fi
-    warn "picom validation failed with exit code $rc"
-    [[ -f "$log_file" ]] && sed -n '1,40p' "$log_file" >&2
-    return 1
-  fi
+  return 1
+}
 
-  if [[ -f "$log_file" ]] && grep -Eiq '(shader.*(fail|error)|compile error|error:)' "$log_file"; then
-    if grep -Eiq 'another composite manager' "$log_file"; then
-      warn "another compositor is active; skipping validation"
-      return 0
-    fi
-    warn "picom reported shader or config errors during validation"
-    sed -n '1,40p' "$log_file" >&2
-    return 1
-  fi
+extract_picom_error_lines() {
+  local log_file="$1"
+  local lines=""
 
-  return 0
+  [[ -f "$log_file" ]] || {
+    printf ''
+    return 0
+  }
+
+  lines="$(grep -Ein 'shader|compile|error|failed|forbidden|initializer' "$log_file" | head -n 20 || true)"
+  if [[ -z "$lines" ]]; then
+    lines="$(sed -n '1,20p' "$log_file" || true)"
+  fi
+  printf '%s' "$lines"
 }
 
 run_stage_picom_runtime_test() {
@@ -2686,6 +2717,11 @@ run_stage_picom_runtime_test() {
   fi
 
   if [[ -z "${DISPLAY:-}" ]]; then
+    printf 'missing-display'
+    return 1
+  fi
+
+  if ! x11_display_accessible; then
     printf 'missing-display'
     return 1
   fi
@@ -5351,8 +5387,11 @@ cmd_compatibility_check() {
   local rc=2
   local shader_reason glx_reason blur_reason degraded_reason
   local status gpu_vendor
+  local excerpt
   local tmp_profile stage_dir
   local picom_ver
+
+  printf 'RetroFX compatibility-check\n'
 
   ensure_dirs
   session_type="$(detect_session_type)"
@@ -5412,12 +5451,20 @@ cmd_compatibility_check() {
     stage_dir="$(mktemp -d "$STATE_DIR/compat-stage-x11.$(now_ts_compact).$$.XXXXXX")"
     if render_templates "$stage_dir" "$tmp_profile" "x11" "compat-x11" &&
       validate_stage_outputs "$stage_dir" "x11"; then
-      status="$(run_stage_picom_runtime_test "$stage_dir")"
+      status="$(run_stage_picom_runtime_test "$stage_dir" || true)"
       if [[ "$status" == "ok" ]]; then
         shader_compile_pass=1
         shader_reason="minimal runtime shader test started successfully"
+      elif [[ "$status" == "compositor-active" ]]; then
+        shader_reason="runtime test skipped (another compositor is active)"
       else
-        shader_reason="runtime shader test failed ($status)"
+        excerpt="$(extract_picom_error_lines "$stage_dir/picom-compat.log")"
+        if [[ -n "$excerpt" ]]; then
+          shader_reason="runtime shader test failed ($status)"
+          printf '%s\n' "$excerpt" >&2
+        else
+          shader_reason="runtime shader test failed ($status)"
+        fi
       fi
     else
       shader_reason="failed to generate compatibility runtime stage"
@@ -5435,7 +5482,6 @@ cmd_compatibility_check() {
 
   rm -f "$tmp_profile"
 
-  printf 'RetroFX compatibility-check\n'
   printf '  Session: %s\n' "$session_type"
   printf '  WM/DE: %s\n' "$wm_de"
   printf '  Picom: %s\n' "$picom_ver"
@@ -5534,7 +5580,7 @@ PROFILE
   fi
 
   start_ms="$(now_ms)"
-  status="$(run_stage_picom_runtime_test "$stage_dir")"
+  status="$(run_stage_picom_runtime_test "$stage_dir" || true)"
   end_ms="$(now_ms)"
   elapsed_ms=$((end_ms - start_ms))
 
