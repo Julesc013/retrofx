@@ -1,93 +1,100 @@
 # Integration Guide
 
-## X11 + i3 + picom
+## X11 i3 Session Wrapper (Optional)
 
-1. Generate active config:
+RetroFX now ships optional wrappers in `scripts/integrate/`:
 
-```bash
-./scripts/retrofx apply <profile>
-```
+- `i3-retro-session.sh`
+- `generate-xsession.sh`
 
-2. Launch picom with repo-local active config:
+`i3-retro-session.sh` behavior:
 
-```bash
-(cd ./active && picom --config picom.conf)
-```
+1. Picks profile in this order:
+   - explicit argument
+   - `RETROFX_PROFILE` env
+   - `crt-green-4band` if present
+   - `passthrough` fallback
+2. Runs `./scripts/retrofx apply <profile>`
+3. Starts picom with `active/picom.conf` when available
+4. `exec i3`
 
-3. Point your i3 startup picom command to `active/picom.conf`.
+If `retrofx apply` fails, it logs a warning and still starts plain i3.
 
-## TTY Backend (Profile Scoped)
-
-Enable in profile:
-
-```toml
-[scope]
-tty = true
-```
-
-Run apply normally:
+Run directly from repo:
 
 ```bash
-./scripts/retrofx apply <profile>
+./scripts/integrate/i3-retro-session.sh
 ```
 
-Behavior:
+## User-Local Xsession Entry (No Root)
 
-- Generates ANSI16 semantic palette in `active/tty-palette.env`.
-- Attempts console palette apply when safe.
-- Falls back to mock mode when console write is unavailable.
-- Stores rollback backups under `state/tty-backups/`.
-
-Useful environment controls:
-
-- `RETROFX_TTY_MODE=auto` (default)
-- `RETROFX_TTY_MODE=mock` (no console write, test-safe)
-- `RETROFX_TTY_MODE=apply` or `force` (attempt write)
-- `RETROFX_TTY_DEVICE=/dev/ttyN`
-
-TTY rollback only:
+Generate an Xsession desktop entry under `~/.local/share/xsessions/`:
 
 ```bash
-./scripts/retrofx off --tty
+./scripts/integrate/generate-xsession.sh --name "RetroFX i3"
 ```
 
-## Tuigreet Snippet Generation (Profile Scoped)
+This creates:
 
-Enable in profile:
+- `~/.local/share/xsessions/retrofx-i3.desktop`
 
-```toml
-[scope]
-tuigreet = true
-```
+The `Exec` path is absolute and points to this repository wrapper script.
 
-Apply profile:
+## greetd + tuigreet Selection
+
+If your tuigreet setup chooses entries from `.desktop` sessions, select:
+
+- the generated `RetroFX i3` entry, or
+- your existing `Default.desktop` flow that chains to an i3 startup script.
+
+RetroFX does not modify global greetd configuration. `active/tuigreet.conf` is only a generated snippet.
+
+## Wayland Degraded Integration (Honest Mode)
+
+When Wayland is detected (`WAYLAND_DISPLAY` set), `retrofx apply` uses degraded mode:
+
+- no picom/shader targets generated in `active/`
+- no compositor shader pipeline claimed
+- terminal palette artifacts still generated (`xresources`, `semantic.env`, `tty-palette.env`)
+- optional scoped backends still honored:
+  - TTY palette backend
+  - tuigreet snippet generation
+
+Expected message:
+
+`Wayland session detected: shader pipeline disabled; applied degraded outputs only.`
+
+## Optional Toolkit Env Hooks (Print Only)
+
+These scripts print suggested env vars and do not apply system changes:
+
+- `./scripts/integrate/x11-env.sh`
+- `./scripts/integrate/wayland-env.sh`
+
+Example:
 
 ```bash
-./scripts/retrofx apply <profile>
+eval "$(./scripts/integrate/wayland-env.sh)"
 ```
 
-Generated file:
+## Rollback / Disable
 
-- `active/tuigreet.conf`
-
-This file is a user-level snippet and does not modify global greetd config.
-
-## Disable / Rollback
-
-- Default passthrough:
+Default rollback to passthrough profile:
 
 ```bash
 ./scripts/retrofx off
 ```
 
-- Restore TTY palette only:
+TTY palette only rollback:
 
 ```bash
 ./scripts/retrofx off --tty
 ```
 
-- Passthrough + TTY restore:
+Profile + TTY rollback:
 
 ```bash
 ./scripts/retrofx off --all
 ```
+
+In Wayland degraded sessions, `retrofx off` also attempts TTY restore when the previous active profile had `scope.tty = true`.

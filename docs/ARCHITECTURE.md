@@ -25,13 +25,20 @@ RetroFX is a profile-driven renderer that generates deterministic session-local 
 ## Apply Transaction
 
 1. Parse and validate profile.
-2. Render shader/picom/xresources/semantic artifacts into `state/stage.*`.
-3. Validate generated stage (including shader markers and placeholder checks).
-4. Optionally runtime-validate with picom when environment allows.
-5. Backup current `active/`.
-6. Atomically swap stage into `active/`.
-7. Apply scoped backends (`x11`, `tty`, `tuigreet`).
-8. Persist new `state/last_good/` snapshot.
+2. Detect session type (`x11`, `wayland`, `unknown`) and WM/DE (best-effort).
+3. Render stage artifacts into `state/stage.*`:
+   - X11/unknown: shader + picom + palette artifacts
+   - Wayland: degraded palette artifacts only (no shader/picom targets)
+4. Validate generated stage:
+   - X11/unknown: shader static checks + artifact checks
+   - Wayland: degraded artifact checks (and assert shader/picom absence)
+5. Optionally runtime-validate with picom when environment allows.
+6. Backup current `active/`.
+7. Atomically swap stage into `active/`.
+8. Apply scoped backends:
+   - `x11-picom` only outside Wayland
+   - `tty` and `tuigreet` by profile scope
+9. Persist new `state/last_good/` snapshot.
 
 ## Failure Handling
 
@@ -85,4 +92,4 @@ RetroFX is a profile-driven renderer that generates deterministic session-local 
 - `x11-picom`: functional profile-scoped backend.
 - `tty`: functional profile-scoped backend with safe mock/apply/off behavior and rollback backups.
 - `tuigreet`: functional profile-scoped snippet generation (`active/tuigreet.conf`).
-- Wayland: degraded future backend (not implemented here).
+- Wayland: degraded support implemented with honest capability reporting (no global post-process shader pipeline).

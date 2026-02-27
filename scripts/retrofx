@@ -581,7 +581,104 @@ resolve_profile_path() {
 }
 
 detect_x11() {
-  [[ -n "${DISPLAY:-}" ]]
+  [[ "$(detect_session_type)" == "x11" ]]
+}
+
+detect_wayland() {
+  [[ "$(detect_session_type)" == "wayland" ]]
+}
+
+detect_session_type() {
+  local xdg_type
+  xdg_type="$(printf '%s' "${XDG_SESSION_TYPE:-}" | tr '[:upper:]' '[:lower:]')"
+
+  if [[ -n "${WAYLAND_DISPLAY:-}" || "$xdg_type" == "wayland" ]]; then
+    printf 'wayland'
+    return 0
+  fi
+
+  if [[ -n "${DISPLAY:-}" || "$xdg_type" == "x11" ]]; then
+    printf 'x11'
+    return 0
+  fi
+
+  printf 'unknown'
+}
+
+detect_wm_de() {
+  local desk
+  desk="$(printf '%s:%s' "${XDG_CURRENT_DESKTOP:-}" "${DESKTOP_SESSION:-}" | tr '[:upper:]' '[:lower:]')"
+
+  if [[ -n "${SWAYSOCK:-}" || "$desk" == *sway* ]]; then
+    printf 'sway'
+    return 0
+  fi
+
+  if [[ -n "${I3SOCK:-}" || "$desk" == *i3* ]]; then
+    printf 'i3'
+    return 0
+  fi
+
+  if [[ "$desk" == *plasma* || "$desk" == *kde* ]]; then
+    printf 'plasma'
+    return 0
+  fi
+
+  if [[ "$desk" == *gnome* ]]; then
+    printf 'gnome'
+    return 0
+  fi
+
+  if [[ "$desk" == *xfce* ]]; then
+    printf 'xfce'
+    return 0
+  fi
+
+  if [[ "$desk" == *awesome* ]]; then
+    printf 'awesome'
+    return 0
+  fi
+
+  if [[ "$desk" == *hyprland* ]]; then
+    printf 'hyprland'
+    return 0
+  fi
+
+  if command -v pgrep >/dev/null 2>&1; then
+    if pgrep -x i3 >/dev/null 2>&1; then
+      printf 'i3'
+      return 0
+    fi
+    if pgrep -x sway >/dev/null 2>&1; then
+      printf 'sway'
+      return 0
+    fi
+    if pgrep -x plasmashell >/dev/null 2>&1; then
+      printf 'plasma'
+      return 0
+    fi
+    if pgrep -x gnome-shell >/dev/null 2>&1; then
+      printf 'gnome'
+      return 0
+    fi
+    if pgrep -x xfce4-session >/dev/null 2>&1; then
+      printf 'xfce'
+      return 0
+    fi
+    if pgrep -x awesome >/dev/null 2>&1; then
+      printf 'awesome'
+      return 0
+    fi
+  fi
+
+  printf 'unknown'
+}
+
+picom_has_glx() {
+  if ! command -v picom >/dev/null 2>&1; then
+    return 1
+  fi
+  picom --help 2>&1 | grep -qi 'glx'
 }
 
 validate_profile() {
@@ -1068,16 +1165,24 @@ render_picom() {
 render_templates() {
   local stage_dir="$1"
   local profile_path="$2"
+  local session_type="${3:-x11}"
 
   cp "$profile_path" "$stage_dir/profile.toml"
   write_profile_env "$stage_dir/profile.env"
-  render_shader "$stage_dir/shader.glsl"
-  render_picom "$stage_dir/picom.conf"
+
+  if [[ "$session_type" == "wayland" ]]; then
+    rm -f "$stage_dir/shader.glsl" "$stage_dir/picom.conf"
+  else
+    render_shader "$stage_dir/shader.glsl"
+    render_picom "$stage_dir/picom.conf"
+  fi
+
   render_color_artifacts "$stage_dir"
 
   {
     printf 'generated_at=%s\n' "$(now_ts)"
     printf 'profile=%s\n' "$(basename "$profile_path")"
+    printf 'session_type=%s\n' "$session_type"
   } >"$stage_dir/meta"
 }
 
@@ -1154,28 +1259,42 @@ validate_generated_shader() {
 
 validate_stage_outputs() {
   local stage_dir="$1"
+  local session_type="${2:-x11}"
 
   [[ -f "$stage_dir/profile.toml" ]] || return 1
   [[ -f "$stage_dir/profile.env" ]] || return 1
-  [[ -f "$stage_dir/picom.conf" ]] || return 1
-  [[ -f "$stage_dir/shader.glsl" ]] || return 1
   [[ -f "$stage_dir/xresources" ]] || return 1
   [[ -f "$stage_dir/semantic.env" ]] || return 1
   [[ -f "$stage_dir/tty-palette.env" ]] || return 1
   [[ -f "$stage_dir/tty-palette.txt" ]] || return 1
   [[ -f "$stage_dir/meta" ]] || return 1
 
+  if [[ "$session_type" == "wayland" ]]; then
+    if [[ -f "$stage_dir/picom.conf" || -f "$stage_dir/shader.glsl" ]]; then
+      warn "wayland stage should not contain picom/shader targets"
+      return 1
+    fi
+    return 0
+  fi
+
+  [[ -f "$stage_dir/picom.conf" ]] || return 1
+  [[ -f "$stage_dir/shader.glsl" ]] || return 1
   validate_generated_shader "$stage_dir"
 }
 
 validate_stage_with_picom() {
   local stage_dir="$1"
+  local session_type="${2:-x11}"
   local log_file="$stage_dir/picom-validate.log"
   local rc=0
 
-  if ! validate_stage_outputs "$stage_dir"; then
+  if ! validate_stage_outputs "$stage_dir" "$session_type"; then
     warn "generated stage validation failed"
     return 1
+  fi
+
+  if [[ "$session_type" == "wayland" ]]; then
+    return 0
   fi
 
   if ! command -v picom >/dev/null 2>&1; then
@@ -1343,8 +1462,14 @@ restore_last_good_if_needed() {
 }
 
 apply_scoped_backends() {
-  if [[ "$CFG_scope_x11" == "true" && -x "$BACKEND_X11" ]]; then
-    "$BACKEND_X11" apply "$ACTIVE_DIR" || warn "x11 backend apply hook reported an issue"
+  local session_type="${1:-x11}"
+
+  if [[ "$CFG_scope_x11" == "true" ]]; then
+    if [[ "$session_type" == "wayland" ]]; then
+      info "wayland session detected: skipping x11 compositor backend"
+    elif [[ -x "$BACKEND_X11" ]]; then
+      "$BACKEND_X11" apply "$ACTIVE_DIR" || warn "x11 backend apply hook reported an issue"
+    fi
   fi
 
   if [[ "$CFG_scope_tty" == "true" && -x "$BACKEND_TTY" ]]; then
@@ -1451,52 +1576,86 @@ status_warn() {
 }
 
 cmd_doctor() {
+  local session_type wm_de
+  local picom_installed=0
+  local picom_glx=0
+  local glx_runtime=0
+
   ensure_dirs
   printf 'RetroFX doctor\n'
+  session_type="$(detect_session_type)"
+  wm_de="$(detect_wm_de)"
 
-  if detect_x11; then
+  printf 'Session type: %s\n' "$session_type"
+  printf 'WM/DE: %s\n' "$wm_de"
+
+  if [[ -n "${DISPLAY:-}" ]]; then
     status_ok "DISPLAY is set to $DISPLAY"
   else
     status_warn "DISPLAY is not set (not in X11 session?)"
+  fi
+
+  if [[ -n "${WAYLAND_DISPLAY:-}" ]]; then
+    status_ok "WAYLAND_DISPLAY is set to $WAYLAND_DISPLAY"
+  else
+    status_warn "WAYLAND_DISPLAY is not set"
   fi
 
   case "${XDG_SESSION_TYPE:-unknown}" in
     x11)
       status_ok "XDG_SESSION_TYPE is x11"
       ;;
+    wayland)
+      status_ok "XDG_SESSION_TYPE is wayland"
+      ;;
     *)
-      status_warn "XDG_SESSION_TYPE is ${XDG_SESSION_TYPE:-unset}; X11 backend expects x11"
+      status_warn "XDG_SESSION_TYPE is ${XDG_SESSION_TYPE:-unset}"
       ;;
   esac
 
   if command -v picom >/dev/null 2>&1; then
+    picom_installed=1
     status_ok "picom is installed"
   else
     status_warn "picom is not installed"
   fi
 
-  if command -v picom >/dev/null 2>&1; then
-    if picom --help 2>&1 | grep -qi 'glx'; then
+  if [[ "$picom_installed" -eq 1 ]]; then
+    if picom_has_glx; then
+      picom_glx=1
       status_ok "picom advertises glx backend support"
     else
       status_warn "could not confirm glx backend support from picom --help"
     fi
   fi
 
-  if command -v glxinfo >/dev/null 2>&1; then
-    if glxinfo -B >/dev/null 2>&1; then
-      status_ok "GLX context query succeeded"
+  if [[ "$session_type" == "x11" ]]; then
+    if command -v glxinfo >/dev/null 2>&1; then
+      if glxinfo -B >/dev/null 2>&1; then
+        glx_runtime=1
+        status_ok "GLX context query succeeded"
+      else
+        status_warn "glxinfo present but GLX query failed"
+      fi
     else
-      status_warn "glxinfo present but GLX query failed"
+      status_warn "glxinfo not found (cannot fully validate GLX runtime)"
     fi
   else
-    status_warn "glxinfo not found (cannot fully validate GLX runtime)"
+    status_warn "GLX runtime check skipped outside X11 session"
   fi
 
-  if [[ -f "$ACTIVE_DIR/picom.conf" && -f "$ACTIVE_DIR/shader.glsl" ]]; then
+  if [[ -f "$ACTIVE_DIR/profile.env" && -f "$ACTIVE_DIR/xresources" && -f "$ACTIVE_DIR/semantic.env" ]]; then
     status_ok "active config exists"
   else
     status_warn "active config missing (run: retrofx apply <profile>)"
+  fi
+
+  if [[ "$session_type" == "wayland" ]]; then
+    if [[ -f "$ACTIVE_DIR/picom.conf" || -f "$ACTIVE_DIR/shader.glsl" ]]; then
+      status_warn "wayland active state still contains x11 shader artifacts; reapply to refresh degraded outputs"
+    else
+      status_ok "wayland active state contains degraded outputs only"
+    fi
   fi
 
   if dir_has_files "$LAST_GOOD_DIR"; then
@@ -1504,6 +1663,25 @@ cmd_doctor() {
   else
     status_warn "last_good backup is empty or missing"
   fi
+
+  printf 'Capabilities:\n'
+  if [[ "$session_type" == "x11" ]]; then
+    if [[ "$picom_installed" -eq 1 && "$picom_glx" -eq 1 && "$glx_runtime" -eq 1 ]]; then
+      status_ok "X11 backend: full shader pipeline available"
+    else
+      status_warn "X11 backend: full shader pipeline requires picom + glx"
+    fi
+  elif [[ "$session_type" == "wayland" ]]; then
+    status_warn "Global post-process shaders are not supported in this backend."
+    status_ok "Wayland backend: degraded outputs only (no global shader pipeline)"
+  else
+    status_warn "Session backend unknown; assuming degraded-safe behavior"
+  fi
+
+  status_ok "Terminal palette export: xresources + ANSI semantic env"
+  status_ok "TTY backend: optional (profile scope.tty=true)"
+  status_ok "Tuigreet backend: optional (profile scope.tuigreet=true)"
+  status_ok "Toolkit hooks: optional env suggestions via scripts/integrate/*-env.sh"
 }
 
 preview_truecolor_block() {
@@ -1920,12 +2098,13 @@ cmd_new() {
 
 cmd_apply() {
   local profile_ref="$1"
-  local profile_path stage_dir profile_id
+  local profile_path stage_dir profile_id session_type
 
   ensure_dirs
   profile_path="$(resolve_profile_path "$profile_ref")" || die "profile not found: $profile_ref"
   profile_id="$(basename "$profile_path")"
   profile_id="${profile_id%.toml}"
+  session_type="$(detect_session_type)"
 
   load_profile "$profile_path"
 
@@ -1934,9 +2113,9 @@ cmd_apply() {
   stage_dir="$(mktemp -d "$STATE_DIR/stage.$(now_ts_compact).$$.XXXXXX")"
   TXN_STAGE_DIR="$stage_dir"
 
-  render_templates "$stage_dir" "$profile_path"
+  render_templates "$stage_dir" "$profile_path" "$session_type"
 
-  if ! validate_stage_with_picom "$stage_dir"; then
+  if ! validate_stage_with_picom "$stage_dir" "$session_type"; then
     LAST_ERROR="validation failed for profile '$profile_id'"
     warn "$LAST_ERROR"
     return 1
@@ -1954,7 +2133,14 @@ cmd_apply() {
 
   TXN_STAGE_DIR=""
 
-  if [[ ! -f "$ACTIVE_DIR/shader.glsl" ]]; then
+  if [[ "$session_type" == "wayland" ]]; then
+    if [[ -f "$ACTIVE_DIR/shader.glsl" || -f "$ACTIVE_DIR/picom.conf" ]]; then
+      LAST_ERROR="wayland active state must not contain x11 shader targets"
+      restore_last_good || true
+      TXN_ACTIVE=0
+      return 1
+    fi
+  elif [[ ! -f "$ACTIVE_DIR/shader.glsl" ]]; then
     LAST_ERROR="active/shader.glsl missing after swap"
     restore_last_good || true
     TXN_ACTIVE=0
@@ -1963,7 +2149,7 @@ cmd_apply() {
 
   prune_backups "$BACKUP_KEEP"
 
-  if ! apply_scoped_backends; then
+  if ! apply_scoped_backends "$session_type"; then
     restore_last_good || true
     TXN_ACTIVE=0
     return 1
@@ -1979,26 +2165,44 @@ cmd_apply() {
   restart_picom_if_running || true
 
   TXN_ACTIVE=0
+  if [[ "$session_type" == "wayland" ]]; then
+    log "Wayland session detected: shader pipeline disabled; applied degraded outputs only."
+  fi
   log "applied profile '$profile_id'"
 }
 
 cmd_off_profile() {
+  local skip_tty_restore="${1:-false}"
+  local session_type old_scope_tty
+  old_scope_tty="false"
+
   ensure_dirs
+
+  session_type="$(detect_session_type)"
+  if [[ -f "$ACTIVE_DIR/profile.env" ]]; then
+    # shellcheck source=/dev/null
+    source "$ACTIVE_DIR/profile.env"
+    old_scope_tty="${SCOPE_TTY:-false}"
+  fi
+
   if [[ -f "$PROFILES_DIR/passthrough.toml" ]]; then
-    cmd_apply "passthrough"
-    return 0
-  fi
+    cmd_apply "passthrough" || return 1
+  else
+    warn "profiles/passthrough.toml missing; using built-in passthrough"
+    local tmp
+    tmp="$(mktemp "$STATE_DIR/passthrough.$(now_ts_compact).$$.XXXXXX.toml")"
+    create_builtin_passthrough_profile "$tmp"
 
-  warn "profiles/passthrough.toml missing; using built-in passthrough"
-  local tmp
-  tmp="$(mktemp "$STATE_DIR/passthrough.$(now_ts_compact).$$.XXXXXX.toml")"
-  create_builtin_passthrough_profile "$tmp"
-
-  if ! cmd_apply "$tmp"; then
+    if ! cmd_apply "$tmp"; then
+      rm -f "$tmp"
+      return 1
+    fi
     rm -f "$tmp"
-    return 1
   fi
-  rm -f "$tmp"
+
+  if [[ "$skip_tty_restore" != "true" && "$session_type" == "wayland" && "$old_scope_tty" == "true" ]]; then
+    cmd_off_tty || return 1
+  fi
 }
 
 cmd_off_tty() {
@@ -2015,13 +2219,13 @@ cmd_off() {
   local rc=0
   case "$mode" in
     --profile)
-      cmd_off_profile
+      cmd_off_profile "false"
       ;;
     --tty)
       cmd_off_tty
       ;;
     --all)
-      if ! cmd_off_profile; then
+      if ! cmd_off_profile "true"; then
         rc=1
       fi
       if ! cmd_off_tty; then

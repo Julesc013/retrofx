@@ -22,6 +22,22 @@ die() {
   exit 1
 }
 
+run_retrofx_x11() {
+  DISPLAY=':99' WAYLAND_DISPLAY='' XDG_SESSION_TYPE='x11' "$RETROFX" "$@"
+}
+
+run_retrofx_wayland() {
+  DISPLAY='' WAYLAND_DISPLAY='wayland-0' XDG_SESSION_TYPE='wayland' "$RETROFX" "$@"
+}
+
+assert_contains() {
+  local haystack="$1"
+  local needle="$2"
+  if ! printf '%s\n' "$haystack" | grep -Fq "$needle"; then
+    die "expected output to contain: $needle"
+  fi
+}
+
 require_file() {
   local path="$1"
   [[ -f "$path" ]] || die "missing expected file: $path"
@@ -48,15 +64,23 @@ hex_brightness() {
 }
 
 validate_active_files() {
+  local mode="${1:-x11}"
+
   require_file "$ACTIVE_DIR/profile.toml"
   require_file "$ACTIVE_DIR/profile.env"
-  require_file "$ACTIVE_DIR/picom.conf"
-  require_file "$ACTIVE_DIR/shader.glsl"
   require_file "$ACTIVE_DIR/xresources"
   require_file "$ACTIVE_DIR/meta"
   require_file "$ACTIVE_DIR/semantic.env"
   require_file "$ACTIVE_DIR/tty-palette.env"
   require_file "$ACTIVE_DIR/tty-palette.txt"
+
+  if [[ "$mode" == "wayland" ]]; then
+    [[ ! -f "$ACTIVE_DIR/picom.conf" ]] || die "wayland active should not contain picom.conf"
+    [[ ! -f "$ACTIVE_DIR/shader.glsl" ]] || die "wayland active should not contain shader.glsl"
+  else
+    require_file "$ACTIVE_DIR/picom.conf"
+    require_file "$ACTIVE_DIR/shader.glsl"
+  fi
 }
 
 validate_ansi_palette_env() {
@@ -198,7 +222,7 @@ else
 fi
 
 log "checking list command"
-"$RETROFX" list >/dev/null
+run_retrofx_x11 list >/dev/null
 
 profiles=("$PROFILES_DIR"/*.toml)
 if [[ ! -e "${profiles[0]}" ]]; then
@@ -214,7 +238,7 @@ for profile_path in "${profiles[@]}"; do
   [[ -e "$profile_path" ]] || continue
   profile_name="$(basename "$profile_path" .toml)"
   log "apply $profile_name"
-  "$RETROFX" apply "$profile_name"
+  run_retrofx_x11 apply "$profile_name"
   validate_active_files
   validate_ansi_palette_env "$ACTIVE_DIR/tty-palette.env"
 done
@@ -245,7 +269,7 @@ x11 = true
 tty = false
 tuigreet = false
 PROFILE
-"$RETROFX" apply "$mono_profile"
+run_retrofx_x11 apply "$mono_profile"
 validate_active_files
 validate_shader_static "$ACTIVE_DIR/shader.glsl" mono 13 vga16 16
 
@@ -274,9 +298,14 @@ x11 = true
 tty = false
 tuigreet = false
 PROFILE
-"$RETROFX" apply "$palette_profile"
+run_retrofx_x11 apply "$palette_profile"
 validate_active_files
 validate_shader_static "$ACTIVE_DIR/shader.glsl" palette 4 cube256 256
+
+log "wayland degraded apply path"
+wayland_apply_output="$(run_retrofx_wayland apply "$mono_profile" 2>&1)"
+assert_contains "$wayland_apply_output" "Wayland session detected: shader pipeline disabled; applied degraded outputs only."
+validate_active_files wayland
 
 log "tty backend mock test: monochrome semantic mapping"
 tty_mono_profile="$TEST_TMP_DIR/tty-mono.toml"
@@ -304,7 +333,7 @@ x11 = false
 tty = true
 tuigreet = false
 PROFILE
-RETROFX_TTY_MODE=mock "$RETROFX" apply "$tty_mono_profile"
+RETROFX_TTY_MODE=mock run_retrofx_x11 apply "$tty_mono_profile"
 validate_active_files
 validate_ansi_palette_env "$ACTIVE_DIR/tty-palette.env"
 validate_monochrome_semantics "$ACTIVE_DIR/tty-palette.env"
@@ -335,7 +364,7 @@ x11 = false
 tty = true
 tuigreet = false
 PROFILE
-RETROFX_TTY_MODE=mock "$RETROFX" apply "$tty_vga_profile"
+RETROFX_TTY_MODE=mock run_retrofx_x11 apply "$tty_vga_profile"
 # shellcheck source=/dev/null
 source "$ACTIVE_DIR/tty-palette.env"
 [[ "$ANSI_1" == '#aa0000' ]] || die "vga16 semantic mapping mismatch for ANSI_1"
@@ -367,7 +396,7 @@ x11 = false
 tty = true
 tuigreet = false
 PROFILE
-RETROFX_TTY_MODE=mock "$RETROFX" apply "$tty_cube_profile"
+RETROFX_TTY_MODE=mock run_retrofx_x11 apply "$tty_cube_profile"
 validate_ansi_palette_env "$ACTIVE_DIR/tty-palette.env"
 # shellcheck source=/dev/null
 source "$ACTIVE_DIR/tty-palette.env"
@@ -400,21 +429,39 @@ x11 = false
 tty = false
 tuigreet = true
 PROFILE
-"$RETROFX" apply "$tuigreet_profile"
+run_retrofx_x11 apply "$tuigreet_profile"
 require_file "$ACTIVE_DIR/tuigreet.conf"
 grep -q '^background = "#' "$ACTIVE_DIR/tuigreet.conf" || die "tuigreet config missing background color"
 
 log "verifying off --tty restores previous tty palette state in mock mode"
-RETROFX_TTY_MODE=mock "$RETROFX" off --tty
+RETROFX_TTY_MODE=mock run_retrofx_x11 off --tty
 require_file "$STATE_DIR/tty-current.env"
 
+log "doctor capability output (simulated X11)"
+doctor_x11_output="$(run_retrofx_x11 doctor 2>&1)"
+assert_contains "$doctor_x11_output" "Session type: x11"
+assert_contains "$doctor_x11_output" "WM/DE:"
+assert_contains "$doctor_x11_output" "Capabilities:"
+assert_contains "$doctor_x11_output" "X11 backend: full shader pipeline"
+
+log "doctor capability output (simulated Wayland)"
+doctor_wayland_output="$(run_retrofx_wayland doctor 2>&1)"
+assert_contains "$doctor_wayland_output" "Session type: wayland"
+assert_contains "$doctor_wayland_output" "Global post-process shaders are not supported in this backend."
+assert_contains "$doctor_wayland_output" "Wayland backend: degraded outputs only"
+
 log "verifying apply -> off returns to passthrough baseline"
-"$RETROFX" apply passthrough
+run_retrofx_x11 apply passthrough
 baseline_hash="$(hash_file "$ACTIVE_DIR/profile.toml")"
-"$RETROFX" apply "$mono_profile"
-"$RETROFX" off
+run_retrofx_x11 apply "$mono_profile"
+run_retrofx_x11 off
 post_off_hash="$(hash_file "$ACTIVE_DIR/profile.toml")"
 [[ "$baseline_hash" == "$post_off_hash" ]] || die "off did not restore passthrough profile state"
+
+log "verifying wayland off keeps degraded outputs and succeeds"
+RETROFX_TTY_MODE=mock run_retrofx_wayland apply "$tty_mono_profile"
+RETROFX_TTY_MODE=mock run_retrofx_wayland off
+validate_active_files wayland
 
 log "checking audit log exists"
 require_file "$STATE_DIR/logs/retrofx.log"
