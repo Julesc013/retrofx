@@ -5,7 +5,9 @@
 RetroFX now ships optional wrappers in `scripts/integrate/`:
 
 - `i3-retro-session.sh`
-- `generate-xsession.sh`
+- `install-xsession.sh`
+- `remove-xsession.sh`
+- `generate-xsession.sh` (compat wrapper to `install-xsession.sh`)
 
 `i3-retro-session.sh` behavior:
 
@@ -38,7 +40,7 @@ eval "$(./scripts/integrate/retrofx-env.sh)"
 Generate an Xsession desktop entry under `~/.local/share/xsessions/`:
 
 ```bash
-./scripts/integrate/generate-xsession.sh --name "RetroFX i3"
+./scripts/integrate/install-xsession.sh --name "RetroFX i3" --profile crt-green-p1-4band
 ```
 
 This creates:
@@ -46,6 +48,13 @@ This creates:
 - `~/.local/share/xsessions/retrofx-i3.desktop`
 
 The `Exec` path is absolute and points to this repository wrapper script.
+The generated file includes `X-RetroFX-Managed=true` marker metadata for safe cleanup.
+
+Remove managed xsession entries:
+
+```bash
+./scripts/integrate/remove-xsession.sh --all-managed --yes
+```
 
 ## greetd + tuigreet Selection
 

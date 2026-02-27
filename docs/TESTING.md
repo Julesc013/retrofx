@@ -24,6 +24,10 @@ Pass criteria:
 - tuigreet snippet generation check passes
 - doctor capability output includes expected X11/Wayland strings
 - `apply -> off` restores passthrough profile state
+- user-local install smoke test passes in isolated `HOME`:
+  - `install --yes` creates `~/.config/retrofx` and `~/.local/bin/retrofx`
+  - installed launcher can run `status`/`list`
+  - `uninstall --yes` removes install tree and launcher
 - export commands write target files:
   - `retrofx export alacritty ...`
   - `retrofx export xresources ...`

@@ -3,8 +3,32 @@ set -euo pipefail
 
 export LC_ALL=C
 
-readonly SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-readonly ROOT_DIR="$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)"
+readonly SELF_SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+readonly SELF_ROOT_DIR="$(CDPATH= cd -- "$SELF_SCRIPT_DIR/.." && pwd)"
+
+resolve_runtime_root() {
+  local install_home
+  install_home="${HOME}/.config/retrofx"
+
+  if [[ -n "${RETROFX_HOME:-}" ]]; then
+    if [[ -d "$RETROFX_HOME" ]]; then
+      (CDPATH= cd -- "$RETROFX_HOME" && pwd)
+    else
+      printf '%s' "$RETROFX_HOME"
+    fi
+    return 0
+  fi
+
+  if [[ "$SELF_SCRIPT_DIR" == "${HOME}/.local/bin" && -d "$install_home" ]]; then
+    printf '%s' "$install_home"
+    return 0
+  fi
+
+  printf '%s' "$SELF_ROOT_DIR"
+}
+
+readonly ROOT_DIR="$(resolve_runtime_root)"
+readonly SCRIPT_DIR="$ROOT_DIR/scripts"
 readonly PROFILES_DIR="$ROOT_DIR/profiles"
 readonly PROFILES_USER_DIR="$PROFILES_DIR/user"
 readonly PROFILES_PACKS_DIR="$PROFILES_DIR/packs"
@@ -20,6 +44,10 @@ readonly BACKEND_X11="$ROOT_DIR/backends/x11-picom/apply.sh"
 readonly BACKEND_TTY="$ROOT_DIR/backends/tty/apply.sh"
 readonly BACKEND_TUIGREET="$ROOT_DIR/backends/tuigreet/apply.sh"
 readonly BACKUP_KEEP_DEFAULT=10
+readonly DEFAULT_INSTALL_HOME="${HOME}/.config/retrofx"
+readonly DEFAULT_LAUNCHER_PATH="${HOME}/.local/bin/retrofx"
+readonly INSTALL_MARKER_FILE=".retrofx-install"
+readonly XS_MARKER_KEY="X-RetroFX-Managed=true"
 
 BACKUP_KEEP="${RETROFX_BACKUP_KEEP:-$BACKUP_KEEP_DEFAULT}"
 if [[ ! "$BACKUP_KEEP" =~ ^[0-9]+$ ]] || ((BACKUP_KEEP < 1)); then
@@ -107,6 +135,67 @@ now_ts() {
 
 now_ts_compact() {
   date -u +%Y%m%d-%H%M%S
+}
+
+expand_user_path() {
+  local raw="$1"
+  case "$raw" in
+    "~")
+      printf '%s' "$HOME"
+      ;;
+    "~/"*)
+      printf '%s/%s' "$HOME" "${raw#~/}"
+      ;;
+    *)
+      printf '%s' "$raw"
+      ;;
+  esac
+}
+
+execution_mode() {
+  if [[ -f "$ROOT_DIR/$INSTALL_MARKER_FILE" ]]; then
+    printf 'installed'
+  else
+    printf 'repo-local'
+  fi
+}
+
+append_home_log() {
+  local home_dir="$1"
+  local cmd="$2"
+  local profile="$3"
+  local result="$4"
+  local detail="$5"
+
+  (
+    mkdir -p "$home_dir/state/logs"
+    printf '%s cmd=%q profile=%q result=%q detail=%q\n' \
+      "$(now_ts)" "$cmd" "$profile" "$result" "$detail" >>"$home_dir/state/logs/retrofx.log"
+  ) >/dev/null 2>&1 || true
+}
+
+confirm_or_die() {
+  local question="$1"
+  local auto_yes="${2:-false}"
+  local answer=""
+
+  if [[ "$auto_yes" == "true" ]]; then
+    return 0
+  fi
+
+  if [[ ! -t 0 ]]; then
+    die "$question (use --yes to proceed in non-interactive mode)"
+  fi
+
+  read -r -p "$question [y/N]: " answer || die "aborted"
+  case "$answer" in
+    y | Y | yes | YES)
+      return 0
+      ;;
+    *)
+      die "aborted"
+      ;;
+  esac
 }
 
 ensure_dirs() {
@@ -3513,6 +3602,304 @@ cmd_off() {
   esac
 }
 
+copy_install_payload() {
+  local stage_dir="$1"
+  local src_root="$SELF_ROOT_DIR"
+  local item
+
+  mkdir -p "$stage_dir"
+  for item in backends templates scripts profiles docs palettes README.md; do
+    if [[ -e "$src_root/$item" ]]; then
+      cp -a "$src_root/$item" "$stage_dir/$item"
+    fi
+  done
+
+  # User profiles are preserved from the destination tree; do not overwrite from source.
+  rm -rf "$stage_dir/profiles/user"
+  mkdir -p "$stage_dir/profiles/user" "$stage_dir/active" "$stage_dir/state"
+}
+
+backup_existing_user_profiles() {
+  local existing_home="$1"
+  local out_dir="$2"
+
+  if dir_has_files "$existing_home/profiles/user"; then
+    mkdir -p "$out_dir"
+    cp -a "$existing_home/profiles/user"/. "$out_dir"/
+  fi
+}
+
+preserve_existing_install_state() {
+  local existing_home="$1"
+  local stage_dir="$2"
+
+  if [[ -d "$existing_home/active" ]]; then
+    rm -rf "$stage_dir/active"
+    cp -a "$existing_home/active" "$stage_dir/active"
+  fi
+
+  if [[ -d "$existing_home/state" ]]; then
+    rm -rf "$stage_dir/state"
+    cp -a "$existing_home/state" "$stage_dir/state"
+  fi
+
+  if [[ -d "$existing_home/profiles/user" ]]; then
+    mkdir -p "$stage_dir/profiles/user"
+    cp -a "$existing_home/profiles/user"/. "$stage_dir/profiles/user"/
+  fi
+}
+
+write_install_marker() {
+  local install_home="$1"
+  local stage_dir="$2"
+
+  {
+    printf 'managed=true\n'
+    printf 'installed_at=%s\n' "$(now_ts)"
+    printf 'install_home=%s\n' "$install_home"
+    printf 'source_root=%s\n' "$SELF_ROOT_DIR"
+  } >"$stage_dir/$INSTALL_MARKER_FILE"
+}
+
+atomic_replace_tree() {
+  local target_dir="$1"
+  local stage_dir="$2"
+  local parent_dir old_dir
+
+  parent_dir="$(dirname -- "$target_dir")"
+  mkdir -p "$parent_dir"
+  old_dir="$parent_dir/.retrofx-old.$$.${RANDOM}"
+  rm -rf "$old_dir"
+
+  if [[ -d "$target_dir" ]]; then
+    mv "$target_dir" "$old_dir"
+  fi
+
+  if mv "$stage_dir" "$target_dir"; then
+    rm -rf "$old_dir"
+    return 0
+  fi
+
+  warn "install swap failed; restoring previous install tree"
+  rm -rf "$target_dir"
+  if [[ -d "$old_dir" ]]; then
+    mv "$old_dir" "$target_dir"
+  fi
+  return 1
+}
+
+launcher_is_managed() {
+  local launcher="$1"
+  [[ -f "$launcher" ]] || return 1
+  grep -Fq '# RetroFX launcher (managed)' "$launcher"
+}
+
+launcher_points_to_home() {
+  local launcher="$1"
+  local install_home="$2"
+  [[ -f "$launcher" ]] || return 1
+  grep -Fq "$install_home/scripts/retrofx" "$launcher"
+}
+
+write_launcher() {
+  local install_home="$1"
+  local launcher_path="$DEFAULT_LAUNCHER_PATH"
+  local launcher_dir tmp_launcher backup_dir
+
+  launcher_dir="$(dirname -- "$launcher_path")"
+  mkdir -p "$launcher_dir"
+
+  if [[ -f "$launcher_path" ]] && ! launcher_is_managed "$launcher_path"; then
+    backup_dir="$install_home/state/install-backups/launcher-$(now_ts_compact)-pid$$"
+    mkdir -p "$backup_dir"
+    cp -a "$launcher_path" "$backup_dir/retrofx.launcher.backup"
+  fi
+
+  tmp_launcher="$(mktemp "$launcher_dir/.retrofx-launcher.XXXXXX")"
+  {
+    printf '#!/usr/bin/env bash\n'
+    printf 'set -euo pipefail\n'
+    printf '# RetroFX launcher (managed)\n'
+    printf 'export RETROFX_HOME=%q\n' "$install_home"
+    printf 'exec %q "$@"\n' "$install_home/scripts/retrofx"
+  } >"$tmp_launcher"
+  chmod 755 "$tmp_launcher"
+  mv "$tmp_launcher" "$launcher_path"
+}
+
+remove_managed_xsessions() {
+  local xs_dir="${XDG_DATA_HOME:-$HOME/.local/share}/xsessions"
+  local removed=0
+  local file
+
+  [[ -d "$xs_dir" ]] || {
+    printf '0'
+    return 0
+  }
+
+  while IFS= read -r file; do
+    [[ -f "$file" ]] || continue
+    if grep -Fxq "$XS_MARKER_KEY" "$file" || grep -Fq '# RetroFX-Managed: true' "$file"; then
+      rm -f "$file"
+      removed=$((removed + 1))
+    fi
+  done < <(find "$xs_dir" -mindepth 1 -maxdepth 1 -type f -name '*.desktop' | sort)
+
+  printf '%s' "$removed"
+}
+
+cmd_install() {
+  local auto_yes="false"
+  local target_home="$DEFAULT_INSTALL_HOME"
+  local stage_dir=""
+  local backup_user_dir=""
+  local profile="-"
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --yes)
+        auto_yes="true"
+        shift
+        ;;
+      --path)
+        [[ $# -ge 2 ]] || die "--path requires a directory argument"
+        target_home="$2"
+        shift 2
+        ;;
+      *)
+        die "install accepts only --yes and optional --path <dir>"
+        ;;
+    esac
+  done
+
+  target_home="$(expand_user_path "$target_home")"
+  [[ "$target_home" == /* ]] || target_home="$PWD/$target_home"
+  target_home="${target_home%/}"
+  [[ -n "$target_home" && "$target_home" != "/" ]] || die "invalid install path"
+
+  confirm_or_die "Install RetroFX to $target_home?" "$auto_yes"
+
+  stage_dir="$(mktemp -d "/tmp/retrofx-install-stage.$$.XXXXXX")"
+  copy_install_payload "$stage_dir"
+
+  if [[ -d "$target_home" ]]; then
+    backup_user_dir="$target_home/state/install-backups/user-profiles-$(now_ts_compact)-pid$$"
+    backup_existing_user_profiles "$target_home" "$backup_user_dir"
+    preserve_existing_install_state "$target_home" "$stage_dir"
+  fi
+
+  write_install_marker "$target_home" "$stage_dir"
+
+  if ! atomic_replace_tree "$target_home" "$stage_dir"; then
+    rm -rf "$stage_dir"
+    append_home_log "$target_home" "install" "$profile" "failure" "atomic swap failed"
+    die "install failed while replacing target directory"
+  fi
+
+  if ! write_launcher "$target_home"; then
+    append_home_log "$target_home" "install" "$profile" "failure" "launcher write failed"
+    die "install completed but launcher setup failed"
+  fi
+
+  append_home_log "$target_home" "install" "$profile" "success" "source=$SELF_ROOT_DIR"
+  log "installed RetroFX to $target_home"
+  log "launcher written to $DEFAULT_LAUNCHER_PATH"
+}
+
+cmd_uninstall() {
+  local auto_yes="false"
+  local keep_profiles="false"
+  local target_home="${RETROFX_HOME:-$DEFAULT_INSTALL_HOME}"
+  local kept_profiles_dir=""
+  local removed_xsessions=0
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --yes)
+        auto_yes="true"
+        shift
+        ;;
+      --keep-profiles)
+        keep_profiles="true"
+        shift
+        ;;
+      *)
+        die "uninstall accepts only --yes and optional --keep-profiles"
+        ;;
+    esac
+  done
+
+  target_home="$(expand_user_path "$target_home")"
+  [[ "$target_home" == /* ]] || target_home="$PWD/$target_home"
+  target_home="${target_home%/}"
+  [[ -n "$target_home" && "$target_home" != "/" ]] || die "invalid uninstall path"
+  [[ -d "$target_home" ]] || die "install directory not found: $target_home"
+
+  if [[ ! -f "$target_home/$INSTALL_MARKER_FILE" ]]; then
+    warn "install marker not found under $target_home; proceeding with caution"
+  fi
+
+  confirm_or_die "Uninstall RetroFX from $target_home?" "$auto_yes"
+
+  append_home_log "$target_home" "uninstall" "-" "start" "keep_profiles=$keep_profiles"
+
+  if [[ "$keep_profiles" == "true" ]] && dir_has_files "$target_home/profiles/user"; then
+    kept_profiles_dir="${target_home}-profiles-$(now_ts_compact)"
+    mkdir -p "$kept_profiles_dir"
+    cp -a "$target_home/profiles/user" "$kept_profiles_dir/user"
+  fi
+
+  if [[ -e "$DEFAULT_LAUNCHER_PATH" ]] && (launcher_is_managed "$DEFAULT_LAUNCHER_PATH" || launcher_points_to_home "$DEFAULT_LAUNCHER_PATH" "$target_home"); then
+    rm -f "$DEFAULT_LAUNCHER_PATH"
+  fi
+
+  removed_xsessions="$(remove_managed_xsessions)"
+  rm -rf "$target_home"
+
+  if [[ -n "$kept_profiles_dir" ]]; then
+    log "kept profiles backup at $kept_profiles_dir"
+  fi
+  if [[ "$removed_xsessions" -gt 0 ]]; then
+    log "removed $removed_xsessions RetroFX-managed xsession entries"
+  fi
+  log "uninstalled RetroFX from $target_home"
+}
+
+cmd_status() {
+  local mode active_profile="-"
+
+  mode="$(execution_mode)"
+
+  if [[ -f "$ACTIVE_DIR/profile.env" ]]; then
+    # shellcheck source=/dev/null
+    source "$ACTIVE_DIR/profile.env"
+    active_profile="${PROFILE_ID:--}"
+  fi
+
+  printf 'RetroFX status\n'
+  printf 'Execution mode: %s\n' "$mode"
+  printf 'Home dir: %s\n' "$ROOT_DIR"
+  printf 'Source dir: %s\n' "$SELF_ROOT_DIR"
+  if [[ -n "${RETROFX_HOME:-}" ]]; then
+    printf 'RETROFX_HOME: %s\n' "$RETROFX_HOME"
+  fi
+  if [[ -d "$DEFAULT_INSTALL_HOME" ]]; then
+    printf 'Installed home exists: yes (%s)\n' "$DEFAULT_INSTALL_HOME"
+  else
+    printf 'Installed home exists: no (%s)\n' "$DEFAULT_INSTALL_HOME"
+  fi
+  if [[ -e "$DEFAULT_LAUNCHER_PATH" ]]; then
+    if launcher_is_managed "$DEFAULT_LAUNCHER_PATH"; then
+      printf 'Launcher: %s (managed)\n' "$DEFAULT_LAUNCHER_PATH"
+    else
+      printf 'Launcher: %s (present, unmanaged)\n' "$DEFAULT_LAUNCHER_PATH"
+    fi
+  else
+    printf 'Launcher: not found at %s\n' "$DEFAULT_LAUNCHER_PATH"
+  fi
+  printf 'Active profile: %s\n' "$active_profile"
+}
+
 usage() {
   cat <<'USAGE'
 Usage:
@@ -3521,6 +3908,9 @@ Usage:
   retrofx info <profile>
   retrofx apply <profile>
   retrofx export <alacritty|xresources> <profile> <output_path>
+  retrofx status
+  retrofx install [--yes] [--path <dir>]
+  retrofx uninstall [--yes] [--keep-profiles]
   retrofx off [--tty|--all]
   retrofx doctor
   retrofx preview [profile]
@@ -3531,8 +3921,18 @@ USAGE
 main() {
   local cmd="${1:-}"
   local profile_ref="-"
+  local needs_runtime_dirs=1
 
-  ensure_dirs
+  case "$cmd" in
+    install | uninstall | status | "" | -h | --help | help)
+      needs_runtime_dirs=0
+      ;;
+  esac
+
+  if [[ "$needs_runtime_dirs" -eq 1 ]]; then
+    ensure_dirs
+  fi
+
   LAST_ERROR=""
 
   case "$cmd" in
@@ -3569,6 +3969,19 @@ main() {
       shift
       [[ "$#" -eq 3 ]] || die "export requires format, profile, and output_path"
       cmd_export "$1" "$2" "$3"
+      ;;
+    status)
+      shift
+      [[ "$#" -eq 0 ]] || die "status takes no arguments"
+      cmd_status
+      ;;
+    install)
+      shift
+      cmd_install "$@"
+      ;;
+    uninstall)
+      shift
+      cmd_uninstall "$@"
       ;;
     off)
       shift
@@ -3613,7 +4026,6 @@ main() {
       cmd_new
       ;;
     "" | -h | --help | help)
-      audit_begin "help" "-"
       usage
       ;;
     *)

@@ -24,6 +24,7 @@ RetroFX is a profile-driven rendering system for retro visual effects.
 Start here: `docs/QUICKSTART.md`
 
 Additional docs:
+- `docs/INSTALL.md`
 - `docs/ARCHITECTURE.md`
 - `docs/PROFILE_SPEC.md`
 - `docs/PALETTES.md`

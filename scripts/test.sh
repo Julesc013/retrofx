@@ -256,7 +256,13 @@ mkdir -p "$TEST_TMP_DIR"
 
 log "running shellcheck when available"
 if command -v shellcheck >/dev/null 2>&1; then
-  shellcheck "$RETROFX" "$ROOT_DIR/scripts/test.sh" "$ROOT_DIR/backends/tty/apply.sh" "$ROOT_DIR/scripts/integrate/retrofx-env.sh"
+  shellcheck \
+    "$RETROFX" \
+    "$ROOT_DIR/scripts/test.sh" \
+    "$ROOT_DIR/backends/tty/apply.sh" \
+    "$ROOT_DIR/scripts/integrate/retrofx-env.sh" \
+    "$ROOT_DIR/scripts/integrate/install-xsession.sh" \
+    "$ROOT_DIR/scripts/integrate/remove-xsession.sh"
 else
   warn "shellcheck not installed; skipping"
 fi
@@ -662,6 +668,20 @@ doctor_wayland_output="$(run_retrofx_wayland doctor 2>&1)"
 assert_contains "$doctor_wayland_output" "Session type: wayland"
 assert_contains "$doctor_wayland_output" "Global post-process shaders are not supported in this backend."
 assert_contains "$doctor_wayland_output" "Wayland backend: degraded outputs only"
+
+log "install/uninstall cycle in isolated HOME"
+install_home="$TEST_TMP_DIR/home-install"
+mkdir -p "$install_home"
+HOME="$install_home" run_retrofx_x11 install --yes
+[[ -d "$install_home/.config/retrofx" ]] || die "install did not create ~/.config/retrofx"
+[[ -x "$install_home/.local/bin/retrofx" ]] || die "install did not create launcher ~/.local/bin/retrofx"
+install_status_output="$(HOME="$install_home" "$install_home/.local/bin/retrofx" status 2>&1)"
+assert_contains "$install_status_output" "Execution mode: installed"
+install_list_output="$(HOME="$install_home" "$install_home/.local/bin/retrofx" list 2>&1)"
+assert_contains "$install_list_output" "Core Pack:"
+HOME="$install_home" run_retrofx_x11 uninstall --yes
+[[ ! -d "$install_home/.config/retrofx" ]] || die "uninstall did not remove ~/.config/retrofx"
+[[ ! -e "$install_home/.local/bin/retrofx" ]] || die "uninstall did not remove launcher"
 
 log "verifying apply -> off returns to passthrough baseline"
 run_retrofx_x11 apply passthrough
