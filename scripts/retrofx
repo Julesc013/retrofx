@@ -1,0 +1,1477 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+export LC_ALL=C
+
+SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)"
+PROFILES_DIR="$ROOT_DIR/profiles"
+TEMPLATES_DIR="$ROOT_DIR/templates"
+ACTIVE_DIR="$ROOT_DIR/active"
+STATE_DIR="$ROOT_DIR/state"
+BACKUPS_DIR="$STATE_DIR/backups"
+LAST_GOOD_DIR="$STATE_DIR/last_good"
+
+BACKEND_X11="$ROOT_DIR/backends/x11-picom/apply.sh"
+BACKEND_TTY="$ROOT_DIR/backends/tty/apply.sh"
+BACKEND_TUIGREET="$ROOT_DIR/backends/tuigreet/apply.sh"
+
+umask 077
+
+declare -A PARSE_SEEN_KEYS=()
+
+declare CFG_PROFILE_PATH=""
+declare CFG_name=""
+declare CFG_version="1"
+declare CFG_mode_type="passthrough"
+
+declare CFG_monochrome_bands="4"
+declare CFG_monochrome_phosphor="green"
+declare CFG_monochrome_custom_rgb=""
+declare CFG_monochrome_hotcore="false"
+
+declare CFG_palette_kind="vga16"
+declare CFG_palette_size="16"
+declare CFG_palette_custom_file=""
+
+declare CFG_effects_blur_strength="2"
+declare CFG_effects_scanlines="false"
+declare CFG_effects_flicker="false"
+declare CFG_effects_dither="none"
+declare CFG_effects_vignette="false"
+
+declare CFG_scope_x11="true"
+declare CFG_scope_tty="false"
+declare CFG_scope_tuigreet="false"
+
+declare CFG_phosphor_r="1.000000"
+declare CFG_phosphor_g="1.000000"
+declare CFG_phosphor_b="1.000000"
+
+log() {
+  printf 'retrofx: %s\n' "$*"
+}
+
+warn() {
+  printf 'retrofx: warning: %s\n' "$*" >&2
+}
+
+die() {
+  printf 'retrofx: error: %s\n' "$*" >&2
+  exit 1
+}
+
+trim() {
+  local s="$1"
+  s="${s#"${s%%[![:space:]]*}"}"
+  s="${s%"${s##*[![:space:]]}"}"
+  printf '%s' "$s"
+}
+
+strip_inline_comment() {
+  local input="$1"
+  local out=""
+  local in_quote=0
+  local prev=""
+  local i c
+
+  for ((i = 0; i < ${#input}; i++)); do
+    c="${input:i:1}"
+    if [[ "$c" == '"' && "$prev" != '\\' ]]; then
+      if ((in_quote == 0)); then
+        in_quote=1
+      else
+        in_quote=0
+      fi
+    fi
+    if [[ "$c" == "#" && $in_quote -eq 0 ]]; then
+      break
+    fi
+    out+="$c"
+    prev="$c"
+  done
+
+  printf '%s' "$out"
+}
+
+toml_string() {
+  local raw
+  raw="$(trim "$1")"
+
+  if [[ $raw =~ ^\".*\"$ ]]; then
+    local inner="${raw:1:${#raw}-2}"
+    inner="${inner//\\\\/\\}"
+    inner="${inner//\\\"/\"}"
+    printf '%s' "$inner"
+    return 0
+  fi
+
+  if [[ "$raw" =~ ^[A-Za-z0-9._/:,+-]+$ ]]; then
+    printf '%s' "$raw"
+    return 0
+  fi
+
+  return 1
+}
+
+parse_bool() {
+  local raw
+  raw="$(trim "$1")"
+  case "$raw" in
+    true | false)
+      printf '%s' "$raw"
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+parse_int_range() {
+  local raw min max
+  raw="$(trim "$1")"
+  min="$2"
+  max="$3"
+
+  if [[ ! "$raw" =~ ^[0-9]+$ ]]; then
+    return 1
+  fi
+
+  if ((raw < min || raw > max)); then
+    return 1
+  fi
+
+  printf '%s' "$raw"
+}
+
+normalize_rgb_component() {
+  local raw
+  raw="$(trim "$1")"
+
+  if [[ "$raw" =~ ^[0-9]+$ ]]; then
+    if ((raw < 0 || raw > 255)); then
+      return 1
+    fi
+    awk -v c="$raw" 'BEGIN { printf "%.6f", c / 255.0 }'
+    return 0
+  fi
+
+  if [[ "$raw" =~ ^([0-9]+\.[0-9]+|[0-9]+|\.[0-9]+)$ ]]; then
+    awk -v c="$raw" 'BEGIN { if (c < 0.0 || c > 1.0) { exit 1 } printf "%.6f", c }' || return 1
+    return 0
+  fi
+
+  return 1
+}
+
+normalize_rgb_triplet() {
+  local raw c1 c2 c3 extra n1 n2 n3
+  raw="$(trim "$1")"
+
+  IFS=',' read -r c1 c2 c3 extra <<<"$raw"
+  if [[ -n "${extra:-}" || -z "${c1:-}" || -z "${c2:-}" || -z "${c3:-}" ]]; then
+    return 1
+  fi
+
+  n1="$(normalize_rgb_component "$c1")" || return 1
+  n2="$(normalize_rgb_component "$c2")" || return 1
+  n3="$(normalize_rgb_component "$c3")" || return 1
+  printf '%s,%s,%s' "$n1" "$n2" "$n3"
+}
+
+require_seen() {
+  local key="$1"
+  local message="$2"
+  if [[ -z "${PARSE_SEEN_KEYS[$key]:-}" ]]; then
+    die "$message"
+  fi
+}
+
+reset_config() {
+  PARSE_SEEN_KEYS=()
+
+  CFG_PROFILE_PATH=""
+  CFG_name=""
+  CFG_version="1"
+  CFG_mode_type="passthrough"
+
+  CFG_monochrome_bands="4"
+  CFG_monochrome_phosphor="green"
+  CFG_monochrome_custom_rgb=""
+  CFG_monochrome_hotcore="false"
+
+  CFG_palette_kind="vga16"
+  CFG_palette_size="16"
+  CFG_palette_custom_file=""
+
+  CFG_effects_blur_strength="2"
+  CFG_effects_scanlines="false"
+  CFG_effects_flicker="false"
+  CFG_effects_dither="none"
+  CFG_effects_vignette="false"
+
+  CFG_scope_x11="true"
+  CFG_scope_tty="false"
+  CFG_scope_tuigreet="false"
+
+  CFG_phosphor_r="1.000000"
+  CFG_phosphor_g="1.000000"
+  CFG_phosphor_b="1.000000"
+}
+
+set_cfg_value() {
+  local section="$1"
+  local key="$2"
+  local raw="$3"
+  local ctx="$4"
+  local val
+
+  case "$section" in
+    "")
+      case "$key" in
+        name)
+          val="$(toml_string "$raw")" || die "$ctx: invalid string for name"
+          CFG_name="$val"
+          ;;
+        version)
+          if val="$(parse_int_range "$raw" 1 1)"; then
+            CFG_version="$val"
+          else
+            val="$(toml_string "$raw")" || die "$ctx: version must be 1"
+            [[ "$val" == "1" ]] || die "$ctx: unsupported version '$val' (expected 1)"
+            CFG_version="$val"
+          fi
+          ;;
+        *)
+          die "$ctx: unknown top-level key '$key'"
+          ;;
+      esac
+      ;;
+    mode)
+      case "$key" in
+        type)
+          val="$(toml_string "$raw")" || die "$ctx: invalid mode.type"
+          case "$val" in
+            passthrough | monochrome | palette)
+              CFG_mode_type="$val"
+              ;;
+            *)
+              die "$ctx: mode.type must be passthrough|monochrome|palette"
+              ;;
+          esac
+          ;;
+        *)
+          die "$ctx: unknown key 'mode.$key'"
+          ;;
+      esac
+      ;;
+    monochrome)
+      case "$key" in
+        bands)
+          val="$(parse_int_range "$raw" 2 256)" || die "$ctx: monochrome.bands must be 2..256"
+          CFG_monochrome_bands="$val"
+          ;;
+        phosphor)
+          val="$(toml_string "$raw")" || die "$ctx: invalid monochrome.phosphor"
+          case "$val" in
+            green | amber | blue | white | custom)
+              CFG_monochrome_phosphor="$val"
+              ;;
+            *)
+              die "$ctx: monochrome.phosphor must be green|amber|blue|white|custom"
+              ;;
+          esac
+          ;;
+        custom_rgb)
+          val="$(toml_string "$raw")" || die "$ctx: invalid monochrome.custom_rgb"
+          val="$(normalize_rgb_triplet "$val")" || die "$ctx: monochrome.custom_rgb must be r,g,b with each in 0..1 or 0..255"
+          CFG_monochrome_custom_rgb="$val"
+          ;;
+        hotcore)
+          val="$(parse_bool "$raw")" || die "$ctx: monochrome.hotcore must be true|false"
+          CFG_monochrome_hotcore="$val"
+          ;;
+        *)
+          die "$ctx: unknown key 'monochrome.$key'"
+          ;;
+      esac
+      ;;
+    palette)
+      case "$key" in
+        kind)
+          val="$(toml_string "$raw")" || die "$ctx: invalid palette.kind"
+          case "$val" in
+            vga16 | cube256 | custom)
+              CFG_palette_kind="$val"
+              ;;
+            *)
+              die "$ctx: palette.kind must be vga16|cube256|custom"
+              ;;
+          esac
+          ;;
+        size)
+          val="$(parse_int_range "$raw" 2 256)" || die "$ctx: palette.size must be 2..256"
+          CFG_palette_size="$val"
+          ;;
+        custom_file)
+          val="$(toml_string "$raw")" || die "$ctx: invalid palette.custom_file"
+          CFG_palette_custom_file="$val"
+          ;;
+        *)
+          die "$ctx: unknown key 'palette.$key'"
+          ;;
+      esac
+      ;;
+    effects)
+      case "$key" in
+        blur_strength)
+          val="$(parse_int_range "$raw" 0 6)" || die "$ctx: effects.blur_strength must be 0..6"
+          CFG_effects_blur_strength="$val"
+          ;;
+        scanlines)
+          val="$(parse_bool "$raw")" || die "$ctx: effects.scanlines must be true|false"
+          CFG_effects_scanlines="$val"
+          ;;
+        flicker)
+          val="$(parse_bool "$raw")" || die "$ctx: effects.flicker must be true|false"
+          CFG_effects_flicker="$val"
+          ;;
+        dither)
+          val="$(toml_string "$raw")" || die "$ctx: invalid effects.dither"
+          case "$val" in
+            none | ordered)
+              CFG_effects_dither="$val"
+              ;;
+            *)
+              die "$ctx: effects.dither must be none|ordered"
+              ;;
+          esac
+          ;;
+        vignette)
+          val="$(parse_bool "$raw")" || die "$ctx: effects.vignette must be true|false"
+          CFG_effects_vignette="$val"
+          ;;
+        *)
+          die "$ctx: unknown key 'effects.$key'"
+          ;;
+      esac
+      ;;
+    scope)
+      case "$key" in
+        x11)
+          val="$(parse_bool "$raw")" || die "$ctx: scope.x11 must be true|false"
+          CFG_scope_x11="$val"
+          ;;
+        tty)
+          val="$(parse_bool "$raw")" || die "$ctx: scope.tty must be true|false"
+          CFG_scope_tty="$val"
+          ;;
+        tuigreet)
+          val="$(parse_bool "$raw")" || die "$ctx: scope.tuigreet must be true|false"
+          CFG_scope_tuigreet="$val"
+          ;;
+        *)
+          die "$ctx: unknown key 'scope.$key'"
+          ;;
+      esac
+      ;;
+    *)
+      die "$ctx: unknown section '$section'"
+      ;;
+  esac
+}
+
+parse_profile() {
+  local profile_path="$1"
+  local line line_no=0 section=""
+
+  reset_config
+  CFG_PROFILE_PATH="$profile_path"
+
+  [[ -f "$profile_path" ]] || die "profile does not exist: $profile_path"
+
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    line_no=$((line_no + 1))
+    line="${line%$'\r'}"
+    line="$(strip_inline_comment "$line")"
+    line="$(trim "$line")"
+
+    [[ -z "$line" ]] && continue
+
+    if [[ "$line" =~ ^\[([A-Za-z0-9_]+)\]$ ]]; then
+      section="${BASH_REMATCH[1]}"
+      case "$section" in
+        mode | monochrome | palette | effects | scope)
+          ;;
+        *)
+          die "$profile_path:$line_no: unknown section [$section]"
+          ;;
+      esac
+      continue
+    fi
+
+    if [[ ! "$line" =~ ^([A-Za-z0-9_]+)[[:space:]]*=[[:space:]]*(.+)$ ]]; then
+      die "$profile_path:$line_no: invalid TOML syntax"
+    fi
+
+    local key="${BASH_REMATCH[1]}"
+    local raw="${BASH_REMATCH[2]}"
+    local scope_key
+
+    if [[ -n "$section" ]]; then
+      scope_key="$section.$key"
+    else
+      scope_key="root.$key"
+    fi
+
+    if [[ -n "${PARSE_SEEN_KEYS[$scope_key]:-}" ]]; then
+      die "$profile_path:$line_no: duplicate key '$scope_key'"
+    fi
+    PARSE_SEEN_KEYS[$scope_key]=1
+
+    set_cfg_value "$section" "$key" "$raw" "$profile_path:$line_no"
+  done <"$profile_path"
+
+  require_seen "root.name" "$profile_path: missing required top-level key 'name'"
+  require_seen "root.version" "$profile_path: missing required top-level key 'version'"
+  require_seen "mode.type" "$profile_path: missing required key 'mode.type'"
+  require_seen "effects.blur_strength" "$profile_path: missing required key 'effects.blur_strength'"
+  require_seen "effects.scanlines" "$profile_path: missing required key 'effects.scanlines'"
+  require_seen "effects.flicker" "$profile_path: missing required key 'effects.flicker'"
+  require_seen "effects.dither" "$profile_path: missing required key 'effects.dither'"
+  require_seen "effects.vignette" "$profile_path: missing required key 'effects.vignette'"
+  require_seen "scope.x11" "$profile_path: missing required key 'scope.x11'"
+  require_seen "scope.tty" "$profile_path: missing required key 'scope.tty'"
+  require_seen "scope.tuigreet" "$profile_path: missing required key 'scope.tuigreet'"
+
+  case "$CFG_mode_type" in
+    monochrome)
+      require_seen "monochrome.bands" "$profile_path: mode=monochrome requires monochrome.bands"
+      require_seen "monochrome.phosphor" "$profile_path: mode=monochrome requires monochrome.phosphor"
+      require_seen "monochrome.hotcore" "$profile_path: mode=monochrome requires monochrome.hotcore"
+      if [[ "$CFG_monochrome_phosphor" == "custom" ]]; then
+        require_seen "monochrome.custom_rgb" "$profile_path: phosphor=custom requires monochrome.custom_rgb"
+      fi
+      ;;
+    palette)
+      require_seen "palette.kind" "$profile_path: mode=palette requires palette.kind"
+      require_seen "palette.size" "$profile_path: mode=palette requires palette.size"
+      if [[ "$CFG_palette_kind" == "custom" ]]; then
+        require_seen "palette.custom_file" "$profile_path: palette.kind=custom requires palette.custom_file"
+      fi
+      ;;
+    passthrough)
+      ;;
+  esac
+
+  if ((CFG_effects_blur_strength > 3)); then
+    warn "$profile_path: blur_strength > 3 can hurt performance"
+  fi
+}
+
+resolve_profile_path() {
+  local ref="$1"
+
+  if [[ -f "$ref" ]]; then
+    printf '%s' "$ref"
+    return 0
+  fi
+
+  if [[ -f "$PROFILES_DIR/$ref" ]]; then
+    printf '%s' "$PROFILES_DIR/$ref"
+    return 0
+  fi
+
+  if [[ -f "$PROFILES_DIR/$ref.toml" ]]; then
+    printf '%s' "$PROFILES_DIR/$ref.toml"
+    return 0
+  fi
+
+  return 1
+}
+
+compute_phosphor_rgb() {
+  if [[ "$CFG_mode_type" != "monochrome" ]]; then
+    CFG_phosphor_r="1.000000"
+    CFG_phosphor_g="1.000000"
+    CFG_phosphor_b="1.000000"
+    return 0
+  fi
+
+  case "$CFG_monochrome_phosphor" in
+    green)
+      CFG_phosphor_r="0.660000"
+      CFG_phosphor_g="1.000000"
+      CFG_phosphor_b="0.660000"
+      ;;
+    amber)
+      CFG_phosphor_r="1.000000"
+      CFG_phosphor_g="0.760000"
+      CFG_phosphor_b="0.340000"
+      ;;
+    blue)
+      CFG_phosphor_r="0.620000"
+      CFG_phosphor_g="0.790000"
+      CFG_phosphor_b="1.000000"
+      ;;
+    white)
+      CFG_phosphor_r="1.000000"
+      CFG_phosphor_g="1.000000"
+      CFG_phosphor_b="1.000000"
+      ;;
+    custom)
+      IFS=',' read -r CFG_phosphor_r CFG_phosphor_g CFG_phosphor_b <<<"$CFG_monochrome_custom_rgb"
+      ;;
+    *)
+      die "internal error: unknown phosphor '$CFG_monochrome_phosphor'"
+      ;;
+  esac
+}
+
+float_to_u8() {
+  local n="$1"
+  awk -v x="$n" 'BEGIN { v = int((x * 255.0) + 0.5); if (v < 0) v = 0; if (v > 255) v = 255; printf "%d", v }'
+}
+
+rgb_hex_from_units() {
+  local r="$1"
+  local g="$2"
+  local b="$3"
+  local ru gu bu
+
+  ru="$(float_to_u8 "$r")"
+  gu="$(float_to_u8 "$g")"
+  bu="$(float_to_u8 "$b")"
+  printf '#%02x%02x%02x' "$ru" "$gu" "$bu"
+}
+
+write_profile_env() {
+  local out_file="$1"
+  local profile_id
+
+  profile_id="$(basename "$CFG_PROFILE_PATH")"
+  profile_id="${profile_id%.toml}"
+
+  {
+    printf 'PROFILE_PATH=%q\n' "$CFG_PROFILE_PATH"
+    printf 'PROFILE_ID=%q\n' "$profile_id"
+    printf 'PROFILE_NAME=%q\n' "$CFG_name"
+    printf 'PROFILE_VERSION=%q\n' "$CFG_version"
+
+    printf 'MODE_TYPE=%q\n' "$CFG_mode_type"
+
+    printf 'MONO_BANDS=%q\n' "$CFG_monochrome_bands"
+    printf 'MONO_PHOSPHOR=%q\n' "$CFG_monochrome_phosphor"
+    printf 'MONO_HOTCORE=%q\n' "$CFG_monochrome_hotcore"
+    printf 'MONO_CUSTOM_RGB=%q\n' "$CFG_monochrome_custom_rgb"
+
+    printf 'PALETTE_KIND=%q\n' "$CFG_palette_kind"
+    printf 'PALETTE_SIZE=%q\n' "$CFG_palette_size"
+    printf 'PALETTE_CUSTOM_FILE=%q\n' "$CFG_palette_custom_file"
+
+    printf 'EFFECT_BLUR_STRENGTH=%q\n' "$CFG_effects_blur_strength"
+    printf 'EFFECT_SCANLINES=%q\n' "$CFG_effects_scanlines"
+    printf 'EFFECT_FLICKER=%q\n' "$CFG_effects_flicker"
+    printf 'EFFECT_DITHER=%q\n' "$CFG_effects_dither"
+    printf 'EFFECT_VIGNETTE=%q\n' "$CFG_effects_vignette"
+
+    printf 'SCOPE_X11=%q\n' "$CFG_scope_x11"
+    printf 'SCOPE_TTY=%q\n' "$CFG_scope_tty"
+    printf 'SCOPE_TUIGREET=%q\n' "$CFG_scope_tuigreet"
+
+    printf 'PHOSPHOR_R=%q\n' "$CFG_phosphor_r"
+    printf 'PHOSPHOR_G=%q\n' "$CFG_phosphor_g"
+    printf 'PHOSPHOR_B=%q\n' "$CFG_phosphor_b"
+  } >"$out_file"
+}
+
+render_xresources() {
+  local out_file="$1"
+  local fg_hex bg_hex accent_hex
+
+  fg_hex="$(rgb_hex_from_units "$CFG_phosphor_r" "$CFG_phosphor_g" "$CFG_phosphor_b")"
+  bg_hex="#000000"
+  accent_hex="$(rgb_hex_from_units "$(awk -v r="$CFG_phosphor_r" 'BEGIN{printf "%.6f", r * 0.45}')" "$(awk -v g="$CFG_phosphor_g" 'BEGIN{printf "%.6f", g * 0.55}')" "$(awk -v b="$CFG_phosphor_b" 'BEGIN{printf "%.6f", b * 0.45}')")"
+
+  : >"$out_file"
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    line="${line//@FG_HEX@/$fg_hex}"
+    line="${line//@BG_HEX@/$bg_hex}"
+    line="${line//@ACCENT_HEX@/$accent_hex}"
+    printf '%s\n' "$line" >>"$out_file"
+  done <"$TEMPLATES_DIR/xresources.in"
+}
+
+declare -a CUSTOM_PALETTE_LINES=()
+
+load_custom_palette() {
+  local path="$1"
+  local wanted="$2"
+  local line parsed hex r g b
+
+  CUSTOM_PALETTE_LINES=()
+
+  [[ -f "$path" ]] || die "custom palette file not found: $path"
+
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    line="${line%$'\r'}"
+    line="$(strip_inline_comment "$line")"
+    line="$(trim "$line")"
+    [[ -z "$line" ]] && continue
+
+    if [[ "$line" =~ ^#([A-Fa-f0-9]{6})$ ]]; then
+      hex="${BASH_REMATCH[1]}"
+      r=$((16#${hex:0:2}))
+      g=$((16#${hex:2:2}))
+      b=$((16#${hex:4:2}))
+      parsed="$(normalize_rgb_triplet "$r,$g,$b")" || die "invalid custom color '$line' in $path"
+    elif [[ "$line" == *","*","* ]]; then
+      parsed="$(normalize_rgb_triplet "$line")" || die "invalid custom color '$line' in $path"
+    elif [[ "$line" =~ ^[0-9.]+[[:space:]]+[0-9.]+[[:space:]]+[0-9.]+$ ]]; then
+      parsed="$(normalize_rgb_triplet "${line//[[:space:]]/,}")" || die "invalid custom color '$line' in $path"
+    else
+      die "invalid custom color '$line' in $path (expected #RRGGBB or r,g,b)"
+    fi
+
+    IFS=',' read -r r g b <<<"$parsed"
+    CUSTOM_PALETTE_LINES+=("    vec3(${r}, ${g}, ${b})")
+
+    if ((${#CUSTOM_PALETTE_LINES[@]} == wanted)); then
+      break
+    fi
+  done <"$path"
+
+  if ((${#CUSTOM_PALETTE_LINES[@]} < wanted)); then
+    die "custom palette file '$path' has ${#CUSTOM_PALETTE_LINES[@]} colors, expected at least $wanted"
+  fi
+}
+
+render_shader() {
+  local out_file="$1"
+  local mode_passthrough=0 mode_mono=0 mode_palette=0
+  local hotcore=0 enable_dither=0 enable_scanlines=0 enable_flicker=0 enable_vignette=0
+  local palette_kind_vga16=0 palette_kind_cube256=0 palette_kind_custom=0
+  local palette_size=16 custom_palette_size=1
+  local custom_block_file line
+
+  case "$CFG_mode_type" in
+    passthrough)
+      mode_passthrough=1
+      ;;
+    monochrome)
+      mode_mono=1
+      ;;
+    palette)
+      mode_palette=1
+      ;;
+  esac
+
+  [[ "$CFG_monochrome_hotcore" == "true" ]] && hotcore=1
+  [[ "$CFG_effects_dither" == "ordered" ]] && enable_dither=1
+  [[ "$CFG_effects_scanlines" == "true" ]] && enable_scanlines=1
+  [[ "$CFG_effects_flicker" == "true" ]] && enable_flicker=1
+  [[ "$CFG_effects_vignette" == "true" ]] && enable_vignette=1
+
+  case "$CFG_palette_kind" in
+    vga16)
+      palette_kind_vga16=1
+      ;;
+    cube256)
+      palette_kind_cube256=1
+      ;;
+    custom)
+      palette_kind_custom=1
+      ;;
+  esac
+
+  palette_size="$CFG_palette_size"
+  custom_block_file="$(mktemp "$STATE_DIR/custom_palette_block.XXXXXX")"
+
+  if [[ "$CFG_mode_type" == "palette" && "$CFG_palette_kind" == "custom" ]]; then
+    local profile_dir custom_path
+    profile_dir="$(CDPATH= cd -- "$(dirname -- "$CFG_PROFILE_PATH")" && pwd)"
+    custom_path="$CFG_palette_custom_file"
+    if [[ "$custom_path" != /* ]]; then
+      custom_path="$profile_dir/$custom_path"
+    fi
+    load_custom_palette "$custom_path" "$CFG_palette_size"
+    custom_palette_size="$CFG_palette_size"
+  else
+    CUSTOM_PALETTE_LINES=("    vec3(1.000000, 1.000000, 1.000000)")
+    custom_palette_size=1
+  fi
+
+  {
+    printf 'const vec3 CUSTOM_PALETTE[CUSTOM_PALETTE_SIZE] = vec3[](\n'
+    local i
+    for ((i = 0; i < ${#CUSTOM_PALETTE_LINES[@]}; i++)); do
+      if ((i == ${#CUSTOM_PALETTE_LINES[@]} - 1)); then
+        printf '%s\n' "${CUSTOM_PALETTE_LINES[$i]}"
+      else
+        printf '%s,\n' "${CUSTOM_PALETTE_LINES[$i]}"
+      fi
+    done
+    printf ');\n'
+  } >"$custom_block_file"
+
+  : >"$out_file"
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    if [[ "$line" == "@CUSTOM_PALETTE_BLOCK@" ]]; then
+      cat "$custom_block_file" >>"$out_file"
+      continue
+    fi
+
+    line="${line//@MODE_PASSTHROUGH@/$mode_passthrough}"
+    line="${line//@MODE_MONO@/$mode_mono}"
+    line="${line//@MODE_PALETTE@/$mode_palette}"
+
+    line="${line//@MONO_BANDS@/$CFG_monochrome_bands}"
+    line="${line//@PHOSPHOR_R@/$CFG_phosphor_r}"
+    line="${line//@PHOSPHOR_G@/$CFG_phosphor_g}"
+    line="${line//@PHOSPHOR_B@/$CFG_phosphor_b}"
+    line="${line//@HOTCORE@/$hotcore}"
+
+    line="${line//@ENABLE_DITHER@/$enable_dither}"
+    line="${line//@ENABLE_SCANLINES@/$enable_scanlines}"
+    line="${line//@ENABLE_FLICKER@/$enable_flicker}"
+    line="${line//@ENABLE_VIGNETTE@/$enable_vignette}"
+
+    line="${line//@PALETTE_KIND_VGA16@/$palette_kind_vga16}"
+    line="${line//@PALETTE_KIND_CUBE256@/$palette_kind_cube256}"
+    line="${line//@PALETTE_KIND_CUSTOM@/$palette_kind_custom}"
+    line="${line//@PALETTE_SIZE@/$palette_size}"
+    line="${line//@CUSTOM_PALETTE_SIZE@/$custom_palette_size}"
+
+    printf '%s\n' "$line" >>"$out_file"
+  done <"$TEMPLATES_DIR/shader.glsl.in"
+
+  rm -f "$custom_block_file"
+}
+
+render_picom() {
+  local out_file="$1"
+  local blur_enabled="false"
+  local line
+
+  if ((CFG_effects_blur_strength > 0)); then
+    blur_enabled="true"
+  fi
+
+  : >"$out_file"
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    line="${line//@BLUR_STRENGTH@/$CFG_effects_blur_strength}"
+    line="${line//@BLUR_ENABLED@/$blur_enabled}"
+    line="${line//@SHADER_PATH@/shader.glsl}"
+    printf '%s\n' "$line" >>"$out_file"
+  done <"$TEMPLATES_DIR/picom.conf.in"
+}
+
+validate_stage_with_picom() {
+  local stage_dir="$1"
+  local log_file="$stage_dir/picom-validate.log"
+  local rc=0
+
+  if ! command -v picom >/dev/null 2>&1; then
+    warn "picom not installed; skipping runtime shader validation"
+    return 0
+  fi
+
+  if [[ -z "${DISPLAY:-}" ]]; then
+    warn "DISPLAY is not set; skipping runtime shader validation"
+    return 0
+  fi
+
+  if command -v pgrep >/dev/null 2>&1 && pgrep -x picom >/dev/null 2>&1; then
+    warn "picom is already running; skipping test instance validation"
+    return 0
+  fi
+
+  if command -v timeout >/dev/null 2>&1; then
+    (cd "$stage_dir" && timeout 3s picom --config picom.conf --log-file "$log_file" >/dev/null 2>&1) || rc=$?
+  else
+    (cd "$stage_dir" && picom --config picom.conf --log-file "$log_file" >/dev/null 2>&1) || rc=$?
+  fi
+
+  if [[ "$rc" -ne 0 && "$rc" -ne 124 ]]; then
+    if [[ -f "$log_file" ]] && grep -Eiq 'another composite manager' "$log_file"; then
+      warn "another compositor is active; skipping validation"
+      return 0
+    fi
+    warn "picom validation failed with exit code $rc"
+    [[ -f "$log_file" ]] && sed -n '1,40p' "$log_file" >&2
+    return 1
+  fi
+
+  if [[ -f "$log_file" ]] && grep -Eiq '(shader.*(fail|error)|compile error|error:)' "$log_file"; then
+    if grep -Eiq 'another composite manager' "$log_file"; then
+      warn "another compositor is active; skipping validation"
+      return 0
+    fi
+    warn "picom reported shader or config errors during validation"
+    sed -n '1,40p' "$log_file" >&2
+    return 1
+  fi
+
+  return 0
+}
+
+swap_active_dir() {
+  local stage_dir="$1"
+  local profile_id="$2"
+  local ts backup_name backup_dir old_active
+
+  mkdir -p "$STATE_DIR" "$BACKUPS_DIR"
+
+  ts="$(date +%Y%m%d-%H%M%S)"
+  backup_name="${ts}-${profile_id//[^A-Za-z0-9._-]/_}"
+  backup_dir="$BACKUPS_DIR/$backup_name"
+  mkdir -p "$backup_dir"
+
+  if [[ -d "$ACTIVE_DIR" && -n "$(ls -A "$ACTIVE_DIR" 2>/dev/null || true)" ]]; then
+    cp -a "$ACTIVE_DIR"/. "$backup_dir"/
+  fi
+
+  old_active="$STATE_DIR/active.prev.$$"
+  rm -rf "$old_active"
+
+  if [[ -d "$ACTIVE_DIR" ]]; then
+    mv "$ACTIVE_DIR" "$old_active"
+  else
+    mkdir -p "$old_active"
+  fi
+
+  if mv "$stage_dir" "$ACTIVE_DIR"; then
+    rm -rf "$old_active"
+    return 0
+  fi
+
+  warn "active swap failed; rolling back"
+  rm -rf "$ACTIVE_DIR"
+  if [[ -d "$old_active" ]]; then
+    mv "$old_active" "$ACTIVE_DIR"
+  fi
+  return 1
+}
+
+copy_active_to_last_good() {
+  local staging old
+
+  mkdir -p "$STATE_DIR"
+  staging="$(mktemp -d "$STATE_DIR/last_good.new.XXXXXX")"
+
+  if [[ -d "$ACTIVE_DIR" && -n "$(ls -A "$ACTIVE_DIR" 2>/dev/null || true)" ]]; then
+    cp -a "$ACTIVE_DIR"/. "$staging"/
+  fi
+
+  old="$STATE_DIR/last_good.old.$$"
+  rm -rf "$old"
+
+  if [[ -d "$LAST_GOOD_DIR" ]]; then
+    mv "$LAST_GOOD_DIR" "$old"
+  fi
+
+  mv "$staging" "$LAST_GOOD_DIR"
+  rm -rf "$old"
+}
+
+restore_last_good_if_needed() {
+  local restore_dir old_active
+
+  if [[ ! -d "$LAST_GOOD_DIR" ]]; then
+    return 0
+  fi
+
+  if [[ -d "$ACTIVE_DIR" && -n "$(ls -A "$ACTIVE_DIR" 2>/dev/null || true)" ]]; then
+    return 0
+  fi
+
+  warn "restoring active/ from last_good"
+  restore_dir="$(mktemp -d "$STATE_DIR/restore.XXXXXX")"
+  cp -a "$LAST_GOOD_DIR"/. "$restore_dir"/
+
+  old_active="$STATE_DIR/active.bad.$$"
+  rm -rf "$old_active"
+  if [[ -d "$ACTIVE_DIR" ]]; then
+    mv "$ACTIVE_DIR" "$old_active"
+  fi
+
+  mv "$restore_dir" "$ACTIVE_DIR"
+  rm -rf "$old_active"
+}
+
+apply_scoped_backends() {
+  if [[ "$CFG_scope_x11" == "true" && -x "$BACKEND_X11" ]]; then
+    "$BACKEND_X11" apply "$ACTIVE_DIR" || warn "x11 backend apply hook reported an issue"
+  fi
+
+  if [[ "$CFG_scope_tty" == "true" && -x "$BACKEND_TTY" ]]; then
+    "$BACKEND_TTY" apply "$ACTIVE_DIR" || warn "tty backend apply hook reported an issue"
+  fi
+
+  if [[ "$CFG_scope_tuigreet" == "true" && -x "$BACKEND_TUIGREET" ]]; then
+    "$BACKEND_TUIGREET" apply "$ACTIVE_DIR" || warn "tuigreet backend apply hook reported an issue"
+  fi
+}
+
+create_builtin_passthrough_profile() {
+  local out_file="$1"
+  cat >"$out_file" <<'PROFILE'
+name = "Passthrough"
+version = 1
+
+[mode]
+type = "passthrough"
+
+[effects]
+blur_strength = 0
+scanlines = false
+flicker = false
+dither = "none"
+vignette = false
+
+[scope]
+x11 = true
+tty = false
+tuigreet = false
+PROFILE
+}
+
+cmd_list() {
+  local current_profile=""
+  local found=0
+
+  if [[ -f "$ACTIVE_DIR/profile.env" ]]; then
+    # shellcheck source=/dev/null
+    source "$ACTIVE_DIR/profile.env"
+    current_profile="${PROFILE_ID:-}"
+  fi
+
+  for profile in "$PROFILES_DIR"/*.toml; do
+    [[ -e "$profile" ]] || continue
+    found=1
+    local base
+    base="$(basename "$profile")"
+    base="${base%.toml}"
+
+    if [[ "$base" == "$current_profile" ]]; then
+      printf '%s (active)\n' "$base"
+    else
+      printf '%s\n' "$base"
+    fi
+  done
+
+  if [[ "$found" -eq 0 ]]; then
+    printf 'no profiles found in %s\n' "$PROFILES_DIR"
+  fi
+}
+
+status_ok() {
+  printf '[ OK ] %s\n' "$1"
+}
+
+status_warn() {
+  printf '[WARN] %s\n' "$1"
+}
+
+cmd_doctor() {
+  printf 'RetroFX doctor\n'
+
+  if [[ -n "${DISPLAY:-}" ]]; then
+    status_ok "DISPLAY is set to $DISPLAY"
+  else
+    status_warn "DISPLAY is not set (not in X11 session?)"
+  fi
+
+  case "${XDG_SESSION_TYPE:-unknown}" in
+    x11)
+      status_ok "XDG_SESSION_TYPE is x11"
+      ;;
+    *)
+      status_warn "XDG_SESSION_TYPE is ${XDG_SESSION_TYPE:-unset}; X11 backend expects x11"
+      ;;
+  esac
+
+  if command -v picom >/dev/null 2>&1; then
+    status_ok "picom is installed"
+  else
+    status_warn "picom is not installed"
+  fi
+
+  if command -v picom >/dev/null 2>&1; then
+    if picom --help 2>&1 | grep -qi 'glx'; then
+      status_ok "picom advertises glx backend support"
+    else
+      status_warn "could not confirm glx backend support from picom --help"
+    fi
+  fi
+
+  if command -v glxinfo >/dev/null 2>&1; then
+    if glxinfo -B >/dev/null 2>&1; then
+      status_ok "GLX context query succeeded"
+    else
+      status_warn "glxinfo present but GLX query failed"
+    fi
+  else
+    status_warn "glxinfo not found (cannot fully validate GLX runtime)"
+  fi
+
+  if [[ -f "$ACTIVE_DIR/picom.conf" && -f "$ACTIVE_DIR/shader.glsl" ]]; then
+    status_ok "active config exists"
+  else
+    status_warn "active config missing (run: retrofx apply <profile>)"
+  fi
+
+  if [[ -d "$LAST_GOOD_DIR" && -n "$(ls -A "$LAST_GOOD_DIR" 2>/dev/null || true)" ]]; then
+    status_ok "last_good backup exists"
+  else
+    status_warn "last_good backup is empty or missing"
+  fi
+}
+
+preview_truecolor_block() {
+  local r="$1"
+  local g="$2"
+  local b="$3"
+  printf '\033[48;2;%d;%d;%dm  \033[0m' "$r" "$g" "$b"
+}
+
+cmd_preview() {
+  local mode="passthrough"
+  local bands=8
+  local phosphor_r="1.000000"
+  local phosphor_g="1.000000"
+  local phosphor_b="1.000000"
+
+  if [[ $# -gt 0 ]]; then
+    local profile_path
+    profile_path="$(resolve_profile_path "$1")" || die "profile not found: $1"
+    parse_profile "$profile_path"
+    compute_phosphor_rgb
+
+    mode="$CFG_mode_type"
+    bands="$CFG_monochrome_bands"
+    phosphor_r="$CFG_phosphor_r"
+    phosphor_g="$CFG_phosphor_g"
+    phosphor_b="$CFG_phosphor_b"
+  elif [[ -f "$ACTIVE_DIR/profile.env" ]]; then
+    # shellcheck source=/dev/null
+    source "$ACTIVE_DIR/profile.env"
+    mode="${MODE_TYPE:-passthrough}"
+    bands="${MONO_BANDS:-8}"
+    phosphor_r="${PHOSPHOR_R:-1.000000}"
+    phosphor_g="${PHOSPHOR_G:-1.000000}"
+    phosphor_b="${PHOSPHOR_B:-1.000000}"
+  fi
+
+  printf 'Grayscale ramp\n'
+  local i v
+  for ((i = 0; i < 32; i++)); do
+    v=$((i * 255 / 31))
+    preview_truecolor_block "$v" "$v" "$v"
+  done
+  printf '\n\n'
+
+  printf 'Band visualization (%s, %s bands)\n' "$mode" "$bands"
+  local levels
+  levels="$bands"
+  if [[ "$levels" -lt 2 ]]; then
+    levels=2
+  fi
+  if [[ "$levels" -gt 256 ]]; then
+    levels=256
+  fi
+
+  local pr pg pb
+  pr="$(float_to_u8 "$phosphor_r")"
+  pg="$(float_to_u8 "$phosphor_g")"
+  pb="$(float_to_u8 "$phosphor_b")"
+
+  local lum q out r g b
+  for ((i = 0; i < 64; i++)); do
+    lum=$((i * 255 / 63))
+    q=$(((lum * (levels - 1) + 127) / 255))
+    out=$((q * 255 / (levels - 1)))
+
+    r=$((out * pr / 255))
+    g=$((out * pg / 255))
+    b=$((out * pb / 255))
+    preview_truecolor_block "$r" "$g" "$b"
+  done
+  printf '\n\n'
+
+  printf 'ANSI 16 swatches\n'
+  local code ansi
+  for ((code = 0; code < 16; code++)); do
+    if ((code < 8)); then
+      ansi=$((40 + code))
+    else
+      ansi=$((100 + code - 8))
+    fi
+    printf '\033[%dm %02d \033[0m' "$ansi" "$code"
+  done
+  printf '\n\n'
+
+  printf 'cube256 swatches\n'
+  local rr gg bb idx
+  for ((gg = 0; gg < 6; gg++)); do
+    for ((rr = 0; rr < 6; rr++)); do
+      for ((bb = 0; bb < 6; bb++)); do
+        idx=$((16 + 36 * rr + 6 * gg + bb))
+        printf '\033[48;5;%dm  \033[0m' "$idx"
+      done
+      printf ' '
+    done
+    printf '\n'
+  done
+  printf 'grayscale: '
+  for ((idx = 232; idx <= 255; idx++)); do
+    printf '\033[48;5;%dm  \033[0m' "$idx"
+  done
+  printf '\n'
+}
+
+prompt_input() {
+  local prompt="$1"
+  local default="$2"
+  local value=""
+
+  while true; do
+    if [[ -n "$default" ]]; then
+      read -r -p "$prompt [$default]: " value || return 1
+      value="${value:-$default}"
+    else
+      read -r -p "$prompt: " value || return 1
+    fi
+
+    value="$(trim "$value")"
+    if [[ -n "$value" ]]; then
+      printf '%s' "$value"
+      return 0
+    fi
+  done
+}
+
+prompt_yes_no() {
+  local prompt="$1"
+  local default="$2"
+  local answer=""
+
+  while true; do
+    read -r -p "$prompt [$default]: " answer || return 1
+    answer="$(trim "${answer:-$default}")"
+    case "$answer" in
+      y | Y | yes | YES | true)
+        printf 'true'
+        return 0
+        ;;
+      n | N | no | NO | false)
+        printf 'false'
+        return 0
+        ;;
+      *)
+        printf 'Please answer y or n.\n' >&2
+        ;;
+    esac
+  done
+}
+
+cmd_new() {
+  [[ -t 0 ]] || die "retrofx new requires an interactive terminal"
+
+  local name version mode filename out_path tmp_path
+  local mono_bands mono_phosphor mono_custom mono_hotcore
+  local pal_kind pal_size pal_custom
+  local eff_blur eff_scan eff_flicker eff_dither eff_vignette
+  local scope_x11 scope_tty scope_tuigreet
+
+  name="$(prompt_input "Profile name" "My RetroFX Profile")" || exit 1
+  version="1"
+
+  while true; do
+    mode="$(prompt_input "Mode (passthrough/monochrome/palette)" "monochrome")" || exit 1
+    case "$mode" in
+      passthrough | monochrome | palette)
+        break
+        ;;
+    esac
+    printf 'Choose one of: passthrough, monochrome, palette\n' >&2
+  done
+
+  mono_bands="4"
+  mono_phosphor="green"
+  mono_custom=""
+  mono_hotcore="false"
+
+  pal_kind="vga16"
+  pal_size="16"
+  pal_custom=""
+
+  if [[ "$mode" == "monochrome" ]]; then
+    while true; do
+      mono_bands="$(prompt_input "Monochrome bands (2-256)" "4")" || exit 1
+      if parse_int_range "$mono_bands" 2 256 >/dev/null; then
+        break
+      fi
+      printf 'bands must be 2..256\n' >&2
+    done
+
+    while true; do
+      mono_phosphor="$(prompt_input "Phosphor (green/amber/blue/white/custom)" "green")" || exit 1
+      case "$mono_phosphor" in
+        green | amber | blue | white | custom)
+          break
+          ;;
+      esac
+      printf 'Invalid phosphor selection\n' >&2
+    done
+
+    if [[ "$mono_phosphor" == "custom" ]]; then
+      while true; do
+        mono_custom="$(prompt_input "Custom RGB (r,g,b in 0..1 or 0..255)" "0.7,1.0,0.7")" || exit 1
+        if mono_custom="$(normalize_rgb_triplet "$mono_custom")"; then
+          break
+        fi
+        printf 'Invalid RGB triplet\n' >&2
+      done
+    fi
+
+    mono_hotcore="$(prompt_yes_no "Enable hot-core whitening? (y/n)" "y")" || exit 1
+  fi
+
+  if [[ "$mode" == "palette" ]]; then
+    while true; do
+      pal_kind="$(prompt_input "Palette kind (vga16/cube256/custom)" "vga16")" || exit 1
+      case "$pal_kind" in
+        vga16 | cube256 | custom)
+          break
+          ;;
+      esac
+      printf 'Invalid palette kind\n' >&2
+    done
+
+    while true; do
+      if [[ "$pal_kind" == "cube256" ]]; then
+        pal_size="$(prompt_input "Palette size (2-256)" "256")" || exit 1
+      else
+        pal_size="$(prompt_input "Palette size (2-256)" "16")" || exit 1
+      fi
+      if parse_int_range "$pal_size" 2 256 >/dev/null; then
+        break
+      fi
+      printf 'size must be 2..256\n' >&2
+    done
+
+    if [[ "$pal_kind" == "custom" ]]; then
+      pal_custom="$(prompt_input "Custom palette file path" "palette.txt")" || exit 1
+    fi
+  fi
+
+  while true; do
+    eff_blur="$(prompt_input "Blur strength (0-6)" "2")" || exit 1
+    if parse_int_range "$eff_blur" 0 6 >/dev/null; then
+      break
+    fi
+    printf 'blur_strength must be 0..6\n' >&2
+  done
+
+  eff_scan="$(prompt_yes_no "Enable scanlines? (y/n)" "n")" || exit 1
+  eff_flicker="$(prompt_yes_no "Enable flicker? (y/n)" "n")" || exit 1
+
+  while true; do
+    eff_dither="$(prompt_input "Dither (none/ordered)" "ordered")" || exit 1
+    case "$eff_dither" in
+      none | ordered)
+        break
+        ;;
+    esac
+    printf 'dither must be none or ordered\n' >&2
+  done
+
+  eff_vignette="$(prompt_yes_no "Enable vignette? (y/n)" "n")" || exit 1
+
+  scope_x11="$(prompt_yes_no "Enable X11 scope? (y/n)" "y")" || exit 1
+  scope_tty="$(prompt_yes_no "Enable TTY scope? (y/n)" "n")" || exit 1
+  scope_tuigreet="$(prompt_yes_no "Enable tuigreet scope? (y/n)" "n")" || exit 1
+
+  filename="$(prompt_input "Profile filename (without .toml)" "")" || exit 1
+  if [[ -z "$filename" ]]; then
+    filename="$(printf '%s' "$name" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9._-' '-')"
+    filename="${filename#-}"
+    filename="${filename%-}"
+  fi
+
+  [[ -n "$filename" ]] || die "could not derive a profile filename"
+
+  out_path="$PROFILES_DIR/$filename.toml"
+  if [[ -e "$out_path" ]]; then
+    local overwrite
+    overwrite="$(prompt_yes_no "Profile exists at $out_path. Overwrite? (y/n)" "n")" || exit 1
+    [[ "$overwrite" == "true" ]] || die "aborted"
+  fi
+
+  mkdir -p "$PROFILES_DIR"
+  tmp_path="$(mktemp "$PROFILES_DIR/.new-profile.XXXXXX")"
+
+  {
+    printf 'name = "%s"\n' "$name"
+    printf 'version = %s\n\n' "$version"
+
+    printf '[mode]\n'
+    printf 'type = "%s"\n\n' "$mode"
+
+    if [[ "$mode" == "monochrome" ]]; then
+      printf '[monochrome]\n'
+      printf 'bands = %s\n' "$mono_bands"
+      printf 'phosphor = "%s"\n' "$mono_phosphor"
+      if [[ "$mono_phosphor" == "custom" ]]; then
+        printf 'custom_rgb = "%s"\n' "$mono_custom"
+      fi
+      printf 'hotcore = %s\n\n' "$mono_hotcore"
+    fi
+
+    if [[ "$mode" == "palette" ]]; then
+      printf '[palette]\n'
+      printf 'kind = "%s"\n' "$pal_kind"
+      printf 'size = %s\n' "$pal_size"
+      if [[ "$pal_kind" == "custom" ]]; then
+        printf 'custom_file = "%s"\n' "$pal_custom"
+      fi
+      printf '\n'
+    fi
+
+    printf '[effects]\n'
+    printf 'blur_strength = %s\n' "$eff_blur"
+    printf 'scanlines = %s\n' "$eff_scan"
+    printf 'flicker = %s\n' "$eff_flicker"
+    printf 'dither = "%s"\n' "$eff_dither"
+    printf 'vignette = %s\n\n' "$eff_vignette"
+
+    printf '[scope]\n'
+    printf 'x11 = %s\n' "$scope_x11"
+    printf 'tty = %s\n' "$scope_tty"
+    printf 'tuigreet = %s\n' "$scope_tuigreet"
+  } >"$tmp_path"
+
+  mv "$tmp_path" "$out_path"
+  log "wrote new profile: $out_path"
+}
+
+cmd_apply() {
+  local profile_ref="$1"
+  local profile_path stage_dir profile_id
+
+  profile_path="$(resolve_profile_path "$profile_ref")" || die "profile not found: $profile_ref"
+
+  parse_profile "$profile_path"
+  compute_phosphor_rgb
+
+  mkdir -p "$ACTIVE_DIR" "$STATE_DIR" "$BACKUPS_DIR"
+
+  stage_dir="$(mktemp -d "$STATE_DIR/stage.XXXXXX")"
+
+  cp "$profile_path" "$stage_dir/profile.toml"
+  write_profile_env "$stage_dir/profile.env"
+  render_shader "$stage_dir/shader.glsl"
+  render_picom "$stage_dir/picom.conf"
+  render_xresources "$stage_dir/xresources"
+
+  {
+    printf 'generated_at=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    printf 'profile=%s\n' "$(basename "$profile_path")"
+  } >"$stage_dir/meta"
+
+  if ! validate_stage_with_picom "$stage_dir"; then
+    warn "validation failed; keeping previous active configuration"
+    rm -rf "$stage_dir"
+    restore_last_good_if_needed
+    return 1
+  fi
+
+  profile_id="$(basename "$profile_path")"
+  profile_id="${profile_id%.toml}"
+
+  if ! swap_active_dir "$stage_dir" "$profile_id"; then
+    rm -rf "$stage_dir"
+    restore_last_good_if_needed
+    die "unable to atomically swap active configuration"
+  fi
+
+  copy_active_to_last_good
+  apply_scoped_backends
+
+  log "applied profile '$profile_id'"
+}
+
+cmd_off() {
+  if [[ -f "$PROFILES_DIR/passthrough.toml" ]]; then
+    cmd_apply "passthrough"
+    return 0
+  fi
+
+  warn "profiles/passthrough.toml missing; using built-in passthrough"
+  local tmp
+  tmp="$(mktemp "$STATE_DIR/passthrough.XXXXXX.toml")"
+  create_builtin_passthrough_profile "$tmp"
+
+  cmd_apply "$tmp"
+  rm -f "$tmp"
+}
+
+usage() {
+  cat <<'USAGE'
+Usage:
+  retrofx list
+  retrofx apply <profile>
+  retrofx off
+  retrofx doctor
+  retrofx preview [profile]
+  retrofx new
+USAGE
+}
+
+main() {
+  local cmd="${1:-}"
+
+  case "$cmd" in
+    list)
+      shift
+      [[ "$#" -eq 0 ]] || die "list takes no arguments"
+      cmd_list
+      ;;
+    apply)
+      shift
+      [[ "$#" -eq 1 ]] || die "apply requires exactly one profile name/path"
+      cmd_apply "$1"
+      ;;
+    off)
+      shift
+      [[ "$#" -eq 0 ]] || die "off takes no arguments"
+      cmd_off
+      ;;
+    doctor)
+      shift
+      [[ "$#" -eq 0 ]] || die "doctor takes no arguments"
+      cmd_doctor
+      ;;
+    preview)
+      shift
+      if [[ "$#" -gt 1 ]]; then
+        die "preview takes zero or one profile"
+      fi
+      cmd_preview "$@"
+      ;;
+    new)
+      shift
+      [[ "$#" -eq 0 ]] || die "new takes no arguments"
+      cmd_new
+      ;;
+    "" | -h | --help | help)
+      usage
+      ;;
+    *)
+      die "unknown command '$cmd'"
+      ;;
+  esac
+}
+
+main "$@"

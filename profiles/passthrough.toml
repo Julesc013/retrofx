@@ -1,0 +1,17 @@
+name = "Passthrough"
+version = 1
+
+[mode]
+type = "passthrough"
+
+[effects]
+blur_strength = 0
+scanlines = false
+flicker = false
+dither = "none"
+vignette = false
+
+[scope]
+x11 = true
+tty = false
+tuigreet = false

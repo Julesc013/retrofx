@@ -1,0 +1,23 @@
+! RetroFX generated terminal colors (session-local use)
+*.foreground: @FG_HEX@
+*.background: @BG_HEX@
+*.cursorColor: @FG_HEX@
+
+*.color0:  #000000
+*.color8:  #303030
+
+*.color1:  @ACCENT_HEX@
+*.color2:  @FG_HEX@
+*.color3:  #8a8a00
+*.color4:  #3a5fb0
+*.color5:  #8040a0
+*.color6:  #2f7f7f
+*.color7:  #c0c0c0
+
+*.color9:  #aa4444
+*.color10: @FG_HEX@
+*.color11: #b0b000
+*.color12: #6f95ff
+*.color13: #b071d1
+*.color14: #54a9a9
+*.color15: #ffffff
