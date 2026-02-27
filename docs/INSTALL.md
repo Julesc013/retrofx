@@ -58,6 +58,10 @@ retrofx uninstall --yes --keep-profiles
 
 `--keep-profiles` stores preserved profiles in a timestamped backup directory next to the install home.
 
+For recovery and diagnostics see:
+
+- `docs/TROUBLESHOOTING.md`
+
 ## X11 i3 Xsession Entry (User-Local)
 
 Create a managed Xsession entry:

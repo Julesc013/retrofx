@@ -87,3 +87,11 @@ This affects apps launched from that shell/session only. Plasma/GNOME defaults r
 ## Wayland Note (Degraded Mode)
 
 On Wayland sessions, RetroFX does not provide global post-process compositor shaders. In this mode, `apply` generates degraded outputs only (terminal palette artifacts, optional TTY palette backend, optional tuigreet snippet) and reports this explicitly in command output and `doctor`.
+
+## Need Help?
+
+- Run diagnostics:
+  - `./scripts/retrofx doctor`
+  - `./scripts/retrofx self-check`
+- Read:
+  - `docs/TROUBLESHOOTING.md`

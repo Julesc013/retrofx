@@ -31,6 +31,12 @@ run_retrofx_wayland() {
   DISPLAY='' WAYLAND_DISPLAY='wayland-0' XDG_SESSION_TYPE='wayland' "$RETROFX" "$@"
 }
 
+run_retrofx_x11_home() {
+  local test_home="$1"
+  shift
+  HOME="$test_home" DISPLAY=':99' WAYLAND_DISPLAY='' XDG_SESSION_TYPE='x11' "$RETROFX" "$@"
+}
+
 assert_contains() {
   local haystack="$1"
   local needle="$2"
@@ -263,10 +269,17 @@ if command -v shellcheck >/dev/null 2>&1; then
     "$ROOT_DIR/backends/tty/apply.sh" \
     "$ROOT_DIR/scripts/integrate/retrofx-env.sh" \
     "$ROOT_DIR/scripts/integrate/install-xsession.sh" \
-    "$ROOT_DIR/scripts/integrate/remove-xsession.sh"
+    "$ROOT_DIR/scripts/integrate/remove-xsession.sh" \
+    "$ROOT_DIR/scripts/ci.sh"
 else
   warn "shellcheck not installed; skipping"
 fi
+
+log "checking version command"
+version_output="$("$RETROFX" --version)"
+assert_contains "$version_output" "retrofx "
+assert_contains "$version_output" "x11=full"
+assert_contains "$version_output" "wayland=degraded"
 
 log "checking list command"
 list_output="$(run_retrofx_x11 list)"
@@ -722,6 +735,54 @@ assert_contains "$doctor_wayland_output" "Session type: wayland"
 assert_contains "$doctor_wayland_output" "Global post-process shaders are not supported in this backend."
 assert_contains "$doctor_wayland_output" "Wayland backend: degraded outputs only"
 
+log "doctor JSON output"
+doctor_json_output="$(run_retrofx_x11 doctor --json)"
+assert_contains "$doctor_json_output" "\"mode\":"
+assert_contains "$doctor_json_output" "\"session\":"
+assert_contains "$doctor_json_output" "\"picom_present\":"
+assert_contains "$doctor_json_output" "\"warnings\":"
+assert_contains "$doctor_json_output" "\"errors\":"
+DOCTOR_JSON="$doctor_json_output" python3 - <<'PY'
+import json
+import os
+import sys
+
+data = json.loads(os.environ["DOCTOR_JSON"])
+required = [
+    "mode",
+    "session",
+    "picom_present",
+    "glx_backend_possible",
+    "available_profiles_count",
+    "last_good_present",
+    "tty_backend_available",
+    "tuigreet_backend_available",
+    "warnings",
+    "errors",
+]
+missing = [k for k in required if k not in data]
+if missing:
+    raise SystemExit(f"doctor json missing keys: {missing}")
+if not isinstance(data["warnings"], list) or not isinstance(data["errors"], list):
+    raise SystemExit("doctor json warnings/errors must be arrays")
+PY
+
+log "self-check catches missing files in isolated RETROFX_HOME"
+selfcheck_home="$TEST_TMP_DIR/selfcheck-home"
+mkdir -p "$selfcheck_home"
+for item in backends templates scripts profiles palettes docs README.md VERSION CHANGELOG.md; do
+  if [[ -e "$ROOT_DIR/$item" ]]; then
+    cp -a "$ROOT_DIR/$item" "$selfcheck_home/$item"
+  fi
+done
+mkdir -p "$selfcheck_home/active" "$selfcheck_home/state"
+RETROFX_HOME="$selfcheck_home" run_retrofx_x11 apply passthrough
+RETROFX_HOME="$selfcheck_home" run_retrofx_x11 self-check
+rm -f "$selfcheck_home/templates/shader.glsl.in"
+if RETROFX_HOME="$selfcheck_home" run_retrofx_x11 self-check >/dev/null 2>&1; then
+  die "self-check should fail when template files are missing"
+fi
+
 log "install/uninstall cycle in isolated HOME"
 install_home="$TEST_TMP_DIR/home-install"
 mkdir -p "$install_home"
@@ -735,6 +796,19 @@ assert_contains "$install_list_output" "Core Pack:"
 HOME="$install_home" run_retrofx_x11 uninstall --yes
 [[ ! -d "$install_home/.config/retrofx" ]] || die "uninstall did not remove ~/.config/retrofx"
 [[ ! -e "$install_home/.local/bin/retrofx" ]] || die "uninstall did not remove launcher"
+
+log "repair restores active from last_good"
+run_retrofx_x11 apply crt-green-p1-4band
+require_file "$STATE_DIR/last_good/profile.toml"
+expected_repair_hash="$(hash_file "$STATE_DIR/last_good/profile.toml")"
+printf 'corrupted=true\n' >"$ACTIVE_DIR/profile.toml"
+if run_retrofx_x11 self-check >/dev/null 2>&1; then
+  die "self-check should fail for corrupted active/profile.toml"
+fi
+run_retrofx_x11 repair
+repaired_hash="$(hash_file "$ACTIVE_DIR/profile.toml")"
+[[ "$repaired_hash" == "$expected_repair_hash" ]] || die "repair did not restore last_good profile state"
+run_retrofx_x11 self-check
 
 log "verifying apply -> off returns to passthrough baseline"
 run_retrofx_x11 apply passthrough

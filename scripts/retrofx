@@ -48,6 +48,7 @@ readonly DEFAULT_INSTALL_HOME="${HOME}/.config/retrofx"
 readonly DEFAULT_LAUNCHER_PATH="${HOME}/.local/bin/retrofx"
 readonly INSTALL_MARKER_FILE=".retrofx-install"
 readonly XS_MARKER_KEY="X-RetroFX-Managed=true"
+readonly VERSION_FILE="$ROOT_DIR/VERSION"
 
 BACKUP_KEEP="${RETROFX_BACKUP_KEEP:-$BACKUP_KEEP_DEFAULT}"
 if [[ ! "$BACKUP_KEEP" =~ ^[0-9]+$ ]] || ((BACKUP_KEEP < 1)); then
@@ -158,6 +159,22 @@ execution_mode() {
   else
     printf 'repo-local'
   fi
+}
+
+read_version() {
+  local ver=""
+  if [[ -f "$VERSION_FILE" ]]; then
+    IFS= read -r ver <"$VERSION_FILE" || true
+    ver="$(trim "$ver")"
+  fi
+  if [[ -z "$ver" ]]; then
+    ver="0.0.0-unknown"
+  fi
+  printf '%s' "$ver"
+}
+
+capability_summary_line() {
+  printf 'x11=full-with-picom+glx wayland=degraded'
 }
 
 append_home_log() {
@@ -3036,17 +3053,170 @@ status_warn() {
   printf '[WARN] %s\n' "$1"
 }
 
+json_bool() {
+  local val="$1"
+  if [[ "$val" -eq 1 ]]; then
+    printf 'true'
+  else
+    printf 'false'
+  fi
+}
+
+print_json_string_array() {
+  local -n ref="$1"
+  local i
+  printf '['
+  for ((i = 0; i < ${#ref[@]}; i++)); do
+    if ((i > 0)); then
+      printf ', '
+    fi
+    printf '"%s"' "$(json_escape_string "${ref[$i]}")"
+  done
+  printf ']'
+}
+
 cmd_doctor() {
-  local session_type wm_de
+  local output_mode="${1:-text}"
+  local session_type wm_de mode
   local picom_installed=0
   local picom_glx=0
   local glx_runtime=0
+  local glxinfo_present=0
+  local glx_backend_possible=0
+  local profiles_count=0
+  local last_good_present=0
+  local tty_backend_available=0
+  local tuigreet_backend_available=0
+  local session_json=""
+  local -a warnings=()
+  local -a errors=()
+  local xdg_session="${XDG_SESSION_TYPE:-unset}"
+  local template
+  local -a required_templates=(
+    "$TEMPLATES_DIR/shader.glsl.in"
+    "$TEMPLATES_DIR/picom.conf.in"
+    "$TEMPLATES_DIR/xresources.in"
+    "$TEMPLATES_DIR/fontconfig.conf.in"
+  )
 
   ensure_dirs
-  printf 'RetroFX doctor\n'
+
+  mode="$(execution_mode)"
   session_type="$(detect_session_type)"
   wm_de="$(detect_wm_de)"
+  case "$session_type" in
+    x11)
+      session_json="X11"
+      ;;
+    wayland)
+      session_json="Wayland"
+      ;;
+    *)
+      session_json="unknown"
+      ;;
+  esac
 
+  while IFS= read -r _p; do
+    [[ -n "$_p" ]] || continue
+    profiles_count=$((profiles_count + 1))
+  done < <(iter_all_profile_paths)
+
+  if dir_has_files "$LAST_GOOD_DIR"; then
+    last_good_present=1
+  else
+    warnings+=("last_good backup is empty or missing")
+  fi
+
+  [[ -x "$BACKEND_TTY" ]] && tty_backend_available=1
+  [[ -x "$BACKEND_TUIGREET" ]] && tuigreet_backend_available=1
+
+  if command -v picom >/dev/null 2>&1; then
+    picom_installed=1
+    if picom_has_glx; then
+      picom_glx=1
+    else
+      warnings+=("could not confirm glx backend support from picom --help")
+    fi
+  else
+    warnings+=("picom is not installed")
+  fi
+
+  if [[ "$session_type" == "x11" ]]; then
+    if command -v glxinfo >/dev/null 2>&1; then
+      glxinfo_present=1
+      if glxinfo -B >/dev/null 2>&1; then
+        glx_runtime=1
+      else
+        warnings+=("glxinfo present but GLX query failed")
+      fi
+    else
+      warnings+=("glxinfo not found (cannot fully validate GLX runtime)")
+    fi
+  else
+    warnings+=("GLX runtime check skipped outside X11 session")
+  fi
+
+  if [[ "$picom_installed" -eq 1 && "$picom_glx" -eq 1 ]]; then
+    glx_backend_possible=1
+    if [[ "$session_type" == "x11" && "$glx_runtime" -eq 0 && "$glxinfo_present" -eq 1 ]]; then
+      glx_backend_possible=0
+    fi
+  fi
+
+  if [[ ! -f "$ACTIVE_DIR/profile.env" || ! -f "$ACTIVE_DIR/xresources" || ! -f "$ACTIVE_DIR/semantic.env" ]]; then
+    warnings+=("active config missing (run: retrofx apply <profile>)")
+  fi
+
+  if [[ "$session_type" == "wayland" ]]; then
+    if [[ -f "$ACTIVE_DIR/picom.conf" || -f "$ACTIVE_DIR/shader.glsl" ]]; then
+      warnings+=("wayland active state still contains x11 shader artifacts; reapply to refresh degraded outputs")
+    fi
+    warnings+=("Global post-process shaders are not supported in this backend.")
+  fi
+
+  if [[ "$xdg_session" != "x11" && "$xdg_session" != "wayland" ]]; then
+    warnings+=("XDG_SESSION_TYPE is ${xdg_session}")
+  fi
+
+  if [[ -z "${DISPLAY:-}" ]]; then
+    warnings+=("DISPLAY is not set")
+  fi
+
+  if [[ -z "${WAYLAND_DISPLAY:-}" ]]; then
+    warnings+=("WAYLAND_DISPLAY is not set")
+  fi
+
+  if [[ "$profiles_count" -eq 0 ]]; then
+    errors+=("no profiles found")
+  fi
+
+  for template in "${required_templates[@]}"; do
+    if [[ ! -f "$template" ]]; then
+      errors+=("missing template: $template")
+    fi
+  done
+
+  if [[ "$output_mode" == "--json" || "$output_mode" == "json" ]]; then
+    printf '{\n'
+    printf '  "mode": "%s",\n' "$(json_escape_string "$mode")"
+    printf '  "session": "%s",\n' "$(json_escape_string "$session_json")"
+    printf '  "picom_present": %s,\n' "$(json_bool "$picom_installed")"
+    printf '  "glx_backend_possible": %s,\n' "$(json_bool "$glx_backend_possible")"
+    printf '  "available_profiles_count": %s,\n' "$profiles_count"
+    printf '  "last_good_present": %s,\n' "$(json_bool "$last_good_present")"
+    printf '  "tty_backend_available": %s,\n' "$(json_bool "$tty_backend_available")"
+    printf '  "tuigreet_backend_available": %s,\n' "$(json_bool "$tuigreet_backend_available")"
+    printf '  "warnings": '
+    print_json_string_array warnings
+    printf ',\n'
+    printf '  "errors": '
+    print_json_string_array errors
+    printf '\n}\n'
+    return 0
+  fi
+
+  printf 'RetroFX doctor\n'
+  printf 'Mode: %s\n' "$mode"
   printf 'Session type: %s\n' "$session_type"
   printf 'WM/DE: %s\n' "$wm_de"
 
@@ -3062,7 +3232,7 @@ cmd_doctor() {
     status_warn "WAYLAND_DISPLAY is not set"
   fi
 
-  case "${XDG_SESSION_TYPE:-unknown}" in
+  case "$xdg_session" in
     x11)
       status_ok "XDG_SESSION_TYPE is x11"
       ;;
@@ -3070,20 +3240,18 @@ cmd_doctor() {
       status_ok "XDG_SESSION_TYPE is wayland"
       ;;
     *)
-      status_warn "XDG_SESSION_TYPE is ${XDG_SESSION_TYPE:-unset}"
+      status_warn "XDG_SESSION_TYPE is $xdg_session"
       ;;
   esac
 
-  if command -v picom >/dev/null 2>&1; then
-    picom_installed=1
+  if [[ "$picom_installed" -eq 1 ]]; then
     status_ok "picom is installed"
   else
     status_warn "picom is not installed"
   fi
 
   if [[ "$picom_installed" -eq 1 ]]; then
-    if picom_has_glx; then
-      picom_glx=1
+    if [[ "$picom_glx" -eq 1 ]]; then
       status_ok "picom advertises glx backend support"
     else
       status_warn "could not confirm glx backend support from picom --help"
@@ -3092,8 +3260,7 @@ cmd_doctor() {
 
   if [[ "$session_type" == "x11" ]]; then
     if command -v glxinfo >/dev/null 2>&1; then
-      if glxinfo -B >/dev/null 2>&1; then
-        glx_runtime=1
+      if [[ "$glx_runtime" -eq 1 ]]; then
         status_ok "GLX context query succeeded"
       else
         status_warn "glxinfo present but GLX query failed"
@@ -3119,7 +3286,7 @@ cmd_doctor() {
     fi
   fi
 
-  if dir_has_files "$LAST_GOOD_DIR"; then
+  if [[ "$last_good_present" -eq 1 ]]; then
     status_ok "last_good backup exists"
   else
     status_warn "last_good backup is empty or missing"
@@ -3127,7 +3294,7 @@ cmd_doctor() {
 
   printf 'Capabilities:\n'
   if [[ "$session_type" == "x11" ]]; then
-    if [[ "$picom_installed" -eq 1 && "$picom_glx" -eq 1 && "$glx_runtime" -eq 1 ]]; then
+    if [[ "$glx_backend_possible" -eq 1 ]]; then
       status_ok "X11 backend: full shader pipeline available"
     else
       status_warn "X11 backend: full shader pipeline requires picom + glx"
@@ -3140,9 +3307,24 @@ cmd_doctor() {
   fi
 
   status_ok "Terminal palette export: xresources + ANSI semantic env"
-  status_ok "TTY backend: optional (profile scope.tty=true)"
-  status_ok "Tuigreet backend: optional (profile scope.tuigreet=true)"
-  status_ok "Toolkit hooks: optional env suggestions via scripts/integrate/*-env.sh"
+  if [[ "$tty_backend_available" -eq 1 ]]; then
+    status_ok "TTY backend available"
+  else
+    status_warn "TTY backend unavailable"
+  fi
+  if [[ "$tuigreet_backend_available" -eq 1 ]]; then
+    status_ok "Tuigreet backend available"
+  else
+    status_warn "Tuigreet backend unavailable"
+  fi
+
+  if ((${#errors[@]} > 0)); then
+    printf 'Errors:\n'
+    local err
+    for err in "${errors[@]}"; do
+      printf '  - %s\n' "$err"
+    done
+  fi
 }
 
 preview_truecolor_block() {
@@ -3990,7 +4172,7 @@ copy_install_payload() {
   local item
 
   mkdir -p "$stage_dir"
-  for item in backends templates scripts profiles docs palettes README.md; do
+  for item in backends templates scripts profiles docs palettes README.md VERSION CHANGELOG.md; do
     if [[ -e "$src_root/$item" ]]; then
       cp -a "$src_root/$item" "$stage_dir/$item"
     fi
@@ -4282,9 +4464,165 @@ cmd_status() {
   printf 'Active profile: %s\n' "$active_profile"
 }
 
+cmd_version() {
+  printf 'retrofx %s | %s\n' "$(read_version)" "$(capability_summary_line)"
+}
+
+cmd_self_check() {
+  local template
+  local session_hint="x11"
+  local profile_path
+  local ok=1
+  local profile_count=0
+  local -a missing=()
+  local -a parse_errors=()
+  local -a required_common=(
+    "$ACTIVE_DIR/profile.toml"
+    "$ACTIVE_DIR/profile.env"
+    "$ACTIVE_DIR/xresources"
+    "$ACTIVE_DIR/Xresources"
+    "$ACTIVE_DIR/alacritty.toml"
+    "$ACTIVE_DIR/semantic.env"
+    "$ACTIVE_DIR/tty-palette.env"
+    "$ACTIVE_DIR/tty-palette.txt"
+    "$ACTIVE_DIR/meta"
+  )
+  local -a required_templates=(
+    "$TEMPLATES_DIR/shader.glsl.in"
+    "$TEMPLATES_DIR/picom.conf.in"
+    "$TEMPLATES_DIR/xresources.in"
+    "$TEMPLATES_DIR/fontconfig.conf.in"
+  )
+  local f
+
+  ensure_dirs
+
+  for f in "${required_common[@]}"; do
+    if [[ ! -f "$f" ]]; then
+      missing+=("$f")
+      ok=0
+    fi
+  done
+
+  if [[ -f "$ACTIVE_DIR/meta" ]]; then
+    session_hint="$(grep '^session_type=' "$ACTIVE_DIR/meta" | head -n1 | cut -d= -f2 || true)"
+    session_hint="${session_hint:-x11}"
+  fi
+
+  if [[ -f "$ACTIVE_DIR/profile.toml" ]]; then
+    if ! (parse_profile "$ACTIVE_DIR/profile.toml" >/dev/null 2>&1); then
+      parse_errors+=("active/profile.toml failed to parse")
+      ok=0
+    fi
+  fi
+
+  if [[ "$session_hint" == "wayland" ]]; then
+    if [[ -f "$ACTIVE_DIR/picom.conf" || -f "$ACTIVE_DIR/shader.glsl" ]]; then
+      parse_errors+=("wayland active state should not contain picom/shader artifacts")
+      ok=0
+    fi
+  else
+    if [[ ! -f "$ACTIVE_DIR/picom.conf" ]]; then
+      missing+=("$ACTIVE_DIR/picom.conf")
+      ok=0
+    fi
+    if [[ ! -f "$ACTIVE_DIR/shader.glsl" ]]; then
+      missing+=("$ACTIVE_DIR/shader.glsl")
+      ok=0
+    fi
+  fi
+
+  if ! dir_has_files "$LAST_GOOD_DIR"; then
+    parse_errors+=("last_good backup is missing or empty")
+    ok=0
+  fi
+
+  for template in "${required_templates[@]}"; do
+    if [[ ! -f "$template" ]]; then
+      missing+=("$template")
+      ok=0
+    fi
+  done
+
+  while IFS= read -r profile_path; do
+    [[ -f "$profile_path" ]] || continue
+    profile_count=$((profile_count + 1))
+    if ! (parse_profile "$profile_path" >/dev/null 2>&1); then
+      parse_errors+=("profile parse failed: $profile_path")
+      ok=0
+    fi
+  done < <(iter_all_profile_paths)
+
+  if [[ "$profile_count" -eq 0 ]]; then
+    parse_errors+=("no profiles found")
+    ok=0
+  fi
+
+  if [[ "$ok" -eq 1 ]]; then
+    log "self-check passed"
+    return 0
+  fi
+
+  warn "self-check failed"
+  if ((${#missing[@]} > 0)); then
+    printf 'Missing files:\n' >&2
+    for f in "${missing[@]}"; do
+      printf '  - %s\n' "$f" >&2
+    done
+  fi
+  if ((${#parse_errors[@]} > 0)); then
+    printf 'Validation issues:\n' >&2
+    local err
+    for err in "${parse_errors[@]}"; do
+      printf '  - %s\n' "$err" >&2
+    done
+  fi
+  return 1
+}
+
+cmd_repair() {
+  local stage_dir=""
+  local tmp_profile=""
+
+  ensure_dirs
+
+  if dir_has_files "$LAST_GOOD_DIR"; then
+    if restore_last_good; then
+      log "repair: restored active state from last_good"
+      return 0
+    fi
+    die "repair failed: unable to restore last_good"
+  fi
+
+  warn "repair: last_good missing; generating degraded passthrough fallback"
+  tmp_profile="$(mktemp "$STATE_DIR/repair-passthrough.$(now_ts_compact).$$.XXXXXX.toml")"
+  create_builtin_passthrough_profile "$tmp_profile"
+  load_profile "$tmp_profile"
+
+  stage_dir="$(mktemp -d "$STATE_DIR/repair-stage.$(now_ts_compact).$$.XXXXXX")"
+  render_templates "$stage_dir" "$tmp_profile" "wayland"
+  validate_stage_outputs "$stage_dir" "wayland" || {
+    rm -f "$tmp_profile"
+    rm -rf "$stage_dir"
+    die "repair failed: generated fallback outputs are invalid"
+  }
+
+  backup_active "repair"
+  atomic_swap_active "$stage_dir" || {
+    rm -f "$tmp_profile"
+    rm -rf "$stage_dir"
+    die "repair failed: atomic swap failed"
+  }
+
+  copy_active_to_last_good || warn "repair: failed to refresh last_good snapshot"
+  rm -f "$tmp_profile"
+  log "repair: applied degraded passthrough fallback"
+}
+
 usage() {
   cat <<'USAGE'
 Usage:
+  retrofx --version
   retrofx list
   retrofx search <keyword>
   retrofx gallery
@@ -4293,11 +4631,13 @@ Usage:
   retrofx apply <profile>
   retrofx import base16 <path-to-json> --name <profile-name>
   retrofx export <alacritty|xresources|base16> <profile> <output_path>
+  retrofx self-check
+  retrofx repair
   retrofx status
   retrofx install [--yes] [--path <dir>]
   retrofx uninstall [--yes] [--keep-profiles]
   retrofx off [--tty|--all]
-  retrofx doctor
+  retrofx doctor [--json]
   retrofx preview [profile]
   retrofx new
 USAGE
@@ -4309,7 +4649,7 @@ main() {
   local needs_runtime_dirs=1
 
   case "$cmd" in
-    install | uninstall | status | gallery | "" | -h | --help | help)
+    --version | version | install | uninstall | status | gallery | "" | -h | --help | help)
       needs_runtime_dirs=0
       ;;
   esac
@@ -4321,6 +4661,11 @@ main() {
   LAST_ERROR=""
 
   case "$cmd" in
+    --version | version)
+      shift
+      [[ "$#" -eq 0 ]] || die "--version takes no arguments"
+      cmd_version
+      ;;
     list)
       audit_begin "list" "-"
       shift
@@ -4375,6 +4720,18 @@ main() {
       [[ "$#" -eq 3 ]] || die "export requires format, profile, and output_path"
       cmd_export "$1" "$2" "$3"
       ;;
+    self-check)
+      audit_begin "self-check" "-"
+      shift
+      [[ "$#" -eq 0 ]] || die "self-check takes no arguments"
+      cmd_self_check
+      ;;
+    repair)
+      audit_begin "repair" "-"
+      shift
+      [[ "$#" -eq 0 ]] || die "repair takes no arguments"
+      cmd_repair
+      ;;
     status)
       shift
       [[ "$#" -eq 0 ]] || die "status takes no arguments"
@@ -4412,8 +4769,13 @@ main() {
     doctor)
       audit_begin "doctor" "-"
       shift
-      [[ "$#" -eq 0 ]] || die "doctor takes no arguments"
-      cmd_doctor
+      if [[ "$#" -gt 1 ]]; then
+        die "doctor takes zero args or --json"
+      fi
+      if [[ "$#" -eq 1 && "$1" != "--json" ]]; then
+        die "doctor only supports --json"
+      fi
+      cmd_doctor "${1:-text}"
       ;;
     preview)
       profile_ref="${2:--}"

@@ -20,6 +20,10 @@ Pass criteria:
   - `import base16` creates user profile + palette files from fixture JSON
   - `export base16` emits expected `base00..base0f` keys
   - invalid Base16 colors are rejected
+- `--version` outputs version + capability summary
+- `doctor --json` emits machine-readable diagnostics with required keys
+- `self-check` detects missing/corrupted state in isolated runtime copy
+- `repair` restores `active/` from `state/last_good/`
 - font-enabled profile paths generate:
   - `active/fontconfig.conf` (when requested)
   - `active/alacritty.toml`
@@ -59,6 +63,20 @@ shellcheck scripts/retrofx scripts/test.sh backends/tty/apply.sh backends/tuigre
 ```
 
 If `shellcheck` is unavailable, tests continue with a skip message.
+
+## CI-Friendly Runner
+
+Run the local CI wrapper:
+
+```bash
+./scripts/ci.sh
+```
+
+It runs:
+
+- `./scripts/test.sh`
+- `shellcheck` (if available)
+- script LF/executable-bit checks
 
 ## TTY Backend Test Mode
 
