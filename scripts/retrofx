@@ -3,22 +3,38 @@ set -euo pipefail
 
 export LC_ALL=C
 
-SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-ROOT_DIR="$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)"
-PROFILES_DIR="$ROOT_DIR/profiles"
-TEMPLATES_DIR="$ROOT_DIR/templates"
-ACTIVE_DIR="$ROOT_DIR/active"
-STATE_DIR="$ROOT_DIR/state"
-BACKUPS_DIR="$STATE_DIR/backups"
-LAST_GOOD_DIR="$STATE_DIR/last_good"
+readonly SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+readonly ROOT_DIR="$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)"
+readonly PROFILES_DIR="$ROOT_DIR/profiles"
+readonly TEMPLATES_DIR="$ROOT_DIR/templates"
+readonly ACTIVE_DIR="$ROOT_DIR/active"
+readonly STATE_DIR="$ROOT_DIR/state"
+readonly BACKUPS_DIR="$STATE_DIR/backups"
+readonly LAST_GOOD_DIR="$STATE_DIR/last_good"
+readonly LOGS_DIR="$STATE_DIR/logs"
+readonly AUDIT_LOG_FILE="$LOGS_DIR/retrofx.log"
 
-BACKEND_X11="$ROOT_DIR/backends/x11-picom/apply.sh"
-BACKEND_TTY="$ROOT_DIR/backends/tty/apply.sh"
-BACKEND_TUIGREET="$ROOT_DIR/backends/tuigreet/apply.sh"
+readonly BACKEND_X11="$ROOT_DIR/backends/x11-picom/apply.sh"
+readonly BACKEND_TTY="$ROOT_DIR/backends/tty/apply.sh"
+readonly BACKEND_TUIGREET="$ROOT_DIR/backends/tuigreet/apply.sh"
+readonly BACKUP_KEEP_DEFAULT=10
+
+BACKUP_KEEP="${RETROFX_BACKUP_KEEP:-$BACKUP_KEEP_DEFAULT}"
+if [[ ! "$BACKUP_KEEP" =~ ^[0-9]+$ ]] || ((BACKUP_KEEP < 1)); then
+  BACKUP_KEEP="$BACKUP_KEEP_DEFAULT"
+fi
+readonly BACKUP_KEEP
 
 umask 077
 
 declare -A PARSE_SEEN_KEYS=()
+
+declare LAST_ERROR=""
+declare AUDIT_CMD=""
+declare AUDIT_PROFILE="-"
+declare AUDIT_ENABLED=0
+declare TXN_ACTIVE=0
+declare TXN_STAGE_DIR=""
 
 declare CFG_PROFILE_PATH=""
 declare CFG_name=""
@@ -48,8 +64,64 @@ declare CFG_phosphor_r="1.000000"
 declare CFG_phosphor_g="1.000000"
 declare CFG_phosphor_b="1.000000"
 
-log() {
+now_ts() {
+  date -u +%Y-%m-%dT%H:%M:%SZ
+}
+
+now_ts_compact() {
+  date -u +%Y%m%d-%H%M%S
+}
+
+ensure_dirs() {
+  mkdir -p "$ACTIVE_DIR" "$STATE_DIR" "$BACKUPS_DIR" "$LOGS_DIR"
+}
+
+append_audit_log() {
+  local result="$1"
+  local detail="$2"
+  local ts
+
+  ts="$(now_ts)"
+  (
+    mkdir -p "$LOGS_DIR"
+    printf '%s cmd=%q profile=%q result=%q detail=%q\n' \
+      "$ts" "${AUDIT_CMD:-unknown}" "${AUDIT_PROFILE:-unknown}" "$result" "$detail" >>"$AUDIT_LOG_FILE"
+  ) >/dev/null 2>&1 || true
+}
+
+audit_begin() {
+  local cmd="$1"
+  local profile="${2:--}"
+  AUDIT_CMD="$cmd"
+  AUDIT_PROFILE="$profile"
+  AUDIT_ENABLED=1
+}
+
+audit_on_exit() {
+  local rc="$1"
+
+  if [[ "$TXN_ACTIVE" -eq 1 ]]; then
+    [[ -n "$TXN_STAGE_DIR" ]] && rm -rf "$TXN_STAGE_DIR" >/dev/null 2>&1 || true
+    if [[ "$rc" -ne 0 ]]; then
+      restore_last_good || true
+    fi
+  fi
+
+  if [[ "$AUDIT_ENABLED" -eq 1 ]]; then
+    if [[ "$rc" -eq 0 ]]; then
+      append_audit_log "success" "-"
+    else
+      append_audit_log "failure" "${LAST_ERROR:-exit=$rc}"
+    fi
+  fi
+}
+
+info() {
   printf 'retrofx: %s\n' "$*"
+}
+
+log() {
+  info "$@"
 }
 
 warn() {
@@ -57,15 +129,23 @@ warn() {
 }
 
 die() {
+  LAST_ERROR="$*"
   printf 'retrofx: error: %s\n' "$*" >&2
   exit 1
 }
+
+trap 'audit_on_exit $?' EXIT
 
 trim() {
   local s="$1"
   s="${s#"${s%%[![:space:]]*}"}"
   s="${s%"${s##*[![:space:]]}"}"
   printf '%s' "$s"
+}
+
+dir_has_files() {
+  local dir="$1"
+  [[ -d "$dir" && -n "$(find "$dir" -mindepth 1 -maxdepth 1 -print -quit 2>/dev/null)" ]]
 }
 
 strip_inline_comment() {
@@ -490,6 +570,21 @@ resolve_profile_path() {
   return 1
 }
 
+detect_x11() {
+  [[ -n "${DISPLAY:-}" ]]
+}
+
+validate_profile() {
+  local profile_path="$1"
+  parse_profile "$profile_path"
+}
+
+load_profile() {
+  local profile_path="$1"
+  validate_profile "$profile_path"
+  compute_phosphor_rgb
+}
+
 compute_phosphor_rgb() {
   if [[ "$CFG_mode_type" != "monochrome" ]]; then
     CFG_phosphor_r="1.000000"
@@ -766,6 +861,22 @@ render_picom() {
   done <"$TEMPLATES_DIR/picom.conf.in"
 }
 
+render_templates() {
+  local stage_dir="$1"
+  local profile_path="$2"
+
+  cp "$profile_path" "$stage_dir/profile.toml"
+  write_profile_env "$stage_dir/profile.env"
+  render_shader "$stage_dir/shader.glsl"
+  render_picom "$stage_dir/picom.conf"
+  render_xresources "$stage_dir/xresources"
+
+  {
+    printf 'generated_at=%s\n' "$(now_ts)"
+    printf 'profile=%s\n' "$(basename "$profile_path")"
+  } >"$stage_dir/meta"
+}
+
 validate_stage_with_picom() {
   local stage_dir="$1"
   local log_file="$stage_dir/picom-validate.log"
@@ -776,7 +887,7 @@ validate_stage_with_picom() {
     return 0
   fi
 
-  if [[ -z "${DISPLAY:-}" ]]; then
+  if ! detect_x11; then
     warn "DISPLAY is not set; skipping runtime shader validation"
     return 0
   fi
@@ -815,23 +926,47 @@ validate_stage_with_picom() {
   return 0
 }
 
-swap_active_dir() {
-  local stage_dir="$1"
-  local profile_id="$2"
-  local ts backup_name backup_dir old_active
+backup_active() {
+  local profile_id="$1"
+  local ts backup_name backup_dir
 
-  mkdir -p "$STATE_DIR" "$BACKUPS_DIR"
-
-  ts="$(date +%Y%m%d-%H%M%S)"
-  backup_name="${ts}-${profile_id//[^A-Za-z0-9._-]/_}"
+  ensure_dirs
+  ts="$(now_ts_compact)"
+  backup_name="${ts}-${profile_id//[^A-Za-z0-9._-]/_}-pid$$"
   backup_dir="$BACKUPS_DIR/$backup_name"
   mkdir -p "$backup_dir"
 
-  if [[ -d "$ACTIVE_DIR" && -n "$(ls -A "$ACTIVE_DIR" 2>/dev/null || true)" ]]; then
+  if dir_has_files "$ACTIVE_DIR"; then
     cp -a "$ACTIVE_DIR"/. "$backup_dir"/
   fi
+}
 
-  old_active="$STATE_DIR/active.prev.$$"
+prune_backups() {
+  local keep_count="${1:-$BACKUP_KEEP}"
+  local -a entries=()
+  local remove_count i
+
+  [[ -d "$BACKUPS_DIR" ]] || return 0
+
+  while IFS= read -r entry; do
+    entries+=("$entry")
+  done < <(find "$BACKUPS_DIR" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort)
+
+  if ((${#entries[@]} <= keep_count)); then
+    return 0
+  fi
+
+  remove_count=$((${#entries[@]} - keep_count))
+  for ((i = 0; i < remove_count; i++)); do
+    rm -rf "$BACKUPS_DIR/${entries[$i]}"
+  done
+}
+
+atomic_swap_active() {
+  local stage_dir="$1"
+  local old_active
+
+  old_active="$STATE_DIR/active.prev.$$.${RANDOM}"
   rm -rf "$old_active"
 
   if [[ -d "$ACTIVE_DIR" ]]; then
@@ -856,14 +991,14 @@ swap_active_dir() {
 copy_active_to_last_good() {
   local staging old
 
-  mkdir -p "$STATE_DIR"
-  staging="$(mktemp -d "$STATE_DIR/last_good.new.XXXXXX")"
+  ensure_dirs
+  staging="$(mktemp -d "$STATE_DIR/last_good.new.$(now_ts_compact).$$.XXXXXX")"
 
-  if [[ -d "$ACTIVE_DIR" && -n "$(ls -A "$ACTIVE_DIR" 2>/dev/null || true)" ]]; then
+  if dir_has_files "$ACTIVE_DIR"; then
     cp -a "$ACTIVE_DIR"/. "$staging"/
   fi
 
-  old="$STATE_DIR/last_good.old.$$"
+  old="$STATE_DIR/last_good.old.$$.${RANDOM}"
   rm -rf "$old"
 
   if [[ -d "$LAST_GOOD_DIR" ]]; then
@@ -874,29 +1009,41 @@ copy_active_to_last_good() {
   rm -rf "$old"
 }
 
-restore_last_good_if_needed() {
+restore_last_good() {
   local restore_dir old_active
 
-  if [[ ! -d "$LAST_GOOD_DIR" ]]; then
-    return 0
-  fi
-
-  if [[ -d "$ACTIVE_DIR" && -n "$(ls -A "$ACTIVE_DIR" 2>/dev/null || true)" ]]; then
-    return 0
+  if ! dir_has_files "$LAST_GOOD_DIR"; then
+    warn "last_good is not available for rollback"
+    return 1
   fi
 
   warn "restoring active/ from last_good"
-  restore_dir="$(mktemp -d "$STATE_DIR/restore.XXXXXX")"
+  restore_dir="$(mktemp -d "$STATE_DIR/restore.$(now_ts_compact).$$.XXXXXX")"
   cp -a "$LAST_GOOD_DIR"/. "$restore_dir"/
 
-  old_active="$STATE_DIR/active.bad.$$"
+  old_active="$STATE_DIR/active.bad.$$.${RANDOM}"
   rm -rf "$old_active"
   if [[ -d "$ACTIVE_DIR" ]]; then
     mv "$ACTIVE_DIR" "$old_active"
   fi
 
-  mv "$restore_dir" "$ACTIVE_DIR"
-  rm -rf "$old_active"
+  if mv "$restore_dir" "$ACTIVE_DIR"; then
+    rm -rf "$old_active"
+    return 0
+  fi
+
+  rm -rf "$restore_dir"
+  if [[ -d "$old_active" ]]; then
+    mv "$old_active" "$ACTIVE_DIR"
+  fi
+  return 1
+}
+
+restore_last_good_if_needed() {
+  if dir_has_files "$ACTIVE_DIR"; then
+    return 0
+  fi
+  restore_last_good || true
 }
 
 apply_scoped_backends() {
@@ -911,6 +1058,31 @@ apply_scoped_backends() {
   if [[ "$CFG_scope_tuigreet" == "true" && -x "$BACKEND_TUIGREET" ]]; then
     "$BACKEND_TUIGREET" apply "$ACTIVE_DIR" || warn "tuigreet backend apply hook reported an issue"
   fi
+}
+
+restart_picom_if_running() {
+  # Disabled by default to avoid changing runtime behavior unexpectedly.
+  if [[ "${RETROFX_RELOAD_PICOM:-0}" != "1" ]]; then
+    return 0
+  fi
+
+  if ! detect_x11 || ! command -v pgrep >/dev/null 2>&1; then
+    return 0
+  fi
+
+  if ! pgrep -x picom >/dev/null 2>&1; then
+    return 0
+  fi
+
+  if command -v pkill >/dev/null 2>&1; then
+    pkill -HUP -x picom >/dev/null 2>&1 || warn "failed to signal running picom"
+    return 0
+  fi
+
+  local pid
+  while IFS= read -r pid; do
+    kill -HUP "$pid" >/dev/null 2>&1 || warn "failed to signal picom pid=$pid"
+  done < <(pgrep -x picom || true)
 }
 
 create_builtin_passthrough_profile() {
@@ -936,7 +1108,7 @@ tuigreet = false
 PROFILE
 }
 
-cmd_list() {
+list_profiles() {
   local current_profile=""
   local found=0
 
@@ -965,6 +1137,10 @@ cmd_list() {
   fi
 }
 
+cmd_list() {
+  list_profiles
+}
+
 status_ok() {
   printf '[ OK ] %s\n' "$1"
 }
@@ -974,9 +1150,10 @@ status_warn() {
 }
 
 cmd_doctor() {
+  ensure_dirs
   printf 'RetroFX doctor\n'
 
-  if [[ -n "${DISPLAY:-}" ]]; then
+  if detect_x11; then
     status_ok "DISPLAY is set to $DISPLAY"
   else
     status_warn "DISPLAY is not set (not in X11 session?)"
@@ -1021,7 +1198,7 @@ cmd_doctor() {
     status_warn "active config missing (run: retrofx apply <profile>)"
   fi
 
-  if [[ -d "$LAST_GOOD_DIR" && -n "$(ls -A "$LAST_GOOD_DIR" 2>/dev/null || true)" ]]; then
+  if dir_has_files "$LAST_GOOD_DIR"; then
     status_ok "last_good backup exists"
   else
     status_warn "last_good backup is empty or missing"
@@ -1045,8 +1222,7 @@ cmd_preview() {
   if [[ $# -gt 0 ]]; then
     local profile_path
     profile_path="$(resolve_profile_path "$1")" || die "profile not found: $1"
-    parse_profile "$profile_path"
-    compute_phosphor_rgb
+    load_profile "$profile_path"
 
     mode="$CFG_mode_type"
     bands="$CFG_monochrome_bands"
@@ -1360,49 +1536,53 @@ cmd_apply() {
   local profile_ref="$1"
   local profile_path stage_dir profile_id
 
+  ensure_dirs
   profile_path="$(resolve_profile_path "$profile_ref")" || die "profile not found: $profile_ref"
-
-  parse_profile "$profile_path"
-  compute_phosphor_rgb
-
-  mkdir -p "$ACTIVE_DIR" "$STATE_DIR" "$BACKUPS_DIR"
-
-  stage_dir="$(mktemp -d "$STATE_DIR/stage.XXXXXX")"
-
-  cp "$profile_path" "$stage_dir/profile.toml"
-  write_profile_env "$stage_dir/profile.env"
-  render_shader "$stage_dir/shader.glsl"
-  render_picom "$stage_dir/picom.conf"
-  render_xresources "$stage_dir/xresources"
-
-  {
-    printf 'generated_at=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-    printf 'profile=%s\n' "$(basename "$profile_path")"
-  } >"$stage_dir/meta"
-
-  if ! validate_stage_with_picom "$stage_dir"; then
-    warn "validation failed; keeping previous active configuration"
-    rm -rf "$stage_dir"
-    restore_last_good_if_needed
-    return 1
-  fi
-
   profile_id="$(basename "$profile_path")"
   profile_id="${profile_id%.toml}"
 
-  if ! swap_active_dir "$stage_dir" "$profile_id"; then
-    rm -rf "$stage_dir"
-    restore_last_good_if_needed
-    die "unable to atomically swap active configuration"
+  load_profile "$profile_path"
+
+  TXN_ACTIVE=1
+  TXN_STAGE_DIR=""
+  stage_dir="$(mktemp -d "$STATE_DIR/stage.$(now_ts_compact).$$.XXXXXX")"
+  TXN_STAGE_DIR="$stage_dir"
+
+  render_templates "$stage_dir" "$profile_path"
+
+  if ! validate_stage_with_picom "$stage_dir"; then
+    LAST_ERROR="validation failed for profile '$profile_id'"
+    warn "$LAST_ERROR"
+    return 1
   fi
 
-  copy_active_to_last_good
-  apply_scoped_backends
+  if ! backup_active "$profile_id"; then
+    LAST_ERROR="failed to back up active state"
+    return 1
+  fi
 
+  if ! atomic_swap_active "$stage_dir"; then
+    LAST_ERROR="unable to atomically swap active configuration"
+    return 1
+  fi
+
+  TXN_STAGE_DIR=""
+
+  if ! copy_active_to_last_good; then
+    LAST_ERROR="failed to update last_good snapshot"
+    return 1
+  fi
+
+  prune_backups "$BACKUP_KEEP"
+  apply_scoped_backends
+  restart_picom_if_running || true
+
+  TXN_ACTIVE=0
   log "applied profile '$profile_id'"
 }
 
 cmd_off() {
+  ensure_dirs
   if [[ -f "$PROFILES_DIR/passthrough.toml" ]]; then
     cmd_apply "passthrough"
     return 0
@@ -1410,10 +1590,13 @@ cmd_off() {
 
   warn "profiles/passthrough.toml missing; using built-in passthrough"
   local tmp
-  tmp="$(mktemp "$STATE_DIR/passthrough.XXXXXX.toml")"
+  tmp="$(mktemp "$STATE_DIR/passthrough.$(now_ts_compact).$$.XXXXXX.toml")"
   create_builtin_passthrough_profile "$tmp"
 
-  cmd_apply "$tmp"
+  if ! cmd_apply "$tmp"; then
+    rm -f "$tmp"
+    return 1
+  fi
   rm -f "$tmp"
 }
 
@@ -1431,29 +1614,40 @@ USAGE
 
 main() {
   local cmd="${1:-}"
+  local profile_ref="-"
+
+  ensure_dirs
+  LAST_ERROR=""
 
   case "$cmd" in
     list)
+      audit_begin "list" "-"
       shift
       [[ "$#" -eq 0 ]] || die "list takes no arguments"
       cmd_list
       ;;
     apply)
+      profile_ref="${2:--}"
+      audit_begin "apply" "$profile_ref"
       shift
       [[ "$#" -eq 1 ]] || die "apply requires exactly one profile name/path"
       cmd_apply "$1"
       ;;
     off)
+      audit_begin "off" "passthrough"
       shift
       [[ "$#" -eq 0 ]] || die "off takes no arguments"
       cmd_off
       ;;
     doctor)
+      audit_begin "doctor" "-"
       shift
       [[ "$#" -eq 0 ]] || die "doctor takes no arguments"
       cmd_doctor
       ;;
     preview)
+      profile_ref="${2:--}"
+      audit_begin "preview" "$profile_ref"
       shift
       if [[ "$#" -gt 1 ]]; then
         die "preview takes zero or one profile"
@@ -1461,14 +1655,17 @@ main() {
       cmd_preview "$@"
       ;;
     new)
+      audit_begin "new" "-"
       shift
       [[ "$#" -eq 0 ]] || die "new takes no arguments"
       cmd_new
       ;;
     "" | -h | --help | help)
+      audit_begin "help" "-"
       usage
       ;;
     *)
+      audit_begin "${cmd:-unknown}" "-"
       die "unknown command '$cmd'"
       ;;
   esac

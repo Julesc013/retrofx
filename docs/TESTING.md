@@ -1,47 +1,49 @@
 # RetroFX Testing
 
-Run all commands from repo root.
+Run tests from the repository root.
 
-## Baseline Checks
+## Quick Regression Run
 
 ```bash
-shellcheck scripts/retrofx || true
-./scripts/retrofx list
+./scripts/test.sh
+```
+
+Pass criteria:
+
+- command exits `0`
+- each profile in `profiles/*.toml` applies successfully
+- `active/` contains `profile.toml`, `profile.env`, `picom.conf`, `shader.glsl`, `xresources`, and `meta`
+- `apply -> off` returns to passthrough profile state
+- `state/logs/retrofx.log` exists and receives entries
+
+## Manual Command Checks
+
+```bash
 ./scripts/retrofx doctor
+./scripts/retrofx list
 ./scripts/retrofx preview
 ```
 
-## Apply / Off
+## Optional Static Analysis
 
 ```bash
-./scripts/retrofx apply passthrough
-./scripts/retrofx off
+shellcheck scripts/retrofx scripts/test.sh
 ```
 
-Expected behavior:
+If `shellcheck` is unavailable, tests continue and print a skip message.
 
-- `active/` is regenerated atomically.
-- previous `active/` snapshot appears in `state/backups/`.
-- `state/last_good/` is updated after successful apply.
+## Troubleshooting
 
-## Strict Parser Checks
-
-Create a temporary invalid profile and confirm parse failure:
-
-- unknown key -> must fail
-- missing required key -> must fail
-- out-of-range value -> must fail
-
-## Validation/Fallback Checks
-
-- If `picom` is unavailable, apply should warn and continue safely.
-- If shader/config validation fails, active config should remain usable.
-- If `active/` is empty and `last_good/` exists, fallback restore should succeed.
-
-## Backend Scope Checks
-
-Set scope flags in profile and verify hooks:
-
-- `scope.x11 = true` triggers `backends/x11-picom/apply.sh`.
-- `scope.tty = true` triggers scaffold notice.
-- `scope.tuigreet = true` triggers scaffold notice.
+- `picom not installed`
+  - Expected in headless/minimal environments.
+  - Runtime shader validation is skipped; generation and atomic swap should still work.
+- `DISPLAY is not set`
+  - Not in an X11 session.
+  - `doctor` should warn, and `apply` should still render configs without launching runtime validation.
+- shader/picom validation failure
+  - `apply` fails safely.
+  - RetroFX keeps or restores `active/` from `state/last_good/`.
+  - Check `state/logs/retrofx.log` and stderr output for details.
+- profile parse failure
+  - Unknown keys/sections or invalid values are rejected.
+  - Fix profile TOML and rerun `./scripts/retrofx apply <profile>`.

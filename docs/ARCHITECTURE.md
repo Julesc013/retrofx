@@ -6,36 +6,39 @@ RetroFX is a profile-driven renderer that generates deterministic session-local 
 
 - Deterministic generation from `profiles/*.toml`.
 - Atomic apply: generate to temp -> validate -> backup -> rename swap.
-- Fail-safe behavior: previous active config remains intact on failure.
+- Fail-safe behavior: rollback to `state/last_good/` on failed transactions.
 - Modular backends: profile scope controls X11/TTY/tuigreet hooks.
 - Performance-first shader path: ordered dithering only, lightweight effects.
 
 ## Repository Roles
 
 - `scripts/retrofx`: CLI entrypoint and orchestrator.
+- `scripts/test.sh`: minimal regression harness.
 - `profiles/*.toml`: strict v1 profile definitions.
 - `templates/*`: static templates rendered into active artifacts.
 - `active/`: currently active generated config.
-- `state/backups/`: timestamped backups of previous `active/`.
-- `state/last_good/`: last successful active snapshot.
+- `state/backups/`: timestamped backups of previous `active/` (pruned to last N, default 10).
+- `state/last_good/`: canonical rollback snapshot.
+- `state/logs/retrofx.log`: append-only operational audit log.
 - `backends/*`: backend-specific apply hooks.
 
 ## Apply Transaction
 
-1. Parse profile with strict schema and unknown-key rejection.
-2. Render shader/picom/xresources into `state/stage.*`.
+1. Parse and validate profile with strict schema and unknown-key rejection.
+2. Render shader/picom/xresources/profile metadata into `state/stage.*`.
 3. Validate with a picom test instance when runtime conditions allow.
 4. Backup current `active/` to `state/backups/<timestamp>-<profile>/`.
-5. Swap `stage` into `active/` with `mv` rename semantics.
+5. Atomically rename staged output into `active/`.
 6. Refresh `state/last_good/` from new `active/`.
-7. Trigger backend hooks for enabled scopes.
+7. Prune backup retention.
+8. Trigger backend hooks for enabled scopes.
 
 ## Failure Handling
 
-- Parse/render/validation failure: transaction aborts before swap.
-- Swap failure: rollback to previous active snapshot.
-- Shader/picom validation failures do not delete existing active config.
-- `retrofx off` always maps to passthrough profile behavior.
+- Parse/render/validation failure: transaction aborts and rollback is attempted from `state/last_good/`.
+- Swap failure: previous `active/` is restored immediately.
+- Logging failures are best-effort and never fail user commands.
+- `retrofx off` always maps to passthrough mode (`profiles/passthrough.toml` or built-in fallback).
 
 ## Backend Status
 
