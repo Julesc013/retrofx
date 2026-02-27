@@ -1408,6 +1408,92 @@ set_monochrome_palette_with_bands() {
   CFG_monochrome_bands="$old_bands"
 }
 
+resolve_custom_palette_path() {
+  local custom_path="$CFG_palette_custom_file"
+  local profile_dir
+
+  [[ -n "$custom_path" ]] || return 1
+  if [[ "$custom_path" == /* ]]; then
+    printf '%s' "$custom_path"
+    return 0
+  fi
+
+  [[ -n "$CFG_PROFILE_PATH" ]] || return 1
+  profile_dir="$(CDPATH= cd -- "$(dirname -- "$CFG_PROFILE_PATH")" && pwd)"
+  printf '%s/%s' "$profile_dir" "$custom_path"
+}
+
+declare -a PALETTE_HEX_LINES=()
+
+load_palette_hex_lines() {
+  local path="$1"
+  local wanted="$2"
+  local line parsed r g b hex
+
+  PALETTE_HEX_LINES=()
+  [[ -f "$path" ]] || return 1
+  [[ "$wanted" =~ ^[0-9]+$ ]] || return 1
+
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    line="${line%$'\r'}"
+    line="$(trim "$line")"
+    [[ -z "$line" ]] && continue
+
+    # "# " prefix denotes a comment line.
+    if [[ "$line" == "# "* ]]; then
+      continue
+    fi
+
+    if [[ "$line" =~ ^#([A-Fa-f0-9]{6})$ ]]; then
+      hex="#${BASH_REMATCH[1],,}"
+    elif [[ "$line" == *","*","* ]]; then
+      parsed="$(normalize_rgb_triplet "$line")" || return 1
+      IFS=',' read -r r g b <<<"$parsed"
+      hex="$(rgb_hex_from_units "$r" "$g" "$b")"
+    elif [[ "$line" =~ ^[0-9.]+[[:space:]]+[0-9.]+[[:space:]]+[0-9.]+$ ]]; then
+      parsed="$(normalize_rgb_triplet "${line//[[:space:]]/,}")" || return 1
+      IFS=',' read -r r g b <<<"$parsed"
+      hex="$(rgb_hex_from_units "$r" "$g" "$b")"
+    else
+      return 1
+    fi
+
+    PALETTE_HEX_LINES+=("$hex")
+    if ((${#PALETTE_HEX_LINES[@]} == wanted)); then
+      break
+    fi
+  done <"$path"
+
+  ((${#PALETTE_HEX_LINES[@]} >= wanted))
+}
+
+set_custom_palette_summary() {
+  local custom_path=""
+  local i
+
+  if ((CFG_palette_size < 16)); then
+    set_cube256_summary_palette
+    return 0
+  fi
+
+  custom_path="$(resolve_custom_palette_path || true)"
+  if [[ -z "$custom_path" ]]; then
+    set_cube256_summary_palette
+    return 0
+  fi
+
+  if ! load_palette_hex_lines "$custom_path" 16; then
+    warn "unable to load first 16 entries from custom palette for ANSI summary: $custom_path"
+    set_cube256_summary_palette
+    return 0
+  fi
+
+  ANSI_HEX=()
+  for ((i = 0; i < 16; i++)); do
+    ANSI_HEX+=("${PALETTE_HEX_LINES[$i]}")
+  done
+}
+
 build_ansi_palette() {
   case "$CFG_mode_type" in
     monochrome)
@@ -1434,8 +1520,7 @@ build_ansi_palette() {
           set_cube256_summary_palette
           ;;
         custom)
-          # 16-color TTY/ANSI summary fallback for custom palettes.
-          set_cube256_summary_palette
+          set_custom_palette_summary
           ;;
       esac
       ;;
@@ -1823,12 +1908,8 @@ render_shader() {
   custom_block_file="$(mktemp "$STATE_DIR/custom_palette_block.XXXXXX")"
 
   if [[ "$CFG_mode_type" == "palette" && "$CFG_palette_kind" == "custom" ]]; then
-    local profile_dir custom_path
-    profile_dir="$(CDPATH= cd -- "$(dirname -- "$CFG_PROFILE_PATH")" && pwd)"
-    custom_path="$CFG_palette_custom_file"
-    if [[ "$custom_path" != /* ]]; then
-      custom_path="$profile_dir/$custom_path"
-    fi
+    local custom_path
+    custom_path="$(resolve_custom_palette_path)" || die "unable to resolve custom palette file path"
     load_custom_palette "$custom_path" "$palette_size"
     custom_palette_size="$palette_size"
   else
@@ -2612,13 +2693,288 @@ cmd_info() {
   printf '  tuigreet = %s\n' "$CFG_scope_tuigreet"
 }
 
+json_escape_string() {
+  local value="$1"
+  value="${value//\\/\\\\}"
+  value="${value//\"/\\\"}"
+  value="${value//$'\n'/ }"
+  value="${value//$'\r'/ }"
+  value="${value//$'\t'/ }"
+  printf '%s' "$value"
+}
+
+declare -a BASE16_COLORS=()
+declare BASE16_META_SCHEME=""
+declare BASE16_META_AUTHOR=""
+
+load_base16_json_colors() {
+  local scheme_path="$1"
+  local parsed_file key value idx
+
+  command -v python3 >/dev/null 2>&1 || die "python3 is required for base16 JSON import"
+  [[ -f "$scheme_path" ]] || die "base16 file not found: $scheme_path"
+
+  parsed_file="$(mktemp "$STATE_DIR/base16-parse.XXXXXX")"
+  if ! python3 - "$scheme_path" >"$parsed_file" <<'PY'
+import json
+import re
+import sys
+
+path = sys.argv[1]
+try:
+    with open(path, "r", encoding="utf-8") as fh:
+        data = json.load(fh)
+except Exception as exc:
+    print(f"base16 parse error: invalid JSON ({exc})", file=sys.stderr)
+    sys.exit(1)
+
+if not isinstance(data, dict):
+    print("base16 parse error: root must be a JSON object", file=sys.stderr)
+    sys.exit(1)
+
+norm = {}
+for key, value in data.items():
+    if isinstance(key, str):
+        norm[key.lower()] = value
+
+required = [f"base{i:02x}" for i in range(16)]
+for key in required:
+    if key not in norm:
+        print(f"base16 parse error: missing required key '{key}'", file=sys.stderr)
+        sys.exit(1)
+    value = norm[key]
+    if not isinstance(value, str):
+        print(f"base16 parse error: key '{key}' must be a string", file=sys.stderr)
+        sys.exit(1)
+    text = value.strip()
+    if text.startswith("#"):
+        text = text[1:]
+    elif text.lower().startswith("0x"):
+        text = text[2:]
+    if re.fullmatch(r"[0-9a-fA-F]{6}", text) is None:
+        print(f"base16 parse error: key '{key}' must be #RRGGBB", file=sys.stderr)
+        sys.exit(1)
+    print(f"{key}\t#{text.lower()}")
+
+for meta_key in ("scheme", "author"):
+    value = norm.get(meta_key, "")
+    if isinstance(value, str):
+        text = value.replace("\n", " ").replace("\r", " ").strip()
+        print(f"meta_{meta_key}\t{text}")
+PY
+  then
+    rm -f "$parsed_file"
+    return 1
+  fi
+
+  BASE16_COLORS=()
+  for ((idx = 0; idx < 16; idx++)); do
+    BASE16_COLORS[idx]=""
+  done
+  BASE16_META_SCHEME=""
+  BASE16_META_AUTHOR=""
+
+  while IFS=$'\t' read -r key value; do
+    case "$key" in
+      base[0-9a-f][0-9a-f])
+        idx=$((16#${key#base}))
+        BASE16_COLORS[$idx]="$value"
+        ;;
+      meta_scheme)
+        BASE16_META_SCHEME="$value"
+        ;;
+      meta_author)
+        BASE16_META_AUTHOR="$value"
+        ;;
+    esac
+  done <"$parsed_file"
+  rm -f "$parsed_file"
+
+  for ((idx = 0; idx < 16; idx++)); do
+    [[ -n "${BASE16_COLORS[$idx]}" ]] || die "base16 parse error: incomplete palette"
+  done
+}
+
+cmd_import_base16() {
+  local scheme_path=""
+  local profile_name=""
+  local scheme_basename=""
+  local profile_slug=""
+  local profile_path=""
+  local palette_rel_path=""
+  local palette_abs_path=""
+  local tmp_profile=""
+  local tmp_palette=""
+  local i
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --name)
+        [[ $# -ge 2 ]] || die "import base16: --name requires a value"
+        profile_name="$2"
+        shift 2
+        ;;
+      --*)
+        die "import base16: unknown option '$1'"
+        ;;
+      *)
+        if [[ -z "$scheme_path" ]]; then
+          scheme_path="$1"
+          shift
+        else
+          die "import base16: unexpected argument '$1'"
+        fi
+        ;;
+    esac
+  done
+
+  [[ -n "$scheme_path" ]] || die "import base16 requires a path to a JSON file"
+  [[ -n "$profile_name" ]] || die "import base16 requires --name <profile-name>"
+
+  scheme_path="$(expand_user_path "$scheme_path")"
+  [[ "$scheme_path" == /* ]] || scheme_path="$PWD/$scheme_path"
+  scheme_path="${scheme_path%/}"
+  scheme_basename="$(basename "$scheme_path")"
+
+  case "$scheme_path" in
+    *.yaml | *.yml)
+      die "import base16 currently supports JSON only (YAML not supported in this build)"
+      ;;
+  esac
+
+  load_base16_json_colors "$scheme_path"
+
+  profile_slug="$(slugify_filename "$profile_name")"
+  profile_path="$PROFILES_USER_DIR/$profile_slug.toml"
+  palette_rel_path="../../palettes/imported/$profile_slug.txt"
+  palette_abs_path="$ROOT_DIR/palettes/imported/$profile_slug.txt"
+
+  mkdir -p "$PROFILES_USER_DIR" "$ROOT_DIR/palettes/imported"
+  [[ ! -e "$profile_path" ]] || die "refusing to overwrite existing profile: $profile_path"
+  [[ ! -e "$palette_abs_path" ]] || die "refusing to overwrite existing palette file: $palette_abs_path"
+
+  tmp_palette="$(mktemp "$ROOT_DIR/palettes/imported/.base16-import.XXXXXX")"
+  {
+    printf '# RetroFX imported Base16 palette (%s)\n' "$scheme_basename"
+    printf '# ANSI index order 0..15\n'
+    for ((i = 0; i < 16; i++)); do
+      printf '%s\n' "${BASE16_COLORS[$i]}"
+    done
+  } >"$tmp_palette"
+  mv "$tmp_palette" "$palette_abs_path"
+
+  tmp_profile="$(mktemp "$PROFILES_USER_DIR/.base16-profile.XXXXXX.toml")"
+  {
+    printf 'name = "%s"\n' "$(toml_escape_string "$profile_name")"
+    printf 'version = 1\n'
+    printf 'description = "%s"\n' "$(toml_escape_string "Imported from Base16 JSON: $scheme_basename")"
+    printf 'tags = ["base16", "imported", "interop"]\n'
+    if [[ -n "$BASE16_META_AUTHOR" ]]; then
+      printf 'author = "%s"\n' "$(toml_escape_string "$BASE16_META_AUTHOR")"
+    fi
+    printf 'license = "Unknown"\n\n'
+    printf '[mode]\n'
+    printf 'type = "palette"\n\n'
+    printf '[palette]\n'
+    printf 'kind = "custom"\n'
+    printf 'size = 16\n'
+    printf 'custom_file = "%s"\n\n' "$palette_rel_path"
+    printf '[effects]\n'
+    printf 'blur_strength = 2\n'
+    printf 'scanlines = false\n'
+    printf 'flicker = false\n'
+    printf 'dither = "none"\n'
+    printf 'vignette = false\n\n'
+    printf '[scope]\n'
+    printf 'x11 = true\n'
+    printf 'tty = false\n'
+    printf 'tuigreet = false\n\n'
+    printf '[colors]\n'
+    printf 'background = "%s"\n' "${BASE16_COLORS[0]}"
+    printf 'foreground = "%s"\n' "${BASE16_COLORS[5]}"
+  } >"$tmp_profile"
+  mv "$tmp_profile" "$profile_path"
+  log "imported base16 profile '$profile_slug' from $scheme_path"
+}
+
+cmd_import() {
+  local format="${1:-}"
+  shift || true
+
+  case "$format" in
+    base16)
+      cmd_import_base16 "$@"
+      ;;
+    "")
+      die "import requires a format (supported: base16)"
+      ;;
+    *)
+      die "import format must be 'base16'"
+      ;;
+  esac
+}
+
+cmd_gallery() {
+  local pack_dir pack_name count
+  local found=0
+
+  if [[ ! -d "$PROFILES_PACKS_DIR" ]]; then
+    printf 'no pack directory found at %s\n' "$PROFILES_PACKS_DIR"
+    return 0
+  fi
+
+  printf 'RetroFX offline gallery\n'
+  while IFS= read -r pack_dir; do
+    [[ -d "$pack_dir" ]] || continue
+    pack_name="$(basename "$pack_dir")"
+    count="$(find "$pack_dir" -mindepth 1 -maxdepth 1 -type f -name '*.toml' | wc -l | awk '{print $1}')"
+    printf '  %s (%s profiles)\n' "$pack_name" "$count"
+    found=1
+  done < <(find "$PROFILES_PACKS_DIR" -mindepth 1 -maxdepth 1 -type d | sort)
+
+  if [[ "$found" -eq 0 ]]; then
+    printf '  (no packs found)\n'
+  fi
+}
+
+cmd_install_pack() {
+  local pack_name="$1"
+  local pack_dir="$PROFILES_PACKS_DIR/$pack_name"
+  local src base dest copied=0 skipped=0 count=0
+
+  [[ -d "$pack_dir" ]] || die "pack not found: $pack_name"
+  mkdir -p "$PROFILES_USER_DIR"
+
+  while IFS= read -r src; do
+    [[ -f "$src" ]] || continue
+    count=$((count + 1))
+    base="$(basename "$src")"
+    dest="$PROFILES_USER_DIR/$base"
+    if [[ -e "$dest" ]]; then
+      skipped=$((skipped + 1))
+      continue
+    fi
+    cp -a "$src" "$dest"
+    copied=$((copied + 1))
+  done < <(find "$pack_dir" -mindepth 1 -maxdepth 1 -type f -name '*.toml' | sort)
+
+  if [[ "$count" -eq 0 ]]; then
+    warn "pack '$pack_name' has no profiles to install"
+    return 0
+  fi
+
+  log "install-pack '$pack_name': copied=$copied skipped=$skipped destination=$PROFILES_USER_DIR"
+}
+
 cmd_export() {
   local format="$1"
   local profile_ref="$2"
   local out_path="$3"
-  local profile_path out_dir tmp_out
+  local profile_path out_dir tmp_out profile_id i key
 
   profile_path="$(resolve_profile_path "$profile_ref")" || die "profile not found: $profile_ref"
+  profile_id="$(basename "$profile_path")"
+  profile_id="${profile_id%.toml}"
   load_profile "$profile_path"
 
   case "$format" in
@@ -2640,8 +2996,34 @@ cmd_export() {
       mv "$tmp_out" "$out_path"
       log "exported alacritty to $out_path"
       ;;
+    base16)
+      build_ansi_palette
+      out_dir="$(dirname -- "$out_path")"
+      mkdir -p "$out_dir"
+      tmp_out="$(mktemp "$out_dir/.retrofx-base16.XXXXXX")"
+      {
+        printf '{\n'
+        printf '  "system": "base16",\n'
+        printf '  "generated_by": "retrofx",\n'
+        printf '  "generated_at": "%s",\n' "$(now_ts)"
+        printf '  "mapping": "direct-ansi-index",\n'
+        printf '  "profile": "%s",\n' "$(json_escape_string "$profile_id")"
+        printf '  "name": "%s",\n' "$(json_escape_string "$CFG_name")"
+        for ((i = 0; i < 16; i++)); do
+          key="$(printf 'base%02x' "$i")"
+          if ((i == 15)); then
+            printf '  "%s": "%s"\n' "$key" "${ANSI_HEX[$i]}"
+          else
+            printf '  "%s": "%s",\n' "$key" "${ANSI_HEX[$i]}"
+          fi
+        done
+        printf '}\n'
+      } >"$tmp_out"
+      mv "$tmp_out" "$out_path"
+      log "exported base16 to $out_path"
+      ;;
     *)
-      die "export format must be 'alacritty' or 'xresources'"
+      die "export format must be 'alacritty', 'xresources', or 'base16'"
       ;;
   esac
 }
@@ -3905,9 +4287,12 @@ usage() {
 Usage:
   retrofx list
   retrofx search <keyword>
+  retrofx gallery
+  retrofx install-pack <packname>
   retrofx info <profile>
   retrofx apply <profile>
-  retrofx export <alacritty|xresources> <profile> <output_path>
+  retrofx import base16 <path-to-json> --name <profile-name>
+  retrofx export <alacritty|xresources|base16> <profile> <output_path>
   retrofx status
   retrofx install [--yes] [--path <dir>]
   retrofx uninstall [--yes] [--keep-profiles]
@@ -3924,7 +4309,7 @@ main() {
   local needs_runtime_dirs=1
 
   case "$cmd" in
-    install | uninstall | status | "" | -h | --help | help)
+    install | uninstall | status | gallery | "" | -h | --help | help)
       needs_runtime_dirs=0
       ;;
   esac
@@ -3949,12 +4334,32 @@ main() {
       [[ "$#" -eq 1 ]] || die "search requires exactly one keyword"
       cmd_search "$1"
       ;;
+    gallery)
+      audit_begin "gallery" "-"
+      shift
+      [[ "$#" -eq 0 ]] || die "gallery takes no arguments"
+      cmd_gallery
+      ;;
+    install-pack)
+      profile_ref="${2:--}"
+      audit_begin "install-pack" "$profile_ref"
+      shift
+      [[ "$#" -eq 1 ]] || die "install-pack requires exactly one pack name"
+      cmd_install_pack "$1"
+      ;;
     info)
       profile_ref="${2:--}"
       audit_begin "info" "$profile_ref"
       shift
       [[ "$#" -eq 1 ]] || die "info requires exactly one profile"
       cmd_info "$1"
+      ;;
+    import)
+      profile_ref="${2:--}"
+      audit_begin "import" "$profile_ref"
+      shift
+      [[ "$#" -ge 1 ]] || die "import requires a format"
+      cmd_import "$@"
       ;;
     apply)
       profile_ref="${2:--}"

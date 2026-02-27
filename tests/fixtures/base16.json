@@ -1,0 +1,20 @@
+{
+  "scheme": "RetroFX Test Base16",
+  "author": "RetroFX",
+  "base00": "#101010",
+  "base01": "#1f1f1f",
+  "base02": "#2f2f2f",
+  "base03": "#3f3f3f",
+  "base04": "#8f8f8f",
+  "base05": "#cfcfcf",
+  "base06": "#dfdfdf",
+  "base07": "#efefef",
+  "base08": "#d75f5f",
+  "base09": "#ffaf5f",
+  "base0a": "#ffd75f",
+  "base0b": "#87af5f",
+  "base0c": "#5fafaf",
+  "base0d": "#5f87af",
+  "base0e": "#875faf",
+  "base0f": "#af5f5f"
+}

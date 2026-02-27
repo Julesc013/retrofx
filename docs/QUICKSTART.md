@@ -75,6 +75,15 @@ eval "$(./scripts/integrate/retrofx-env.sh)"
 
 This affects apps launched from that shell/session only. Plasma/GNOME defaults remain unchanged unless you opt in.
 
+## Interop (Base16 + Packs)
+
+```bash
+./scripts/retrofx import base16 tests/fixtures/base16.json --name base16-demo
+./scripts/retrofx export base16 base16-demo /tmp/base16-demo.json
+./scripts/retrofx gallery
+./scripts/retrofx install-pack community
+```
+
 ## Wayland Note (Degraded Mode)
 
 On Wayland sessions, RetroFX does not provide global post-process compositor shaders. In this mode, `apply` generates degraded outputs only (terminal palette artifacts, optional TTY palette backend, optional tuigreet snippet) and reports this explicitly in command output and `doctor`.

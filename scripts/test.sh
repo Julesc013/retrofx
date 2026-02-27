@@ -8,6 +8,7 @@ ACTIVE_DIR="$ROOT_DIR/active"
 STATE_DIR="$ROOT_DIR/state"
 PROFILES_DIR="$ROOT_DIR/profiles"
 TEST_TMP_DIR="$STATE_DIR/tests"
+BASE16_FIXTURE="$ROOT_DIR/tests/fixtures/base16.json"
 
 log() {
   printf '[test] %s\n' "$*"
@@ -273,6 +274,12 @@ assert_contains "$list_output" "Core Pack:"
 assert_contains "$list_output" "crt-green-p1-4band"
 assert_contains "$list_output" "palette-128"
 
+log "checking gallery command"
+gallery_output="$(run_retrofx_x11 gallery)"
+assert_contains "$gallery_output" "RetroFX offline gallery"
+assert_contains "$gallery_output" "core"
+assert_contains "$gallery_output" "community"
+
 log "checking search command"
 search_output="$(run_retrofx_x11 search crt)"
 assert_contains "$search_output" "crt-green-p1-4band"
@@ -298,6 +305,52 @@ run_retrofx_x11 export alacritty crt-green-p1-4band "$export_alacritty_path"
 require_file "$export_alacritty_path"
 grep -q '^\[colors.primary\]$' "$export_alacritty_path" || die "exported alacritty file missing colors.primary block"
 grep -q '^\[font.normal\]$' "$export_alacritty_path" || die "exported alacritty file missing font.normal block"
+
+log "checking base16 import/export commands"
+interop_profile_name="base16-test-profile"
+interop_profile_file="$PROFILES_DIR/user/$interop_profile_name.toml"
+interop_palette_file="$ROOT_DIR/palettes/imported/$interop_profile_name.txt"
+rm -f "$interop_profile_file" "$interop_palette_file"
+run_retrofx_x11 import base16 "$BASE16_FIXTURE" --name "$interop_profile_name"
+require_file "$interop_profile_file"
+require_file "$interop_palette_file"
+base16_export_path="$TEST_TMP_DIR/exported.base16.json"
+run_retrofx_x11 export base16 "$interop_profile_name" "$base16_export_path"
+require_file "$base16_export_path"
+grep -q '"system": "base16"' "$base16_export_path" || die "base16 export missing system key"
+grep -q '"base00":' "$base16_export_path" || die "base16 export missing base00 key"
+grep -q '"base0f":' "$base16_export_path" || die "base16 export missing base0f key"
+rm -f "$interop_profile_file" "$interop_palette_file"
+
+log "checking base16 sanitation rejects invalid colors"
+invalid_base16="$TEST_TMP_DIR/base16-invalid.json"
+cat >"$invalid_base16" <<'JSON'
+{
+  "base00": "#000000",
+  "base01": "#111111",
+  "base02": "#222222",
+  "base03": "#333333",
+  "base04": "#444444",
+  "base05": "#555555",
+  "base06": "#666666",
+  "base07": "#777777",
+  "base08": "#888888",
+  "base09": "#999999",
+  "base0a": "#zzzzzz",
+  "base0b": "#bbbbbb",
+  "base0c": "#cccccc",
+  "base0d": "#dddddd",
+  "base0e": "#eeeeee",
+  "base0f": "#ffffff"
+}
+JSON
+if run_retrofx_x11 import base16 "$invalid_base16" --name base16-invalid >/dev/null 2>&1; then
+  die "base16 import accepted invalid color data"
+fi
+
+log "checking install-pack command (community placeholder)"
+install_pack_output="$(run_retrofx_x11 install-pack community 2>&1)"
+assert_contains "$install_pack_output" "has no profiles"
 
 profiles=("$PROFILES_DIR"/*.toml)
 if [[ ! -e "${profiles[0]}" ]]; then

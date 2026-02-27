@@ -15,6 +15,11 @@ Pass criteria:
 - shader static checks pass
 - Wayland degraded apply path omits `active/picom.conf` and `active/shader.glsl`
 - profile pack discovery works (`list`, `search`, `info`)
+- interop checks pass:
+  - `gallery` output includes pack entries
+  - `import base16` creates user profile + palette files from fixture JSON
+  - `export base16` emits expected `base00..base0f` keys
+  - invalid Base16 colors are rejected
 - font-enabled profile paths generate:
   - `active/fontconfig.conf` (when requested)
   - `active/alacritty.toml`

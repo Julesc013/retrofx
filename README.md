@@ -7,9 +7,12 @@ RetroFX is a profile-driven rendering system for retro visual effects.
 ```bash
 ./scripts/retrofx list
 ./scripts/retrofx search <keyword>
+./scripts/retrofx gallery
+./scripts/retrofx install-pack <packname>
 ./scripts/retrofx info <profile>
 ./scripts/retrofx apply <profile>
-./scripts/retrofx export <alacritty|xresources> <profile> <output_path>
+./scripts/retrofx import base16 <path-to-json> --name <profile-name>
+./scripts/retrofx export <alacritty|xresources|base16> <profile> <output_path>
 ./scripts/retrofx off
 ./scripts/retrofx doctor
 ./scripts/retrofx preview
@@ -25,6 +28,7 @@ Start here: `docs/QUICKSTART.md`
 
 Additional docs:
 - `docs/INSTALL.md`
+- `docs/INTEROP.md`
 - `docs/ARCHITECTURE.md`
 - `docs/PROFILE_SPEC.md`
 - `docs/PALETTES.md`
