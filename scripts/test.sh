@@ -53,6 +53,14 @@ assert_not_contains() {
   fi
 }
 
+assert_regex() {
+  local haystack="$1"
+  local regex="$2"
+  if ! printf '%s\n' "$haystack" | grep -Eq "$regex"; then
+    die "expected output to match regex: $regex"
+  fi
+}
+
 require_file() {
   local path="$1"
   [[ -f "$path" ]] || die "missing expected file: $path"
@@ -147,6 +155,7 @@ validate_shader_static() {
   local expected_bands="$3"
   local expected_palette_kind="$4"
   local expected_palette_size="$5"
+  local expected_levels expected_inv
   local step
   local prev=0
   local line
@@ -188,6 +197,10 @@ validate_shader_static() {
   done
 
   grep -q "^#define MONO_BANDS $expected_bands$" "$shader_file" || die "MONO_BANDS constant mismatch"
+  expected_levels=$((expected_bands - 1))
+  grep -q "^#define MONO_LEVELS $expected_levels$" "$shader_file" || die "MONO_LEVELS constant mismatch"
+  expected_inv="$(awk -v l="$expected_levels" 'BEGIN { printf "%.9f", 1.0 / l }')"
+  grep -q "^#define MONO_INV_LEVELS $expected_inv$" "$shader_file" || die "MONO_INV_LEVELS constant mismatch"
   grep -q "^#define PALETTE_SIZE $expected_palette_size$" "$shader_file" || die "PALETTE_SIZE constant mismatch"
 
   case "$expected_mode" in
@@ -364,6 +377,69 @@ fi
 log "checking install-pack command (community placeholder)"
 install_pack_output="$(run_retrofx_x11 install-pack community 2>&1)"
 assert_contains "$install_pack_output" "has no profiles"
+
+log "apply hash skip + regeneration checks"
+skip_profile="$TEST_TMP_DIR/skip-check.toml"
+cat >"$skip_profile" <<'PROFILE'
+name = "Skip Check"
+version = 1
+description = "skip check v1"
+
+[mode]
+type = "passthrough"
+
+[effects]
+blur_strength = 0
+scanlines = false
+flicker = false
+dither = "none"
+vignette = false
+
+[scope]
+x11 = true
+tty = false
+tuigreet = false
+PROFILE
+first_apply_output="$(run_retrofx_x11 apply "$skip_profile" 2>&1)"
+assert_contains "$first_apply_output" "Compositor not required."
+second_apply_output="$(run_retrofx_x11 apply "$skip_profile" 2>&1)"
+assert_contains "$second_apply_output" "No changes; skipping apply."
+assert_not_contains "$second_apply_output" "applied profile"
+
+cat >"$skip_profile" <<'PROFILE'
+name = "Skip Check"
+version = 1
+description = "skip check v2"
+
+[mode]
+type = "passthrough"
+
+[effects]
+blur_strength = 0
+scanlines = false
+flicker = false
+dither = "none"
+vignette = false
+
+[scope]
+x11 = true
+tty = false
+tuigreet = false
+PROFILE
+third_apply_output="$(run_retrofx_x11 apply "$skip_profile" 2>&1)"
+assert_not_contains "$third_apply_output" "No changes; skipping apply."
+assert_contains "$third_apply_output" "applied profile"
+assert_not_contains "$third_apply_output" "picom not installed"
+assert_not_contains "$third_apply_output" "x11-picom:"
+
+log "perf command outputs numeric stage timings"
+perf_output="$(run_retrofx_x11 perf "$skip_profile")"
+assert_contains "$perf_output" "RetroFX perf"
+assert_regex "$perf_output" 'parse_ms=[0-9]+'
+assert_regex "$perf_output" 'render_ms=[0-9]+'
+assert_regex "$perf_output" 'file_writes_ms=[0-9]+'
+assert_regex "$perf_output" 'picom_restart_ms=[0-9]+'
+assert_regex "$perf_output" 'total_ms=[0-9]+'
 
 profiles=("$PROFILES_DIR"/*.toml)
 if [[ ! -e "${profiles[0]}" ]]; then
@@ -740,6 +816,7 @@ doctor_json_output="$(run_retrofx_x11 doctor --json)"
 assert_contains "$doctor_json_output" "\"mode\":"
 assert_contains "$doctor_json_output" "\"session\":"
 assert_contains "$doctor_json_output" "\"picom_present\":"
+assert_contains "$doctor_json_output" "\"compositor_required_for_current_profile\":"
 assert_contains "$doctor_json_output" "\"warnings\":"
 assert_contains "$doctor_json_output" "\"errors\":"
 DOCTOR_JSON="$doctor_json_output" python3 - <<'PY'
@@ -757,6 +834,7 @@ required = [
     "last_good_present",
     "tty_backend_available",
     "tuigreet_backend_available",
+    "compositor_required_for_current_profile",
     "warnings",
     "errors",
 ]

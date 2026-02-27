@@ -24,6 +24,8 @@
 #define MODE_PALETTE @MODE_PALETTE@
 
 #define MONO_BANDS @MONO_BANDS@
+#define MONO_LEVELS @MONO_LEVELS@
+#define MONO_INV_LEVELS @MONO_INV_LEVELS@
 #define PHOSPHOR_R @PHOSPHOR_R@
 #define PHOSPHOR_G @PHOSPHOR_G@
 #define PHOSPHOR_B @PHOSPHOR_B@
@@ -51,6 +53,12 @@
 #define BG_TINT_LINEAR_R @BG_TINT_LINEAR_R@
 #define BG_TINT_LINEAR_G @BG_TINT_LINEAR_G@
 #define BG_TINT_LINEAR_B @BG_TINT_LINEAR_B@
+
+/* Cube256 arithmetic constants are compile-time to avoid per-pixel recomputation. */
+const float CUBE256_CUBE_SCALE = 5.0;
+const float CUBE256_GRAY_SCALE = 23.0;
+const float CUBE256_INV_CUBE_SCALE = 0.2;       /* 1 / 5 */
+const float CUBE256_INV_GRAY_SCALE = 0.043478261; /* 1 / 23 */
 
 uniform sampler2D tex;
 uniform float opacity;
@@ -111,28 +119,18 @@ vec3 tone_transform(vec3 c) {
     return clamp(c, 0.0, 1.0);
 }
 
-/* Ordered Bayer 4x4: values 0..15, no out-of-range indexing. */
+/* Ordered Bayer 4x4: values 0..15, constant-table lookup, no out-of-range indexing. */
 float bayer4(vec2 p) {
+    const float BAYER4[16] = float[](
+        0.0, 8.0, 2.0, 10.0,
+        12.0, 4.0, 14.0, 6.0,
+        3.0, 11.0, 1.0, 9.0,
+        15.0, 7.0, 13.0, 5.0
+    );
     int x = int(mod(p.x, 4.0));
     int y = int(mod(p.y, 4.0));
     int i = x + y * 4;
-
-    if (i == 0) return 0.0;
-    if (i == 1) return 8.0;
-    if (i == 2) return 2.0;
-    if (i == 3) return 10.0;
-    if (i == 4) return 12.0;
-    if (i == 5) return 4.0;
-    if (i == 6) return 14.0;
-    if (i == 7) return 6.0;
-    if (i == 8) return 3.0;
-    if (i == 9) return 11.0;
-    if (i == 10) return 1.0;
-    if (i == 11) return 9.0;
-    if (i == 12) return 15.0;
-    if (i == 13) return 7.0;
-    if (i == 14) return 13.0;
-    return 5.0;
+    return BAYER4[i];
 }
 
 /* q = round(L * (N - 1)) / (N - 1), with N guarded to [2, 256]. */
@@ -233,18 +231,18 @@ vec3 quantize_cube256(vec3 c) {
     vec3 cc = clamp(c, 0.0, 1.0);
     vec3 cube;
     vec3 gray;
-    int ri = int(floor(cc.r * 5.0 + 0.5));
-    int gi = int(floor(cc.g * 5.0 + 0.5));
-    int bi = int(floor(cc.b * 5.0 + 0.5));
-    int gri = int(floor(luminance(cc) * 23.0 + 0.5));
+    int ri = int(floor(cc.r * CUBE256_CUBE_SCALE + 0.5));
+    int gi = int(floor(cc.g * CUBE256_CUBE_SCALE + 0.5));
+    int bi = int(floor(cc.b * CUBE256_CUBE_SCALE + 0.5));
+    int gri = int(floor(luminance(cc) * CUBE256_GRAY_SCALE + 0.5));
 
     ri = clamp_int(ri, 0, 5);
     gi = clamp_int(gi, 0, 5);
     bi = clamp_int(bi, 0, 5);
     gri = clamp_int(gri, 0, 23);
 
-    cube = vec3(float(ri), float(gi), float(bi)) / 5.0;
-    gray = vec3(float(gri) / 23.0);
+    cube = vec3(float(ri), float(gi), float(bi)) * CUBE256_INV_CUBE_SCALE;
+    gray = vec3(float(gri) * CUBE256_INV_GRAY_SCALE);
     return (dot(cc - gray, cc - gray) < dot(cc - cube, cc - cube)) ? gray : cube;
 }
 
@@ -311,7 +309,8 @@ void main() {
 #if MODE_MONO == 1
     {
         float y = luminance(lin);
-        float q = quantize_1d(y, MONO_BANDS);
+        /* Uses precomputed inverse to avoid division per fragment. */
+        float q = floor(clamp01(y) * float(MONO_LEVELS) + 0.5) * MONO_INV_LEVELS;
         vec3 phosphor = vec3(PHOSPHOR_R, PHOSPHOR_G, PHOSPHOR_B);
         vec3 bg_tint = vec3(BG_TINT_LINEAR_R, BG_TINT_LINEAR_G, BG_TINT_LINEAR_B);
         outc = mix(bg_tint, phosphor * q, q);

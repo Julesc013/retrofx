@@ -49,6 +49,7 @@ readonly DEFAULT_LAUNCHER_PATH="${HOME}/.local/bin/retrofx"
 readonly INSTALL_MARKER_FILE=".retrofx-install"
 readonly XS_MARKER_KEY="X-RetroFX-Managed=true"
 readonly VERSION_FILE="$ROOT_DIR/VERSION"
+readonly APPLY_SIG_FILE_NAME="apply-input.sha256"
 
 BACKUP_KEEP="${RETROFX_BACKUP_KEEP:-$BACKUP_KEEP_DEFAULT}"
 if [[ ! "$BACKUP_KEEP" =~ ^[0-9]+$ ]] || ((BACKUP_KEEP < 1)); then
@@ -66,6 +67,7 @@ declare AUDIT_PROFILE="-"
 declare AUDIT_ENABLED=0
 declare TXN_ACTIVE=0
 declare TXN_STAGE_DIR=""
+declare LAST_BACKUP_PATH=""
 
 declare CFG_PROFILE_PATH=""
 declare CFG_name=""
@@ -175,6 +177,38 @@ read_version() {
 
 capability_summary_line() {
   printf 'x11=full-with-picom+glx wayland=degraded'
+}
+
+now_ms() {
+  local ms
+  ms="$(date +%s%3N 2>/dev/null || true)"
+  if [[ -n "$ms" && "$ms" =~ ^[0-9]+$ ]]; then
+    printf '%s' "$ms"
+  else
+    printf '%s000' "$(date +%s)"
+  fi
+}
+
+hash_string() {
+  local text="$1"
+  if command -v sha256sum >/dev/null 2>&1; then
+    printf '%s' "$text" | sha256sum | awk '{print $1}'
+  elif command -v shasum >/dev/null 2>&1; then
+    printf '%s' "$text" | shasum -a 256 | awk '{print $1}'
+  else
+    printf '%s' "$text" | cksum | awk '{print $1}'
+  fi
+}
+
+hash_file() {
+  local file="$1"
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$file" | awk '{print $1}'
+  elif command -v shasum >/dev/null 2>&1; then
+    shasum -a 256 "$file" | awk '{print $1}'
+  else
+    cksum "$file" | awk '{print $1}'
+  fi
 }
 
 append_home_log() {
@@ -1484,6 +1518,152 @@ load_palette_hex_lines() {
   ((${#PALETTE_HEX_LINES[@]} >= wanted))
 }
 
+compositor_required_current_profile() {
+  local scope_x11="${CFG_scope_x11:-true}"
+  local mode="${CFG_mode_type:-passthrough}"
+  local blur="${CFG_effects_blur_strength:-0}"
+  local scanlines="${CFG_effects_scanlines:-false}"
+  local flicker="${CFG_effects_flicker:-false}"
+  local vignette="${CFG_effects_vignette:-false}"
+
+  [[ "$scope_x11" == "true" ]] || return 1
+
+  if ((blur > 0)); then
+    return 0
+  fi
+
+  if [[ "$mode" != "passthrough" ]]; then
+    return 0
+  fi
+
+  if [[ "$scanlines" == "true" || "$flicker" == "true" || "$vignette" == "true" ]]; then
+    return 0
+  fi
+
+  return 1
+}
+
+compute_apply_input_hash() {
+  local profile_path="$1"
+  local session_type="$2"
+  local tmp_manifest template rel custom_path=""
+  local -a files=()
+  local digest
+
+  [[ -f "$profile_path" ]] || die "missing profile for hash: $profile_path"
+  files+=("$profile_path")
+
+  while IFS= read -r template; do
+    [[ -f "$template" ]] || continue
+    files+=("$template")
+  done < <(find "$TEMPLATES_DIR" -mindepth 1 -maxdepth 1 -type f -name '*.in' | sort)
+
+  if [[ "$CFG_mode_type" == "palette" && "$CFG_palette_kind" == "custom" ]]; then
+    custom_path="$(resolve_custom_palette_path || true)"
+    if [[ -n "$custom_path" && -f "$custom_path" ]]; then
+      files+=("$custom_path")
+    fi
+  fi
+
+  tmp_manifest="$(mktemp "$STATE_DIR/apply-input.XXXXXX")"
+  {
+    printf 'session_type=%s\n' "$session_type"
+    printf 'version=%s\n' "$(read_version)"
+    for template in "${files[@]}"; do
+      rel="$template"
+      if [[ "$rel" == "$ROOT_DIR/"* ]]; then
+        rel="${rel#"$ROOT_DIR"/}"
+      fi
+      printf '%s %s\n' "$(hash_file "$template")" "$rel"
+    done
+  } >"$tmp_manifest"
+
+  digest="$(hash_file "$tmp_manifest")"
+  rm -f "$tmp_manifest"
+  printf '%s' "$digest"
+}
+
+stage_matches_active() {
+  local stage_dir="$1"
+  local active_dir="$2"
+  local rel f1 f2
+
+  [[ -d "$active_dir" ]] || return 1
+
+  while IFS= read -r rel; do
+    f1="$stage_dir/$rel"
+    f2="$active_dir/$rel"
+    [[ -f "$f2" ]] || return 1
+    cmp -s "$f1" "$f2" || return 1
+  done < <(cd "$stage_dir" && find . -type f -printf '%P\n' | sort)
+
+  while IFS= read -r rel; do
+    [[ -f "$stage_dir/$rel" ]] || return 1
+  done < <(cd "$active_dir" && find . -type f -printf '%P\n' | sort)
+
+  return 0
+}
+
+file_content_differs() {
+  local old_file="$1"
+  local new_file="$2"
+
+  if [[ ! -f "$old_file" && ! -f "$new_file" ]]; then
+    return 1
+  fi
+  if [[ -f "$old_file" && -f "$new_file" ]]; then
+    if cmp -s "$old_file" "$new_file"; then
+      return 1
+    fi
+    return 0
+  fi
+  return 0
+}
+
+write_apply_signature_file() {
+  local out_file="$1"
+  local sig="$2"
+  printf '%s\n' "$sig" >"$out_file"
+}
+
+read_active_apply_signature() {
+  local sig_file="$ACTIVE_DIR/$APPLY_SIG_FILE_NAME"
+  local sig=""
+  if [[ -f "$sig_file" ]]; then
+    IFS= read -r sig <"$sig_file" || true
+    sig="$(trim "$sig")"
+  fi
+  printf '%s' "$sig"
+}
+
+active_state_complete_for_session() {
+  local session_type="$1"
+
+  [[ -f "$ACTIVE_DIR/profile.toml" ]] || return 1
+  [[ -f "$ACTIVE_DIR/profile.env" ]] || return 1
+  [[ -f "$ACTIVE_DIR/meta" ]] || return 1
+  [[ -f "$ACTIVE_DIR/xresources" ]] || return 1
+  [[ -f "$ACTIVE_DIR/Xresources" ]] || return 1
+  [[ -f "$ACTIVE_DIR/alacritty.toml" ]] || return 1
+  [[ -f "$ACTIVE_DIR/semantic.env" ]] || return 1
+  [[ -f "$ACTIVE_DIR/tty-palette.env" ]] || return 1
+  [[ -f "$ACTIVE_DIR/tty-palette.txt" ]] || return 1
+  [[ -f "$ACTIVE_DIR/$APPLY_SIG_FILE_NAME" ]] || return 1
+
+  if [[ "$session_type" == "wayland" ]]; then
+    [[ ! -f "$ACTIVE_DIR/picom.conf" ]] || return 1
+    [[ ! -f "$ACTIVE_DIR/shader.glsl" ]] || return 1
+    return 0
+  fi
+
+  if compositor_required_current_profile; then
+    [[ -f "$ACTIVE_DIR/picom.conf" ]] || return 1
+    [[ -f "$ACTIVE_DIR/shader.glsl" ]] || return 1
+  fi
+
+  return 0
+}
+
 set_custom_palette_summary() {
   local custom_path=""
   local i
@@ -1854,7 +2034,8 @@ render_shader() {
   local palette_kind_mono2=0 palette_kind_mono4=0 palette_kind_mono8=0 palette_kind_mono16=0
   local palette_kind_cube32=0 palette_kind_cube64=0 palette_kind_cube128=0 palette_kind_cube256=0
   local palette_kind_custom=0
-  local mono_bands=2 palette_size=16 custom_palette_size=1
+  local mono_bands=2 mono_levels=1 mono_inv_levels="1.000000000"
+  local palette_size=16 custom_palette_size=1
   local custom_block_file line
 
   case "$CFG_mode_type" in
@@ -1914,6 +2095,8 @@ render_shader() {
   elif ((mono_bands > 256)); then
     mono_bands=256
   fi
+  mono_levels=$((mono_bands - 1))
+  mono_inv_levels="$(awk -v levels="$mono_levels" 'BEGIN { printf "%.9f", 1.0 / levels }')"
 
   palette_size="$CFG_palette_size"
   if ((palette_size < 2)); then
@@ -1959,6 +2142,8 @@ render_shader() {
     line="${line//@MODE_PALETTE@/$mode_palette}"
 
     line="${line//@MONO_BANDS@/$mono_bands}"
+    line="${line//@MONO_LEVELS@/$mono_levels}"
+    line="${line//@MONO_INV_LEVELS@/$mono_inv_levels}"
     line="${line//@PHOSPHOR_R@/$CFG_phosphor_r}"
     line="${line//@PHOSPHOR_G@/$CFG_phosphor_g}"
     line="${line//@PHOSPHOR_B@/$CFG_phosphor_b}"
@@ -2087,12 +2272,22 @@ render_templates() {
   local stage_dir="$1"
   local profile_path="$2"
   local session_type="${3:-x11}"
+  local input_sig="${4:-}"
+  local compositor_required="false"
+
+  if compositor_required_current_profile; then
+    compositor_required="true"
+  fi
 
   cp "$profile_path" "$stage_dir/profile.toml"
   write_profile_env "$stage_dir/profile.env"
+  if [[ -n "$input_sig" ]]; then
+    write_apply_signature_file "$stage_dir/$APPLY_SIG_FILE_NAME" "$input_sig"
+  fi
 
   if [[ "$session_type" == "wayland" ]]; then
     rm -f "$stage_dir/shader.glsl" "$stage_dir/picom.conf"
+    compositor_required="false"
   else
     render_shader "$stage_dir/shader.glsl"
     render_picom "$stage_dir/picom.conf"
@@ -2101,9 +2296,12 @@ render_templates() {
   render_color_artifacts "$stage_dir"
 
   {
-    printf 'generated_at=%s\n' "$(now_ts)"
     printf 'profile=%s\n' "$(basename "$profile_path")"
     printf 'session_type=%s\n' "$session_type"
+    printf 'compositor_required=%s\n' "$compositor_required"
+    if [[ -n "$input_sig" ]]; then
+      printf 'apply_input_hash=%s\n' "$input_sig"
+    fi
   } >"$stage_dir/meta"
 }
 
@@ -2232,6 +2430,10 @@ validate_stage_with_picom() {
     return 0
   fi
 
+  if ! compositor_required_current_profile; then
+    return 0
+  fi
+
   if ! command -v picom >/dev/null 2>&1; then
     warn "picom not installed; skipping runtime shader validation"
     return 0
@@ -2281,6 +2483,7 @@ backup_active() {
   local ts backup_name backup_dir
 
   ensure_dirs
+  LAST_BACKUP_PATH=""
   ts="$(now_ts_compact)"
   backup_name="${ts}-${profile_id//[^A-Za-z0-9._-]/_}-pid$$"
   backup_dir="$BACKUPS_DIR/$backup_name"
@@ -2289,6 +2492,7 @@ backup_active() {
   if dir_has_files "$ACTIVE_DIR"; then
     cp -a "$ACTIVE_DIR"/. "$backup_dir"/
   fi
+  LAST_BACKUP_PATH="$backup_dir"
 }
 
 prune_backups() {
@@ -2402,6 +2606,8 @@ apply_scoped_backends() {
   if [[ "$CFG_scope_x11" == "true" ]]; then
     if [[ "$session_type" == "wayland" ]]; then
       info "wayland session detected: skipping x11 compositor backend"
+    elif ! compositor_required_current_profile; then
+      info "Compositor not required."
     elif [[ -x "$BACKEND_X11" ]]; then
       "$BACKEND_X11" apply "$ACTIVE_DIR" || warn "x11 backend apply hook reported an issue"
     fi
@@ -2422,6 +2628,12 @@ apply_scoped_backends() {
 }
 
 restart_picom_if_running() {
+  local should_restart="${1:-false}"
+
+  if [[ "$should_restart" != "true" ]]; then
+    return 0
+  fi
+
   # Disabled by default to avoid changing runtime behavior unexpectedly.
   if [[ "${RETROFX_RELOAD_PICOM:-0}" != "1" ]]; then
     return 0
@@ -3087,6 +3299,11 @@ cmd_doctor() {
   local last_good_present=0
   local tty_backend_available=0
   local tuigreet_backend_available=0
+  local compositor_required_known=0
+  local compositor_required_value=0
+  local compositor_required_text="unknown"
+  local active_profile_id="-"
+  local active_profile_path=""
   local session_json=""
   local -a warnings=()
   local -a errors=()
@@ -3165,6 +3382,25 @@ cmd_doctor() {
 
   if [[ ! -f "$ACTIVE_DIR/profile.env" || ! -f "$ACTIVE_DIR/xresources" || ! -f "$ACTIVE_DIR/semantic.env" ]]; then
     warnings+=("active config missing (run: retrofx apply <profile>)")
+  else
+    # shellcheck source=/dev/null
+    source "$ACTIVE_DIR/profile.env" || true
+    active_profile_id="${PROFILE_ID:-$active_profile_id}"
+    active_profile_path="${PROFILE_PATH:-$active_profile_path}"
+
+    if [[ -f "$ACTIVE_DIR/profile.toml" ]]; then
+      if load_profile "$ACTIVE_DIR/profile.toml" >/dev/null 2>&1; then
+        compositor_required_known=1
+        if compositor_required_current_profile; then
+          compositor_required_value=1
+          compositor_required_text="true"
+        else
+          compositor_required_text="false"
+        fi
+      else
+        warnings+=("active profile failed to parse (cannot determine compositor requirement)")
+      fi
+    fi
   fi
 
   if [[ "$session_type" == "wayland" ]]; then
@@ -3206,6 +3442,12 @@ cmd_doctor() {
     printf '  "last_good_present": %s,\n' "$(json_bool "$last_good_present")"
     printf '  "tty_backend_available": %s,\n' "$(json_bool "$tty_backend_available")"
     printf '  "tuigreet_backend_available": %s,\n' "$(json_bool "$tuigreet_backend_available")"
+    printf '  "current_profile": "%s",\n' "$(json_escape_string "$active_profile_id")"
+    if [[ "$compositor_required_known" -eq 1 ]]; then
+      printf '  "compositor_required_for_current_profile": %s,\n' "$(json_bool "$compositor_required_value")"
+    else
+      printf '  "compositor_required_for_current_profile": null,\n'
+    fi
     printf '  "warnings": '
     print_json_string_array warnings
     printf ',\n'
@@ -3219,6 +3461,16 @@ cmd_doctor() {
   printf 'Mode: %s\n' "$mode"
   printf 'Session type: %s\n' "$session_type"
   printf 'WM/DE: %s\n' "$wm_de"
+  printf 'Current profile: %s\n' "$active_profile_id"
+  if [[ "$compositor_required_known" -eq 1 ]]; then
+    if [[ "$compositor_required_value" -eq 1 ]]; then
+      status_ok "Compositor required for current profile: yes"
+    else
+      status_ok "Compositor required for current profile: no"
+    fi
+  else
+    status_warn "Compositor required for current profile: unknown"
+  fi
 
   if [[ -n "${DISPLAY:-}" ]]; then
     status_ok "DISPLAY is set to $DISPLAY"
@@ -4026,6 +4278,9 @@ cmd_new() {
 cmd_apply() {
   local profile_ref="$1"
   local profile_path stage_dir profile_id session_type
+  local apply_input_sig old_sig
+  local restart_required="false"
+  local picom_changed=0 shader_changed=0
 
   ensure_dirs
   profile_path="$(resolve_profile_path "$profile_ref")" || die "profile not found: $profile_ref"
@@ -4034,18 +4289,33 @@ cmd_apply() {
   session_type="$(detect_session_type)"
 
   load_profile "$profile_path"
+  apply_input_sig="$(compute_apply_input_hash "$profile_path" "$session_type")"
+  old_sig="$(read_active_apply_signature)"
+
+  if [[ -n "$old_sig" && "$old_sig" == "$apply_input_sig" ]] && active_state_complete_for_session "$session_type"; then
+    log "No changes; skipping apply."
+    return 0
+  fi
 
   TXN_ACTIVE=1
   TXN_STAGE_DIR=""
   stage_dir="$(mktemp -d "$STATE_DIR/stage.$(now_ts_compact).$$.XXXXXX")"
   TXN_STAGE_DIR="$stage_dir"
 
-  render_templates "$stage_dir" "$profile_path" "$session_type"
+  render_templates "$stage_dir" "$profile_path" "$session_type" "$apply_input_sig"
 
   if ! validate_stage_with_picom "$stage_dir" "$session_type"; then
     LAST_ERROR="validation failed for profile '$profile_id'"
     warn "$LAST_ERROR"
     return 1
+  fi
+
+  if stage_matches_active "$stage_dir" "$ACTIVE_DIR"; then
+    TXN_ACTIVE=0
+    TXN_STAGE_DIR=""
+    rm -rf "$stage_dir"
+    log "No changes; skipping apply."
+    return 0
   fi
 
   if ! backup_active "$profile_id"; then
@@ -4089,7 +4359,19 @@ cmd_apply() {
     return 1
   fi
 
-  restart_picom_if_running || true
+  if [[ "$session_type" != "wayland" ]] && compositor_required_current_profile; then
+    if file_content_differs "$LAST_BACKUP_PATH/picom.conf" "$ACTIVE_DIR/picom.conf"; then
+      picom_changed=1
+    fi
+    if file_content_differs "$LAST_BACKUP_PATH/shader.glsl" "$ACTIVE_DIR/shader.glsl"; then
+      shader_changed=1
+    fi
+    if [[ "$picom_changed" -eq 1 || "$shader_changed" -eq 1 ]]; then
+      restart_required="true"
+    fi
+  fi
+
+  restart_picom_if_running "$restart_required" || true
 
   TXN_ACTIVE=0
   if [[ "$session_type" == "wayland" ]]; then
@@ -4619,6 +4901,66 @@ cmd_repair() {
   log "repair: applied degraded passthrough fallback"
 }
 
+cmd_perf() {
+  local profile_ref="${1:-}"
+  local profile_path session_type
+  local parse_start parse_end render_start render_end write_start write_end restart_start restart_end
+  local parse_ms render_ms write_ms restart_ms total_ms
+  local stage_dir sink_dir
+  local input_sig
+
+  ensure_dirs
+  if [[ -n "$profile_ref" ]]; then
+    profile_path="$(resolve_profile_path "$profile_ref")" || die "profile not found: $profile_ref"
+  elif [[ -f "$ACTIVE_DIR/profile.toml" ]]; then
+    profile_path="$ACTIVE_DIR/profile.toml"
+  elif [[ -f "$PROFILES_DIR/passthrough.toml" ]]; then
+    profile_path="$PROFILES_DIR/passthrough.toml"
+  else
+    die "perf requires an active profile or explicit profile argument"
+  fi
+
+  session_type="$(detect_session_type)"
+
+  parse_start="$(now_ms)"
+  load_profile "$profile_path"
+  input_sig="$(compute_apply_input_hash "$profile_path" "$session_type")"
+  parse_end="$(now_ms)"
+
+  stage_dir="$(mktemp -d "$STATE_DIR/perf-stage.$(now_ts_compact).$$.XXXXXX")"
+  render_start="$(now_ms)"
+  render_templates "$stage_dir" "$profile_path" "$session_type" "$input_sig"
+  validate_stage_outputs "$stage_dir" "$session_type" >/dev/null
+  render_end="$(now_ms)"
+
+  write_start="$(now_ms)"
+  if ! stage_matches_active "$stage_dir" "$ACTIVE_DIR"; then
+    sink_dir="$(mktemp -d "$STATE_DIR/perf-write.$(now_ts_compact).$$.XXXXXX")"
+    cp -a "$stage_dir"/. "$sink_dir"/
+    rm -rf "$sink_dir"
+  fi
+  write_end="$(now_ms)"
+
+  restart_start="$(now_ms)"
+  restart_picom_if_running "false"
+  restart_end="$(now_ms)"
+
+  rm -rf "$stage_dir"
+
+  parse_ms=$((parse_end - parse_start))
+  render_ms=$((render_end - render_start))
+  write_ms=$((write_end - write_start))
+  restart_ms=$((restart_end - restart_start))
+  total_ms=$((parse_ms + render_ms + write_ms + restart_ms))
+
+  printf 'RetroFX perf (%s)\n' "$(basename "$profile_path")"
+  printf '  parse_ms=%d\n' "$parse_ms"
+  printf '  render_ms=%d\n' "$render_ms"
+  printf '  file_writes_ms=%d\n' "$write_ms"
+  printf '  picom_restart_ms=%d\n' "$restart_ms"
+  printf '  total_ms=%d\n' "$total_ms"
+}
+
 usage() {
   cat <<'USAGE'
 Usage:
@@ -4631,6 +4973,7 @@ Usage:
   retrofx apply <profile>
   retrofx import base16 <path-to-json> --name <profile-name>
   retrofx export <alacritty|xresources|base16> <profile> <output_path>
+  retrofx perf [profile]
   retrofx self-check
   retrofx repair
   retrofx status
@@ -4719,6 +5062,15 @@ main() {
       shift
       [[ "$#" -eq 3 ]] || die "export requires format, profile, and output_path"
       cmd_export "$1" "$2" "$3"
+      ;;
+    perf)
+      profile_ref="${2:--}"
+      audit_begin "perf" "$profile_ref"
+      shift
+      if [[ "$#" -gt 1 ]]; then
+        die "perf takes zero or one profile"
+      fi
+      cmd_perf "$@"
       ;;
     self-check)
       audit_begin "self-check" "-"

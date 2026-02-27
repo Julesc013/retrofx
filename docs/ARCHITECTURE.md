@@ -73,6 +73,24 @@ RetroFX is a profile-driven renderer that generates deterministic session-local 
 - Vignette: `O(1)`
 - No multi-pass, no frame history, no extra texture lookups
 
+## Performance Model and Optimization Guarantees
+
+- `retrofx apply` computes an input signature from the selected profile and template set.
+- If the signature matches the last applied signature and active state is complete, apply exits early with:
+  - `No changes; skipping apply.`
+- Active writes are minimized:
+  - generation happens in a stage directory
+  - atomic swap only occurs when staged content differs from `active/`
+- Compositor churn is minimized:
+  - picom reload signaling is gated and only considered when compositor-relevant outputs changed (`picom.conf` or `shader.glsl`)
+  - tty-only operations do not trigger compositor paths
+  - passthrough/blur-free profiles avoid compositor backend application entirely (`Compositor not required.`)
+- Shader math stays bounded and deterministic:
+  - no temporal buffers
+  - no frame history
+  - bounded quantization loops only (`O(16)` max for VGA16, `O(32)` max for custom palettes)
+  - structured palettes use arithmetic quantization (`O(1)`)
+
 ## Semantic Color Preservation Strategy
 
 - A shared ANSI16 semantic palette is generated once per profile and reused by X11 terminal resources, TTY backend, and tuigreet theme snippet.

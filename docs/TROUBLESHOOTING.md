@@ -68,3 +68,15 @@ If needed, remove managed xsession entries:
 ```bash
 ~/.config/retrofx/scripts/integrate/remove-xsession.sh --all-managed --yes
 ```
+
+## Performance / Power Questions
+
+- If `apply` feels slow:
+  - run `./scripts/retrofx perf [profile]` to get stage timings in milliseconds.
+- If repeated applies keep restarting work:
+  - ensure you are applying the same profile file without local edits.
+  - unchanged inputs should print `No changes; skipping apply.`
+- For low-power or latency-sensitive sessions:
+  - use passthrough/blur-free profiles when possible.
+  - those profiles report `Compositor not required.` and avoid compositor backend application.
+- Use `./scripts/retrofx doctor` to confirm current profile compositor requirements.
