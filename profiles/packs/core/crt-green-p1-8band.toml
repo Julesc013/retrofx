@@ -1,0 +1,26 @@
+name = "CRT Green P1 8-Band"
+version = 1
+description = "Smoother green CRT profile with 8 luminance bands."
+tags = ["crt", "green", "retro", "p1"]
+author = "RetroFX Core Pack"
+license = "CC0-1.0"
+
+[mode]
+type = "monochrome"
+
+[monochrome]
+bands = 8
+phosphor = "green"
+hotcore = false
+
+[effects]
+blur_strength = 3
+scanlines = true
+flicker = false
+dither = "ordered"
+vignette = true
+
+[scope]
+x11 = true
+tty = false
+tuigreet = false

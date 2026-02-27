@@ -1,0 +1,26 @@
+name = "VT White"
+version = 1
+description = "Neutral white terminal profile inspired by classic VT displays."
+tags = ["vt", "white", "terminal"]
+author = "RetroFX Core Pack"
+license = "CC0-1.0"
+
+[mode]
+type = "monochrome"
+
+[monochrome]
+bands = 8
+phosphor = "white"
+hotcore = false
+
+[effects]
+blur_strength = 2
+scanlines = false
+flicker = false
+dither = "none"
+vignette = false
+
+[scope]
+x11 = true
+tty = false
+tuigreet = false

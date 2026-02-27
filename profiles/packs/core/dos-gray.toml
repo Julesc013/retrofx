@@ -1,0 +1,26 @@
+name = "DOS Gray"
+version = 1
+description = "Gray DOS-era monitor look with restrained effects."
+tags = ["dos", "gray", "monochrome", "terminal"]
+author = "RetroFX Core Pack"
+license = "CC0-1.0"
+
+[mode]
+type = "monochrome"
+
+[monochrome]
+bands = 6
+phosphor = "white"
+hotcore = false
+
+[effects]
+blur_strength = 2
+scanlines = true
+flicker = false
+dither = "ordered"
+vignette = false
+
+[scope]
+x11 = true
+tty = false
+tuigreet = false

@@ -6,6 +6,8 @@ export LC_ALL=C
 readonly SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 readonly ROOT_DIR="$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)"
 readonly PROFILES_DIR="$ROOT_DIR/profiles"
+readonly PROFILES_USER_DIR="$PROFILES_DIR/user"
+readonly PROFILES_PACKS_DIR="$PROFILES_DIR/packs"
 readonly TEMPLATES_DIR="$ROOT_DIR/templates"
 readonly ACTIVE_DIR="$ROOT_DIR/active"
 readonly STATE_DIR="$ROOT_DIR/state"
@@ -39,6 +41,10 @@ declare TXN_STAGE_DIR=""
 declare CFG_PROFILE_PATH=""
 declare CFG_name=""
 declare CFG_version="1"
+declare CFG_description=""
+declare CFG_tags=""
+declare CFG_author=""
+declare CFG_license=""
 declare CFG_mode_type="passthrough"
 
 declare CFG_monochrome_bands="4"
@@ -234,6 +240,48 @@ parse_int_range() {
   printf '%s' "$raw"
 }
 
+parse_string_array() {
+  local raw inner token val out=""
+  raw="$(trim "$1")"
+
+  [[ "$raw" == "["*"]" ]] || return 1
+  inner="${raw:1:${#raw}-2}"
+  inner="$(trim "$inner")"
+
+  if [[ -z "$inner" ]]; then
+    printf ''
+    return 0
+  fi
+
+  while [[ -n "$inner" ]]; do
+    if [[ "$inner" =~ ^\"([^\"\\]|\\.)*\" ]]; then
+      token="${BASH_REMATCH[0]}"
+      val="$(toml_string "$token")" || return 1
+    elif [[ "$inner" =~ ^[A-Za-z0-9._:+-]+ ]]; then
+      token="${BASH_REMATCH[0]}"
+      val="$(toml_string "$token")" || return 1
+    else
+      return 1
+    fi
+
+    if [[ -z "$out" ]]; then
+      out="$val"
+    else
+      out="$out,$val"
+    fi
+
+    inner="${inner:${#token}}"
+    inner="$(trim "$inner")"
+    if [[ -z "$inner" ]]; then
+      break
+    fi
+    [[ "${inner:0:1}" == "," ]] || return 1
+    inner="$(trim "${inner:1}")"
+  done
+
+  printf '%s' "$out"
+}
+
 normalize_rgb_component() {
   local raw
   raw="$(trim "$1")"
@@ -283,6 +331,10 @@ reset_config() {
   CFG_PROFILE_PATH=""
   CFG_name=""
   CFG_version="1"
+  CFG_description=""
+  CFG_tags=""
+  CFG_author=""
+  CFG_license=""
   CFG_mode_type="passthrough"
 
   CFG_monochrome_bands="4"
@@ -331,6 +383,22 @@ set_cfg_value() {
             [[ "$val" == "1" ]] || die "$ctx: unsupported version '$val' (expected 1)"
             CFG_version="$val"
           fi
+          ;;
+        description)
+          val="$(toml_string "$raw")" || die "$ctx: invalid string for description"
+          CFG_description="$val"
+          ;;
+        tags)
+          val="$(parse_string_array "$raw")" || die "$ctx: tags must be an array of strings"
+          CFG_tags="$val"
+          ;;
+        author)
+          val="$(toml_string "$raw")" || die "$ctx: invalid string for author"
+          CFG_author="$val"
+          ;;
+        license)
+          val="$(toml_string "$raw")" || die "$ctx: invalid string for license"
+          CFG_license="$val"
           ;;
         *)
           die "$ctx: unknown top-level key '$key'"
@@ -561,10 +629,42 @@ parse_profile() {
 
 resolve_profile_path() {
   local ref="$1"
+  local path base
 
   if [[ -f "$ref" ]]; then
     printf '%s' "$ref"
     return 0
+  fi
+
+  if [[ -f "$PROFILES_USER_DIR/$ref" ]]; then
+    printf '%s' "$PROFILES_USER_DIR/$ref"
+    return 0
+  fi
+
+  if [[ -f "$PROFILES_USER_DIR/$ref.toml" ]]; then
+    printf '%s' "$PROFILES_USER_DIR/$ref.toml"
+    return 0
+  fi
+
+  if [[ -f "$PROFILES_PACKS_DIR/$ref" ]]; then
+    printf '%s' "$PROFILES_PACKS_DIR/$ref"
+    return 0
+  fi
+
+  if [[ -f "$PROFILES_PACKS_DIR/$ref.toml" ]]; then
+    printf '%s' "$PROFILES_PACKS_DIR/$ref.toml"
+    return 0
+  fi
+
+  if [[ -d "$PROFILES_PACKS_DIR" ]]; then
+    while IFS= read -r path; do
+      base="$(basename "$path")"
+      base="${base%.toml}"
+      if [[ "$base" == "$ref" ]]; then
+        printf '%s' "$path"
+        return 0
+      fi
+    done < <(find "$PROFILES_PACKS_DIR" -type f -name '*.toml' | sort)
   fi
 
   if [[ -f "$PROFILES_DIR/$ref" ]]; then
@@ -759,6 +859,10 @@ write_profile_env() {
     printf 'PROFILE_ID=%q\n' "$profile_id"
     printf 'PROFILE_NAME=%q\n' "$CFG_name"
     printf 'PROFILE_VERSION=%q\n' "$CFG_version"
+    printf 'PROFILE_DESCRIPTION=%q\n' "$CFG_description"
+    printf 'PROFILE_TAGS=%q\n' "$CFG_tags"
+    printf 'PROFILE_AUTHOR=%q\n' "$CFG_author"
+    printf 'PROFILE_LICENSE=%q\n' "$CFG_license"
 
     printf 'MODE_TYPE=%q\n' "$CFG_mode_type"
 
@@ -1536,35 +1640,222 @@ PROFILE
 
 list_profiles() {
   local current_profile=""
+  local current_path=""
   local found=0
+  local profile base
 
   if [[ -f "$ACTIVE_DIR/profile.env" ]]; then
     # shellcheck source=/dev/null
     source "$ACTIVE_DIR/profile.env"
     current_profile="${PROFILE_ID:-}"
+    current_path="${PROFILE_PATH:-}"
   fi
 
-  for profile in "$PROFILES_DIR"/*.toml; do
-    [[ -e "$profile" ]] || continue
-    found=1
-    local base
-    base="$(basename "$profile")"
-    base="${base%.toml}"
+  print_profile_group() {
+    local title="$1"
+    local dir="$2"
+    local maxdepth="${3:-1}"
+    local group_found=0
+    local path
 
-    if [[ "$base" == "$current_profile" ]]; then
-      printf '%s (active)\n' "$base"
-    else
-      printf '%s\n' "$base"
+    [[ -d "$dir" ]] || return 0
+
+    while IFS= read -r path; do
+      [[ -e "$path" ]] || continue
+      if [[ "$group_found" -eq 0 ]]; then
+        printf '%s:\n' "$title"
+      fi
+      group_found=1
+      found=1
+      base="$(basename "$path")"
+      base="${base%.toml}"
+      if [[ "$path" == "$current_path" || "$base" == "$current_profile" ]]; then
+        printf '  %s (active)\n' "$base"
+      else
+        printf '  %s\n' "$base"
+      fi
+    done < <(find "$dir" -mindepth 1 -maxdepth "$maxdepth" -type f -name '*.toml' | sort)
+
+    if [[ "$group_found" -eq 1 ]]; then
+      printf '\n'
     fi
-  done
+  }
+
+  print_profile_group "Core Pack" "$PROFILES_PACKS_DIR/core" 1
+
+  if [[ -d "$PROFILES_PACKS_DIR" ]]; then
+    local pack_dir pack_name
+    while IFS= read -r pack_dir; do
+      pack_name="$(basename "$pack_dir")"
+      [[ "$pack_name" == "core" ]] && continue
+      print_profile_group "Pack $pack_name" "$pack_dir" 1
+    done < <(find "$PROFILES_PACKS_DIR" -mindepth 1 -maxdepth 1 -type d | sort)
+  fi
+
+  print_profile_group "User Profiles" "$PROFILES_USER_DIR" 1
+  print_profile_group "Profiles" "$PROFILES_DIR" 1
 
   if [[ "$found" -eq 0 ]]; then
-    printf 'no profiles found in %s\n' "$PROFILES_DIR"
+    printf 'no profiles found under %s\n' "$PROFILES_DIR"
   fi
+}
+
+profile_origin_label() {
+  local path="$1"
+  local rel pack_name
+
+  if [[ "$path" == "$PROFILES_USER_DIR/"* ]]; then
+    printf 'user'
+    return 0
+  fi
+
+  if [[ "$path" == "$PROFILES_PACKS_DIR/"* ]]; then
+    rel="${path#"$PROFILES_PACKS_DIR"/}"
+    pack_name="${rel%%/*}"
+    printf 'pack/%s' "$pack_name"
+    return 0
+  fi
+
+  printf 'profiles'
+}
+
+format_tags_csv() {
+  local tags="$1"
+  printf '%s' "${tags//,/, }"
+}
+
+iter_all_profile_paths() {
+  if [[ -d "$PROFILES_USER_DIR" ]]; then
+    find "$PROFILES_USER_DIR" -mindepth 1 -maxdepth 1 -type f -name '*.toml' | sort
+  fi
+  if [[ -d "$PROFILES_PACKS_DIR" ]]; then
+    find "$PROFILES_PACKS_DIR" -type f -name '*.toml' | sort
+  fi
+  find "$PROFILES_DIR" -mindepth 1 -maxdepth 1 -type f -name '*.toml' | sort
 }
 
 cmd_list() {
   list_profiles
+}
+
+cmd_search() {
+  local keyword="$1"
+  local needle path profile_id origin hay base
+  local found=0
+
+  needle="$(printf '%s' "$keyword" | tr '[:upper:]' '[:lower:]')"
+
+  while IFS= read -r path; do
+    [[ -f "$path" ]] || continue
+    base="$(basename "$path")"
+    profile_id="${base%.toml}"
+    parse_profile "$path"
+    hay="$(printf '%s %s %s %s %s %s' \
+      "$profile_id" "$CFG_name" "$CFG_description" "$CFG_tags" "$CFG_author" "$CFG_license" | tr '[:upper:]' '[:lower:]')"
+    if [[ "$hay" == *"$needle"* ]]; then
+      found=1
+      origin="$(profile_origin_label "$path")"
+      if [[ -n "$CFG_description" ]]; then
+        printf '%s [%s] - %s\n' "$profile_id" "$origin" "$CFG_description"
+      else
+        printf '%s [%s]\n' "$profile_id" "$origin"
+      fi
+    fi
+  done < <(iter_all_profile_paths)
+
+  if [[ "$found" -eq 0 ]]; then
+    printf 'no profiles matched: %s\n' "$keyword"
+  fi
+}
+
+cmd_info() {
+  local profile_ref="$1"
+  local profile_path profile_id origin
+
+  profile_path="$(resolve_profile_path "$profile_ref")" || die "profile not found: $profile_ref"
+  profile_id="$(basename "$profile_path")"
+  profile_id="${profile_id%.toml}"
+  origin="$(profile_origin_label "$profile_path")"
+
+  load_profile "$profile_path"
+
+  printf 'Profile: %s\n' "$profile_id"
+  printf 'Path: %s\n' "$profile_path"
+  printf 'Origin: %s\n' "$origin"
+  printf 'Name: %s\n' "$CFG_name"
+  printf 'Version: %s\n' "$CFG_version"
+  if [[ -n "$CFG_description" ]]; then
+    printf 'Description: %s\n' "$CFG_description"
+  fi
+  if [[ -n "$CFG_tags" ]]; then
+    printf 'Tags: %s\n' "$(format_tags_csv "$CFG_tags")"
+  fi
+  if [[ -n "$CFG_author" ]]; then
+    printf 'Author: %s\n' "$CFG_author"
+  fi
+  if [[ -n "$CFG_license" ]]; then
+    printf 'License: %s\n' "$CFG_license"
+  fi
+
+  printf '\nMode\n'
+  printf '  type = %s\n' "$CFG_mode_type"
+  case "$CFG_mode_type" in
+    monochrome)
+      printf '  bands = %s\n' "$CFG_monochrome_bands"
+      printf '  phosphor = %s\n' "$CFG_monochrome_phosphor"
+      if [[ "$CFG_monochrome_phosphor" == "custom" ]]; then
+        printf '  custom_rgb = %s\n' "$CFG_monochrome_custom_rgb"
+      fi
+      printf '  hotcore = %s\n' "$CFG_monochrome_hotcore"
+      ;;
+    palette)
+      printf '  kind = %s\n' "$CFG_palette_kind"
+      printf '  size = %s\n' "$CFG_palette_size"
+      if [[ "$CFG_palette_kind" == "custom" ]]; then
+        printf '  custom_file = %s\n' "$CFG_palette_custom_file"
+      fi
+      ;;
+  esac
+
+  printf '\nEffects\n'
+  printf '  blur_strength = %s\n' "$CFG_effects_blur_strength"
+  printf '  scanlines = %s\n' "$CFG_effects_scanlines"
+  printf '  flicker = %s\n' "$CFG_effects_flicker"
+  printf '  dither = %s\n' "$CFG_effects_dither"
+  printf '  vignette = %s\n' "$CFG_effects_vignette"
+
+  printf '\nScope\n'
+  printf '  x11 = %s\n' "$CFG_scope_x11"
+  printf '  tty = %s\n' "$CFG_scope_tty"
+  printf '  tuigreet = %s\n' "$CFG_scope_tuigreet"
+}
+
+cmd_export() {
+  local format="$1"
+  local profile_ref="$2"
+  local out_path="$3"
+  local profile_path out_dir tmp_out
+
+  profile_path="$(resolve_profile_path "$profile_ref")" || die "profile not found: $profile_ref"
+  load_profile "$profile_path"
+
+  case "$format" in
+    xresources)
+      build_ansi_palette
+      out_dir="$(dirname -- "$out_path")"
+      mkdir -p "$out_dir"
+      tmp_out="$(mktemp "$out_dir/.retrofx-xresources.XXXXXX")"
+      render_xresources "$tmp_out"
+      mv "$tmp_out" "$out_path"
+      log "exported xresources to $out_path"
+      ;;
+    alacritty)
+      printf 'Export not yet supported in this build.\n'
+      ;;
+    *)
+      die "export format must be 'alacritty' or 'xresources'"
+      ;;
+  esac
 }
 
 status_ok() {
@@ -1891,6 +2182,22 @@ prompt_input() {
   done
 }
 
+prompt_optional_input() {
+  local prompt="$1"
+  local default="$2"
+  local value=""
+
+  if [[ -n "$default" ]]; then
+    read -r -p "$prompt [$default]: " value || return 1
+    value="${value:-$default}"
+  else
+    read -r -p "$prompt: " value || return 1
+  fi
+
+  value="$(trim "$value")"
+  printf '%s' "$value"
+}
+
 prompt_yes_no() {
   local prompt="$1"
   local default="$2"
@@ -1915,146 +2222,164 @@ prompt_yes_no() {
   done
 }
 
-cmd_new() {
-  [[ -t 0 ]] || die "retrofx new requires an interactive terminal"
+prompt_select_option() {
+  local prompt="$1"
+  shift
+  local options=("$@")
+  local choice=""
 
-  local name version mode filename out_path tmp_path
-  local mono_bands mono_phosphor mono_custom mono_hotcore
-  local pal_kind pal_size pal_custom
-  local eff_blur eff_scan eff_flicker eff_dither eff_vignette
-  local scope_x11 scope_tty scope_tuigreet
+  printf '%s\n' "$prompt" >&2
+  select choice in "${options[@]}"; do
+    if [[ -n "$choice" ]]; then
+      printf '%s' "$choice"
+      return 0
+    fi
+    printf 'Please select a valid number.\n' >&2
+  done
+}
 
-  name="$(prompt_input "Profile name" "My RetroFX Profile")" || exit 1
-  version="1"
+slugify_filename() {
+  local value="$1"
+  value="$(printf '%s' "$value" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9._-' '-')"
+  value="${value#-}"
+  value="${value%-}"
+  if [[ -z "$value" ]]; then
+    value="profile"
+  fi
+  printf '%s' "$value"
+}
 
-  while true; do
-    mode="$(prompt_input "Mode (passthrough/monochrome/palette)" "monochrome")" || exit 1
-    case "$mode" in
-      passthrough | monochrome | palette)
-        break
-        ;;
-    esac
-    printf 'Choose one of: passthrough, monochrome, palette\n' >&2
+toml_escape_string() {
+  local value="$1"
+  value="${value//\\/\\\\}"
+  value="${value//\"/\\\"}"
+  printf '%s' "$value"
+}
+
+tags_csv_to_toml_array() {
+  local raw="$1"
+  local item escaped out=""
+  local -a parts=()
+  IFS=',' read -r -a parts <<<"$raw"
+
+  for item in "${parts[@]}"; do
+    item="$(trim "$item")"
+    [[ -z "$item" ]] && continue
+    escaped="$(toml_escape_string "$item")"
+    if [[ -z "$out" ]]; then
+      out="\"$escaped\""
+    else
+      out="$out, \"$escaped\""
+    fi
   done
 
-  mono_bands="4"
-  mono_phosphor="green"
-  mono_custom=""
-  mono_hotcore="false"
-
-  pal_kind="vga16"
-  pal_size="16"
-  pal_custom=""
-
-  if [[ "$mode" == "monochrome" ]]; then
-    while true; do
-      mono_bands="$(prompt_input "Monochrome bands (2-256)" "4")" || exit 1
-      if parse_int_range "$mono_bands" 2 256 >/dev/null; then
-        break
-      fi
-      printf 'bands must be 2..256\n' >&2
-    done
-
-    while true; do
-      mono_phosphor="$(prompt_input "Phosphor (green/amber/blue/white/custom)" "green")" || exit 1
-      case "$mono_phosphor" in
-        green | amber | blue | white | custom)
-          break
-          ;;
-      esac
-      printf 'Invalid phosphor selection\n' >&2
-    done
-
-    if [[ "$mono_phosphor" == "custom" ]]; then
-      while true; do
-        mono_custom="$(prompt_input "Custom RGB (r,g,b in 0..1 or 0..255)" "0.7,1.0,0.7")" || exit 1
-        if mono_custom="$(normalize_rgb_triplet "$mono_custom")"; then
-          break
-        fi
-        printf 'Invalid RGB triplet\n' >&2
-      done
-    fi
-
-    mono_hotcore="$(prompt_yes_no "Enable hot-core whitening? (y/n)" "y")" || exit 1
+  if [[ -z "$out" ]]; then
+    printf ''
+  else
+    printf '[%s]' "$out"
   fi
+}
 
-  if [[ "$mode" == "palette" ]]; then
-    while true; do
-      pal_kind="$(prompt_input "Palette kind (vga16/cube256/custom)" "vga16")" || exit 1
-      case "$pal_kind" in
-        vga16 | cube256 | custom)
-          break
-          ;;
-      esac
-      printf 'Invalid palette kind\n' >&2
-    done
+apply_effect_preset() {
+  local preset="$1"
+  case "$preset" in
+    subtle)
+      EFFECT_PRESET_BLUR="2"
+      EFFECT_PRESET_SCANLINES="false"
+      EFFECT_PRESET_FLICKER="false"
+      EFFECT_PRESET_DITHER="none"
+      EFFECT_PRESET_VIGNETTE="false"
+      ;;
+    crt)
+      EFFECT_PRESET_BLUR="3"
+      EFFECT_PRESET_SCANLINES="true"
+      EFFECT_PRESET_FLICKER="false"
+      EFFECT_PRESET_DITHER="ordered"
+      EFFECT_PRESET_VIGNETTE="false"
+      ;;
+    vfd)
+      EFFECT_PRESET_BLUR="3"
+      EFFECT_PRESET_SCANLINES="false"
+      EFFECT_PRESET_FLICKER="true"
+      EFFECT_PRESET_DITHER="ordered"
+      EFFECT_PRESET_VIGNETTE="false"
+      ;;
+    raw)
+      EFFECT_PRESET_BLUR="0"
+      EFFECT_PRESET_SCANLINES="false"
+      EFFECT_PRESET_FLICKER="false"
+      EFFECT_PRESET_DITHER="none"
+      EFFECT_PRESET_VIGNETTE="false"
+      ;;
+    *)
+      die "unknown preset '$preset'"
+      ;;
+  esac
+}
 
-    while true; do
-      if [[ "$pal_kind" == "cube256" ]]; then
-        pal_size="$(prompt_input "Palette size (2-256)" "256")" || exit 1
-      else
-        pal_size="$(prompt_input "Palette size (2-256)" "16")" || exit 1
-      fi
-      if parse_int_range "$pal_size" 2 256 >/dev/null; then
-        break
-      fi
-      printf 'size must be 2..256\n' >&2
-    done
+next_available_user_profile_path() {
+  local base_slug="$1"
+  local candidate="$PROFILES_USER_DIR/$base_slug.toml"
+  local n=1
 
-    if [[ "$pal_kind" == "custom" ]]; then
-      pal_custom="$(prompt_input "Custom palette file path" "palette.txt")" || exit 1
-    fi
-  fi
-
-  while true; do
-    eff_blur="$(prompt_input "Blur strength (0-6)" "2")" || exit 1
-    if parse_int_range "$eff_blur" 0 6 >/dev/null; then
-      break
-    fi
-    printf 'blur_strength must be 0..6\n' >&2
+  while [[ -e "$candidate" ]]; do
+    candidate="$PROFILES_USER_DIR/$base_slug-$n.toml"
+    n=$((n + 1))
   done
 
-  eff_scan="$(prompt_yes_no "Enable scanlines? (y/n)" "n")" || exit 1
-  eff_flicker="$(prompt_yes_no "Enable flicker? (y/n)" "n")" || exit 1
+  printf '%s' "$candidate"
+}
 
-  while true; do
-    eff_dither="$(prompt_input "Dither (none/ordered)" "ordered")" || exit 1
-    case "$eff_dither" in
-      none | ordered)
-        break
-        ;;
-    esac
-    printf 'dither must be none or ordered\n' >&2
-  done
+write_profile_toml() {
+  local out_path="$1"
+  local name="$2"
+  local description="$3"
+  local tags_csv="$4"
+  local author="$5"
+  local license_name="$6"
+  local mode="$7"
+  local mono_bands="$8"
+  local mono_phosphor="$9"
+  local mono_custom="${10}"
+  local mono_hotcore="${11}"
+  local pal_kind="${12}"
+  local pal_size="${13}"
+  local pal_custom="${14}"
+  local eff_blur="${15}"
+  local eff_scan="${16}"
+  local eff_flicker="${17}"
+  local eff_dither="${18}"
+  local eff_vignette="${19}"
+  local scope_x11="${20}"
+  local scope_tty="${21}"
+  local scope_tuigreet="${22}"
+  local tmp_path tags_array escaped
 
-  eff_vignette="$(prompt_yes_no "Enable vignette? (y/n)" "n")" || exit 1
-
-  scope_x11="$(prompt_yes_no "Enable X11 scope? (y/n)" "y")" || exit 1
-  scope_tty="$(prompt_yes_no "Enable TTY scope? (y/n)" "n")" || exit 1
-  scope_tuigreet="$(prompt_yes_no "Enable tuigreet scope? (y/n)" "n")" || exit 1
-
-  filename="$(prompt_input "Profile filename (without .toml)" "")" || exit 1
-  if [[ -z "$filename" ]]; then
-    filename="$(printf '%s' "$name" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9._-' '-')"
-    filename="${filename#-}"
-    filename="${filename%-}"
-  fi
-
-  [[ -n "$filename" ]] || die "could not derive a profile filename"
-
-  out_path="$PROFILES_DIR/$filename.toml"
-  if [[ -e "$out_path" ]]; then
-    local overwrite
-    overwrite="$(prompt_yes_no "Profile exists at $out_path. Overwrite? (y/n)" "n")" || exit 1
-    [[ "$overwrite" == "true" ]] || die "aborted"
-  fi
-
-  mkdir -p "$PROFILES_DIR"
-  tmp_path="$(mktemp "$PROFILES_DIR/.new-profile.XXXXXX")"
+  mkdir -p "$(dirname -- "$out_path")"
+  tmp_path="$(mktemp "$(dirname -- "$out_path")/.new-profile.XXXXXX")"
+  tags_array="$(tags_csv_to_toml_array "$tags_csv")"
 
   {
-    printf 'name = "%s"\n' "$name"
-    printf 'version = %s\n\n' "$version"
+    escaped="$(toml_escape_string "$name")"
+    printf 'name = "%s"\n' "$escaped"
+    printf 'version = 1\n'
+
+    if [[ -n "$description" ]]; then
+      escaped="$(toml_escape_string "$description")"
+      printf 'description = "%s"\n' "$escaped"
+    fi
+    if [[ -n "$tags_array" ]]; then
+      printf 'tags = %s\n' "$tags_array"
+    fi
+    if [[ -n "$author" ]]; then
+      escaped="$(toml_escape_string "$author")"
+      printf 'author = "%s"\n' "$escaped"
+    fi
+    if [[ -n "$license_name" ]]; then
+      escaped="$(toml_escape_string "$license_name")"
+      printf 'license = "%s"\n' "$escaped"
+    fi
+    printf '\n'
 
     printf '[mode]\n'
     printf 'type = "%s"\n\n' "$mode"
@@ -2074,7 +2399,8 @@ cmd_new() {
       printf 'kind = "%s"\n' "$pal_kind"
       printf 'size = %s\n' "$pal_size"
       if [[ "$pal_kind" == "custom" ]]; then
-        printf 'custom_file = "%s"\n' "$pal_custom"
+        escaped="$(toml_escape_string "$pal_custom")"
+        printf 'custom_file = "%s"\n' "$escaped"
       fi
       printf '\n'
     fi
@@ -2093,6 +2419,249 @@ cmd_new() {
   } >"$tmp_path"
 
   mv "$tmp_path" "$out_path"
+}
+
+cmd_new_noninteractive() {
+  local name filename out_path
+  name="Wizard Default Profile"
+  filename="wizard-default"
+  out_path="$(next_available_user_profile_path "$filename")"
+
+  apply_effect_preset "subtle"
+  write_profile_toml \
+    "$out_path" \
+    "$name" \
+    "Generated by non-interactive RetroFX wizard mode." \
+    "user,wizard,default" \
+    "RetroFX Wizard" \
+    "" \
+    "monochrome" \
+    "8" \
+    "green" \
+    "" \
+    "false" \
+    "vga16" \
+    "16" \
+    "" \
+    "$EFFECT_PRESET_BLUR" \
+    "$EFFECT_PRESET_SCANLINES" \
+    "$EFFECT_PRESET_FLICKER" \
+    "$EFFECT_PRESET_DITHER" \
+    "$EFFECT_PRESET_VIGNETTE" \
+    "true" \
+    "false" \
+    "false"
+
+  log "wrote new profile: $out_path"
+}
+
+cmd_new() {
+  local wizard_mode display_type color intensity look preset
+  local name description tags author license_name filename out_path
+  local mode mono_bands mono_phosphor mono_custom mono_hotcore
+  local pal_kind pal_size pal_custom
+  local eff_blur eff_scan eff_flicker eff_dither eff_vignette
+  local scope_x11 scope_tty scope_tuigreet
+
+  mkdir -p "$PROFILES_USER_DIR"
+
+  if [[ "${RETROFX_WIZARD_NONINTERACTIVE:-0}" == "1" ]]; then
+    cmd_new_noninteractive
+    return 0
+  fi
+
+  [[ -t 0 ]] || die "retrofx new requires an interactive terminal (or RETROFX_WIZARD_NONINTERACTIVE=1)"
+
+  name="$(prompt_input "Profile name" "My RetroFX Profile")" || exit 1
+  description="$(prompt_optional_input "Description (optional, one line)" "")" || exit 1
+  tags="$(prompt_optional_input "Tags (comma-separated, optional)" "user,custom")" || exit 1
+  author="$(prompt_optional_input "Author (optional)" "")" || exit 1
+  license_name="$(prompt_optional_input "License (optional)" "")" || exit 1
+
+  wizard_mode="$(prompt_select_option "Wizard mode:" "Beginner" "Advanced")" || exit 1
+
+  mode="monochrome"
+  mono_bands="8"
+  mono_phosphor="green"
+  mono_custom=""
+  mono_hotcore="false"
+  pal_kind="vga16"
+  pal_size="16"
+  pal_custom=""
+  scope_x11="true"
+  scope_tty="false"
+  scope_tuigreet="false"
+  preset="subtle"
+
+  if [[ "$wizard_mode" == "Beginner" ]]; then
+    display_type="$(prompt_select_option "Display type:" "CRT" "VFD" "LCD" "Terminal" "Custom")" || exit 1
+    color="$(prompt_select_option "Color tone:" "green" "amber" "blue" "white" "custom")" || exit 1
+    intensity="$(prompt_select_option "Intensity mode:" "4" "6" "8" "12" "16" "vga16" "cube256")" || exit 1
+    look="$(prompt_select_option "Look strength:" "subtle" "medium" "strong")" || exit 1
+
+    if [[ "$intensity" == "vga16" || "$intensity" == "cube256" ]]; then
+      mode="palette"
+      pal_kind="$intensity"
+      if [[ "$intensity" == "cube256" ]]; then
+        pal_size="256"
+      else
+        pal_size="16"
+      fi
+    else
+      mode="monochrome"
+      mono_bands="$intensity"
+      mono_phosphor="$color"
+      if [[ "$color" == "custom" ]]; then
+        while true; do
+          mono_custom="$(prompt_input "Custom RGB (r,g,b in 0..1 or 0..255)" "0.7,1.0,0.7")" || exit 1
+          if mono_custom="$(normalize_rgb_triplet "$mono_custom")"; then
+            break
+          fi
+          printf 'Invalid RGB triplet\n' >&2
+        done
+      fi
+      if [[ "$display_type" == "VFD" ]]; then
+        mono_hotcore="true"
+      fi
+    fi
+
+    case "$look" in
+      subtle)
+        preset="subtle"
+        ;;
+      medium)
+        if [[ "$display_type" == "VFD" ]]; then
+          preset="vfd"
+        elif [[ "$display_type" == "LCD" ]]; then
+          preset="subtle"
+        else
+          preset="crt"
+        fi
+        ;;
+      strong)
+        if [[ "$display_type" == "VFD" ]]; then
+          preset="vfd"
+        elif [[ "$display_type" == "LCD" ]]; then
+          preset="crt"
+        else
+          preset="crt"
+        fi
+        ;;
+    esac
+  else
+    mode="$(prompt_select_option "Mode:" "passthrough" "monochrome" "palette")" || exit 1
+    if [[ "$mode" == "monochrome" ]]; then
+      while true; do
+        mono_bands="$(prompt_input "Monochrome bands (2-256)" "8")" || exit 1
+        if parse_int_range "$mono_bands" 2 256 >/dev/null; then
+          break
+        fi
+        printf 'bands must be 2..256\n' >&2
+      done
+
+      mono_phosphor="$(prompt_select_option "Phosphor:" "green" "amber" "blue" "white" "custom")" || exit 1
+      if [[ "$mono_phosphor" == "custom" ]]; then
+        while true; do
+          mono_custom="$(prompt_input "Custom RGB (r,g,b in 0..1 or 0..255)" "0.7,1.0,0.7")" || exit 1
+          if mono_custom="$(normalize_rgb_triplet "$mono_custom")"; then
+            break
+          fi
+          printf 'Invalid RGB triplet\n' >&2
+        done
+      fi
+      mono_hotcore="$(prompt_yes_no "Enable hot-core whitening? (y/n)" "n")" || exit 1
+    fi
+
+    if [[ "$mode" == "palette" ]]; then
+      pal_kind="$(prompt_select_option "Palette kind:" "vga16" "cube256" "custom")" || exit 1
+      while true; do
+        if [[ "$pal_kind" == "cube256" ]]; then
+          pal_size="$(prompt_input "Palette size (2-256)" "256")" || exit 1
+        else
+          pal_size="$(prompt_input "Palette size (2-256)" "16")" || exit 1
+        fi
+        if parse_int_range "$pal_size" 2 256 >/dev/null; then
+          break
+        fi
+        printf 'size must be 2..256\n' >&2
+      done
+      if [[ "$pal_kind" == "custom" ]]; then
+        pal_custom="$(prompt_input "Custom palette file path" "palette.txt")" || exit 1
+      fi
+    fi
+
+    preset="$(prompt_select_option "Safe effects preset:" "subtle" "crt" "vfd" "raw")" || exit 1
+  fi
+
+  apply_effect_preset "$preset"
+  eff_blur="$EFFECT_PRESET_BLUR"
+  eff_scan="$EFFECT_PRESET_SCANLINES"
+  eff_flicker="$EFFECT_PRESET_FLICKER"
+  eff_dither="$EFFECT_PRESET_DITHER"
+  eff_vignette="$EFFECT_PRESET_VIGNETTE"
+
+  if [[ "$wizard_mode" == "Advanced" ]]; then
+    if [[ "$(prompt_yes_no "Override preset effects manually? (y/n)" "n")" == "true" ]]; then
+      while true; do
+        eff_blur="$(prompt_input "Blur strength (0-6)" "$eff_blur")" || exit 1
+        if parse_int_range "$eff_blur" 0 6 >/dev/null; then
+          break
+        fi
+        printf 'blur_strength must be 0..6\n' >&2
+      done
+      eff_scan="$(prompt_yes_no "Enable scanlines? (y/n)" "$( [[ "$eff_scan" == "true" ]] && printf y || printf n )")" || exit 1
+      eff_flicker="$(prompt_yes_no "Enable flicker? (y/n)" "$( [[ "$eff_flicker" == "true" ]] && printf y || printf n )")" || exit 1
+      while true; do
+        eff_dither="$(prompt_input "Dither (none/ordered)" "$eff_dither")" || exit 1
+        case "$eff_dither" in
+          none | ordered)
+            break
+            ;;
+        esac
+        printf 'dither must be none or ordered\n' >&2
+      done
+      eff_vignette="$(prompt_yes_no "Enable vignette? (y/n)" "$( [[ "$eff_vignette" == "true" ]] && printf y || printf n )")" || exit 1
+    fi
+  fi
+
+  scope_x11="$(prompt_yes_no "Enable X11 scope? (y/n)" "y")" || exit 1
+  scope_tty="$(prompt_yes_no "Enable TTY scope? (y/n)" "n")" || exit 1
+  scope_tuigreet="$(prompt_yes_no "Enable tuigreet scope? (y/n)" "n")" || exit 1
+
+  filename="$(prompt_input "Profile filename (without .toml)" "$(slugify_filename "$name")")" || exit 1
+  filename="$(slugify_filename "$filename")"
+  out_path="$PROFILES_USER_DIR/$filename.toml"
+
+  if [[ -e "$out_path" ]]; then
+    if [[ "$(prompt_yes_no "Profile exists at $out_path. Overwrite? (y/n)" "n")" != "true" ]]; then
+      die "aborted"
+    fi
+  fi
+
+  write_profile_toml \
+    "$out_path" \
+    "$name" \
+    "$description" \
+    "$tags" \
+    "$author" \
+    "$license_name" \
+    "$mode" \
+    "$mono_bands" \
+    "$mono_phosphor" \
+    "$mono_custom" \
+    "$mono_hotcore" \
+    "$pal_kind" \
+    "$pal_size" \
+    "$pal_custom" \
+    "$eff_blur" \
+    "$eff_scan" \
+    "$eff_flicker" \
+    "$eff_dither" \
+    "$eff_vignette" \
+    "$scope_x11" \
+    "$scope_tty" \
+    "$scope_tuigreet"
+
   log "wrote new profile: $out_path"
 }
 
@@ -2243,7 +2812,10 @@ usage() {
   cat <<'USAGE'
 Usage:
   retrofx list
+  retrofx search <keyword>
+  retrofx info <profile>
   retrofx apply <profile>
+  retrofx export <alacritty|xresources> <profile> <output_path>
   retrofx off [--tty|--all]
   retrofx doctor
   retrofx preview [profile]
@@ -2265,12 +2837,33 @@ main() {
       [[ "$#" -eq 0 ]] || die "list takes no arguments"
       cmd_list
       ;;
+    search)
+      profile_ref="${2:--}"
+      audit_begin "search" "$profile_ref"
+      shift
+      [[ "$#" -eq 1 ]] || die "search requires exactly one keyword"
+      cmd_search "$1"
+      ;;
+    info)
+      profile_ref="${2:--}"
+      audit_begin "info" "$profile_ref"
+      shift
+      [[ "$#" -eq 1 ]] || die "info requires exactly one profile"
+      cmd_info "$1"
+      ;;
     apply)
       profile_ref="${2:--}"
       audit_begin "apply" "$profile_ref"
       shift
       [[ "$#" -eq 1 ]] || die "apply requires exactly one profile name/path"
       cmd_apply "$1"
+      ;;
+    export)
+      profile_ref="${3:--}"
+      audit_begin "export" "$profile_ref"
+      shift
+      [[ "$#" -eq 3 ]] || die "export requires format, profile, and output_path"
+      cmd_export "$1" "$2" "$3"
       ;;
     off)
       shift

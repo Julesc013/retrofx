@@ -1,0 +1,27 @@
+name = "Plasma Orange"
+version = 1
+description = "Orange plasma-style profile with subtle flicker and soft bloom feel."
+tags = ["plasma", "orange", "display", "retro"]
+author = "RetroFX Core Pack"
+license = "CC0-1.0"
+
+[mode]
+type = "monochrome"
+
+[monochrome]
+bands = 12
+phosphor = "custom"
+custom_rgb = "255,160,90"
+hotcore = true
+
+[effects]
+blur_strength = 3
+scanlines = false
+flicker = true
+dither = "ordered"
+vignette = true
+
+[scope]
+x11 = true
+tty = false
+tuigreet = false

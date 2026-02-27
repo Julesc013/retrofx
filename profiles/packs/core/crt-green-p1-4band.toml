@@ -1,0 +1,26 @@
+name = "CRT Green P1 4-Band"
+version = 1
+description = "Classic green phosphor CRT look with coarse 4-band quantization."
+tags = ["crt", "green", "retro", "p1"]
+author = "RetroFX Core Pack"
+license = "CC0-1.0"
+
+[mode]
+type = "monochrome"
+
+[monochrome]
+bands = 4
+phosphor = "green"
+hotcore = false
+
+[effects]
+blur_strength = 3
+scanlines = true
+flicker = false
+dither = "ordered"
+vignette = true
+
+[scope]
+x11 = true
+tty = false
+tuigreet = false

@@ -1,0 +1,25 @@
+name = "Nixie Amber"
+version = 1
+description = "Nixie-inspired amber palette with warm accents and clean contrast."
+tags = ["nixie", "amber", "palette", "retro"]
+author = "RetroFX Core Pack"
+license = "CC0-1.0"
+
+[mode]
+type = "palette"
+
+[palette]
+kind = "vga16"
+size = 16
+
+[effects]
+blur_strength = 2
+scanlines = false
+flicker = false
+dither = "ordered"
+vignette = true
+
+[scope]
+x11 = true
+tty = false
+tuigreet = false

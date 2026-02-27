@@ -222,7 +222,25 @@ else
 fi
 
 log "checking list command"
-run_retrofx_x11 list >/dev/null
+list_output="$(run_retrofx_x11 list)"
+assert_contains "$list_output" "Core Pack:"
+assert_contains "$list_output" "crt-green-p1-4band"
+
+log "checking search command"
+search_output="$(run_retrofx_x11 search crt)"
+assert_contains "$search_output" "crt-green-p1-4band"
+
+log "checking info command"
+info_output="$(run_retrofx_x11 info crt-green-p1-4band)"
+assert_contains "$info_output" "Profile: crt-green-p1-4band"
+assert_contains "$info_output" "Mode"
+
+log "checking export commands"
+export_xr_path="$TEST_TMP_DIR/exported.Xresources"
+run_retrofx_x11 export xresources crt-green-p1-4band "$export_xr_path"
+require_file "$export_xr_path"
+export_alacritty_output="$(run_retrofx_x11 export alacritty crt-green-p1-4band "$TEST_TMP_DIR/alacritty.yml" 2>&1)"
+assert_contains "$export_alacritty_output" "Export not yet supported in this build."
 
 profiles=("$PROFILES_DIR"/*.toml)
 if [[ ! -e "${profiles[0]}" ]]; then
@@ -242,6 +260,11 @@ for profile_path in "${profiles[@]}"; do
   validate_active_files
   validate_ansi_palette_env "$ACTIVE_DIR/tty-palette.env"
 done
+
+log "applying pack profile by id resolution"
+run_retrofx_x11 apply crt-green-p1-4band
+validate_active_files
+assert_contains "$(cat "$ACTIVE_DIR/profile.env")" "PROFILE_ID=crt-green-p1-4band"
 
 log "static shader checks: monochrome profile"
 mono_profile="$TEST_TMP_DIR/mono-check.toml"
@@ -436,6 +459,20 @@ grep -q '^background = "#' "$ACTIVE_DIR/tuigreet.conf" || die "tuigreet config m
 log "verifying off --tty restores previous tty palette state in mock mode"
 RETROFX_TTY_MODE=mock run_retrofx_x11 off --tty
 require_file "$STATE_DIR/tty-current.env"
+
+log "wizard non-interactive generation"
+mkdir -p "$PROFILES_DIR/user"
+before_user_list="$(find "$PROFILES_DIR/user" -mindepth 1 -maxdepth 1 -type f -name '*.toml' | sort || true)"
+before_user_count="$(find "$PROFILES_DIR/user" -mindepth 1 -maxdepth 1 -type f -name '*.toml' | wc -l | awk '{print $1}')"
+RETROFX_WIZARD_NONINTERACTIVE=1 run_retrofx_x11 new
+after_user_count="$(find "$PROFILES_DIR/user" -mindepth 1 -maxdepth 1 -type f -name '*.toml' | wc -l | awk '{print $1}')"
+((after_user_count > before_user_count)) || die "non-interactive wizard did not create a user profile"
+after_user_list="$(find "$PROFILES_DIR/user" -mindepth 1 -maxdepth 1 -type f -name '*.toml' | sort || true)"
+wizard_profile_created="$(comm -13 <(printf '%s\n' "$before_user_list") <(printf '%s\n' "$after_user_list") | head -n1)"
+[[ -n "$wizard_profile_created" ]] || die "unable to identify created wizard profile"
+require_file "$wizard_profile_created"
+grep -q '^name = "Wizard Default Profile"' "$wizard_profile_created" || die "wizard default profile content mismatch"
+rm -f "$wizard_profile_created"
 
 log "doctor capability output (simulated X11)"
 doctor_x11_output="$(run_retrofx_x11 doctor 2>&1)"

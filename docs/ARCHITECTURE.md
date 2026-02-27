@@ -15,6 +15,8 @@ RetroFX is a profile-driven renderer that generates deterministic session-local 
 - `scripts/retrofx`: CLI entrypoint, profile parser, renderer, and transaction orchestrator.
 - `scripts/test.sh`: regression harness including static shader checks and backend mock checks.
 - `templates/*`: static templates rendered into active artifacts.
+- `profiles/packs/core/`: curated built-in profile pack.
+- `profiles/user/`: user-generated profiles from the wizard.
 - `active/`: currently active generated config set.
 - `state/backups/`: timestamped active snapshots (pruned to last N, default 10).
 - `state/last_good/`: canonical rollback snapshot for failed apply.

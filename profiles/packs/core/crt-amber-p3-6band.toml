@@ -1,0 +1,26 @@
+name = "CRT Amber P3 6-Band"
+version = 1
+description = "Amber P3 CRT-inspired profile with medium tonal resolution."
+tags = ["crt", "amber", "p3", "terminal"]
+author = "RetroFX Core Pack"
+license = "CC0-1.0"
+
+[mode]
+type = "monochrome"
+
+[monochrome]
+bands = 6
+phosphor = "amber"
+hotcore = false
+
+[effects]
+blur_strength = 3
+scanlines = true
+flicker = false
+dither = "ordered"
+vignette = true
+
+[scope]
+x11 = true
+tty = false
+tuigreet = false

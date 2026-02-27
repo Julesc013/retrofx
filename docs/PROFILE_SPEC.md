@@ -1,11 +1,22 @@
 # RetroFX Profile Spec v1
 
-Profiles are TOML files under `profiles/*.toml`.
+Profiles are TOML files under:
+
+- `profiles/*.toml` (base)
+- `profiles/packs/*/*.toml` (pack profiles)
+- `profiles/user/*.toml` (user-created profiles)
 
 ## Required Top-Level Keys
 
 - `name` (string)
 - `version` (`1`)
+
+## Optional Top-Level Keys
+
+- `description` (string)
+- `tags` (array of strings)
+- `author` (string)
+- `license` (string)
 
 ## Sections
 

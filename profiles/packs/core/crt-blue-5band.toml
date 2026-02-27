@@ -1,0 +1,26 @@
+name = "CRT Blue 5-Band"
+version = 1
+description = "Cool blue phosphor CRT profile with moderate banding."
+tags = ["crt", "blue", "retro"]
+author = "RetroFX Core Pack"
+license = "CC0-1.0"
+
+[mode]
+type = "monochrome"
+
+[monochrome]
+bands = 5
+phosphor = "blue"
+hotcore = false
+
+[effects]
+blur_strength = 3
+scanlines = true
+flicker = false
+dither = "ordered"
+vignette = true
+
+[scope]
+x11 = true
+tty = false
+tuigreet = false

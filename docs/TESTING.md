@@ -14,6 +14,8 @@ Pass criteria:
 - profile applies generate expected active artifacts
 - shader static checks pass
 - Wayland degraded apply path omits `active/picom.conf` and `active/shader.glsl`
+- profile pack discovery works (`list`, `search`, `info`)
+- non-interactive wizard path works (`RETROFX_WIZARD_NONINTERACTIVE=1`)
 - semantic ANSI mapping files are generated and valid
 - TTY mock-mode backend checks pass (no console access needed)
 - tuigreet snippet generation check passes
