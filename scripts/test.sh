@@ -378,6 +378,26 @@ log "checking install-pack command (community placeholder)"
 install_pack_output="$(run_retrofx_x11 install-pack community 2>&1)"
 assert_contains "$install_pack_output" "has no profiles"
 
+log "compatibility-check command runs and reports checks"
+compat_output=""
+compat_rc=0
+set +e
+compat_output="$(run_retrofx_x11 compatibility-check 2>&1)"
+compat_rc=$?
+set -e
+case "$compat_rc" in
+  0 | 1 | 2)
+    ;;
+  *)
+    die "compatibility-check returned unexpected exit code: $compat_rc"
+    ;;
+esac
+assert_contains "$compat_output" "RetroFX compatibility-check"
+assert_contains "$compat_output" "Shader compile"
+assert_contains "$compat_output" "GLX backend"
+assert_contains "$compat_output" "Blur capability"
+assert_contains "$compat_output" "Degraded mode"
+
 log "apply hash skip + regeneration checks"
 skip_profile="$TEST_TMP_DIR/skip-check.toml"
 cat >"$skip_profile" <<'PROFILE'
@@ -440,6 +460,78 @@ assert_regex "$perf_output" 'render_ms=[0-9]+'
 assert_regex "$perf_output" 'file_writes_ms=[0-9]+'
 assert_regex "$perf_output" 'picom_restart_ms=[0-9]+'
 assert_regex "$perf_output" 'total_ms=[0-9]+'
+
+log "safe-mode apply overrides high-risk profile settings"
+safe_profile="$TEST_TMP_DIR/safe-check.toml"
+cat >"$safe_profile" <<'PROFILE'
+name = "Safe Check"
+version = 1
+
+[mode]
+type = "monochrome"
+
+[monochrome]
+bands = 64
+phosphor = "green"
+hotcore = true
+
+[effects]
+blur_strength = 6
+scanlines = true
+flicker = true
+dither = "ordered"
+vignette = true
+
+[scope]
+x11 = true
+tty = false
+tuigreet = false
+PROFILE
+safe_output="$(run_retrofx_x11 apply "$safe_profile" --safe 2>&1)"
+assert_contains "$safe_output" "safe-mode overrides applied:"
+validate_active_files
+grep -q '^#define MONO_BANDS 8$' "$ACTIVE_DIR/shader.glsl" || die "safe-mode did not cap monochrome bands"
+grep -q '^#define HOTCORE 0$' "$ACTIVE_DIR/shader.glsl" || die "safe-mode did not disable hotcore"
+grep -q '^#define ENABLE_DITHER 0$' "$ACTIVE_DIR/shader.glsl" || die "safe-mode did not disable dither"
+grep -q '^#define ENABLE_SCANLINES 0$' "$ACTIVE_DIR/shader.glsl" || die "safe-mode did not disable scanlines"
+grep -q '^#define ENABLE_FLICKER 0$' "$ACTIVE_DIR/shader.glsl" || die "safe-mode did not disable flicker"
+grep -q 'blur-strength = 2;' "$ACTIVE_DIR/picom.conf" || die "safe-mode did not cap blur strength"
+
+log "safe-mode downscales large custom palette to vga16"
+safe_palette_file="$TEST_TMP_DIR/safe-custom-pal.txt"
+: >"$safe_palette_file"
+for idx in $(seq 0 31); do
+  printf '#%02x%02x%02x\n' "$((idx * 7 % 256))" "$((idx * 13 % 256))" "$((idx * 19 % 256))" >>"$safe_palette_file"
+done
+safe_palette_profile="$TEST_TMP_DIR/safe-custom.toml"
+cat >"$safe_palette_profile" <<PROFILE
+name = "Safe Palette Check"
+version = 1
+
+[mode]
+type = "palette"
+
+[palette]
+kind = "custom"
+size = 32
+custom_file = "$safe_palette_file"
+
+[effects]
+blur_strength = 2
+scanlines = false
+flicker = false
+dither = "none"
+vignette = false
+
+[scope]
+x11 = true
+tty = false
+tuigreet = false
+PROFILE
+safe_palette_output="$(run_retrofx_x11 apply "$safe_palette_profile" --safe 2>&1)"
+assert_contains "$safe_palette_output" "safe-mode overrides applied:"
+grep -q '^#define PALETTE_KIND_VGA16 1$' "$ACTIVE_DIR/shader.glsl" || die "safe-mode did not force custom palette to vga16"
+grep -q '^#define PALETTE_SIZE 16$' "$ACTIVE_DIR/shader.glsl" || die "safe-mode did not force palette size to 16"
 
 profiles=("$PROFILES_DIR"/*.toml)
 if [[ ! -e "${profiles[0]}" ]]; then
@@ -844,6 +936,20 @@ if missing:
 if not isinstance(data["warnings"], list) or not isinstance(data["errors"], list):
     raise SystemExit("doctor json warnings/errors must be arrays")
 PY
+
+log "self-check detects checksum corruption"
+run_retrofx_x11 apply crt-green-p1-4band
+require_file "$STATE_DIR/active_checksum"
+printf 'deadbeef\n' >"$STATE_DIR/active_checksum"
+checksum_selfcheck_output="$(run_retrofx_x11 self-check 2>&1 || true)"
+assert_contains "$checksum_selfcheck_output" "last_good checksum mismatch"
+assert_contains "$checksum_selfcheck_output" "Suggested action: run \`retrofx repair\`"
+run_retrofx_x11 repair
+run_retrofx_x11 self-check
+
+log "sanity-perf command runs without failure"
+sanity_perf_output="$(run_retrofx_x11 sanity-perf 2>&1)"
+assert_contains "$sanity_perf_output" "sanity-perf"
 
 log "self-check catches missing files in isolated RETROFX_HOME"
 selfcheck_home="$TEST_TMP_DIR/selfcheck-home"

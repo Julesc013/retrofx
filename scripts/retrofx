@@ -50,6 +50,7 @@ readonly INSTALL_MARKER_FILE=".retrofx-install"
 readonly XS_MARKER_KEY="X-RetroFX-Managed=true"
 readonly VERSION_FILE="$ROOT_DIR/VERSION"
 readonly APPLY_SIG_FILE_NAME="apply-input.sha256"
+readonly ACTIVE_CHECKSUM_FILE="$STATE_DIR/active_checksum"
 
 BACKUP_KEEP="${RETROFX_BACKUP_KEEP:-$BACKUP_KEEP_DEFAULT}"
 if [[ ! "$BACKUP_KEEP" =~ ^[0-9]+$ ]] || ((BACKUP_KEEP < 1)); then
@@ -68,6 +69,7 @@ declare AUDIT_ENABLED=0
 declare TXN_ACTIVE=0
 declare TXN_STAGE_DIR=""
 declare LAST_BACKUP_PATH=""
+declare SAFE_MODE_OVERRIDE_SUMMARY=""
 
 declare CFG_PROFILE_PATH=""
 declare CFG_name=""
@@ -209,6 +211,59 @@ hash_file() {
   else
     cksum "$file" | awk '{print $1}'
   fi
+}
+
+directory_hash() {
+  local dir="$1"
+  local manifest rel
+
+  [[ -d "$dir" ]] || {
+    printf ''
+    return 0
+  }
+
+  manifest="$(mktemp "$STATE_DIR/hash-manifest.XXXXXX")"
+  : >"$manifest"
+  while IFS= read -r rel; do
+    [[ -f "$dir/$rel" ]] || continue
+    printf '%s %s\n' "$(hash_file "$dir/$rel")" "$rel" >>"$manifest"
+  done < <(cd "$dir" && find . -type f -printf '%P\n' | sort)
+  hash_file "$manifest"
+  rm -f "$manifest"
+}
+
+write_last_good_checksum() {
+  local digest
+  if ! dir_has_files "$LAST_GOOD_DIR"; then
+    rm -f "$ACTIVE_CHECKSUM_FILE"
+    return 1
+  fi
+  digest="$(directory_hash "$LAST_GOOD_DIR")"
+  printf '%s\n' "$digest" >"$ACTIVE_CHECKSUM_FILE"
+}
+
+read_last_good_checksum() {
+  local digest=""
+  if [[ -f "$ACTIVE_CHECKSUM_FILE" ]]; then
+    IFS= read -r digest <"$ACTIVE_CHECKSUM_FILE" || true
+    digest="$(trim "$digest")"
+  fi
+  printf '%s' "$digest"
+}
+
+picom_version() {
+  local line
+  if ! command -v picom >/dev/null 2>&1; then
+    printf 'not-installed'
+    return 0
+  fi
+  line="$(picom --version 2>/dev/null | head -n1 || true)"
+  line="$(trim "$line")"
+  if [[ -z "$line" ]]; then
+    line="$(picom -v 2>/dev/null | head -n1 || true)"
+    line="$(trim "$line")"
+  fi
+  printf '%s' "${line:-unknown}"
 }
 
 append_home_log() {
@@ -1068,6 +1123,10 @@ detect_session_type() {
   printf 'unknown'
 }
 
+detect_ssh_without_x11_forwarding() {
+  [[ -n "${SSH_CONNECTION:-}" && -z "${DISPLAY:-}" ]]
+}
+
 detect_wm_de() {
   local desk
   desk="$(printf '%s:%s' "${XDG_CURRENT_DESKTOP:-}" "${DESKTOP_SESSION:-}" | tr '[:upper:]' '[:lower:]')"
@@ -1155,6 +1214,98 @@ load_profile() {
   compute_phosphor_rgb
   compute_color_knobs
   compute_scanline_knobs
+}
+
+apply_safe_mode_overrides() {
+  local -a overrides=()
+  local changed=0
+
+  SAFE_MODE_OVERRIDE_SUMMARY=""
+
+  if [[ "$CFG_effects_scanlines" != "false" ]]; then
+    CFG_effects_scanlines="false"
+    overrides+=("scanlines=false")
+    changed=1
+  fi
+
+  if [[ "$CFG_effects_flicker" != "false" ]]; then
+    CFG_effects_flicker="false"
+    overrides+=("flicker=false")
+    changed=1
+  fi
+
+  if [[ "$CFG_effects_dither" != "none" ]]; then
+    CFG_effects_dither="none"
+    overrides+=("dither=none")
+    changed=1
+  fi
+
+  if ((CFG_effects_blur_strength > 2)); then
+    CFG_effects_blur_strength="2"
+    overrides+=("blur_strength=2")
+    changed=1
+  fi
+
+  if [[ "$CFG_mode_type" == "monochrome" ]]; then
+    if ((CFG_monochrome_bands > 8)); then
+      CFG_monochrome_bands="8"
+      overrides+=("monochrome.bands=8")
+      changed=1
+    fi
+    if [[ "$CFG_monochrome_hotcore" != "false" ]]; then
+      CFG_monochrome_hotcore="false"
+      overrides+=("monochrome.hotcore=false")
+      changed=1
+    fi
+  fi
+
+  if [[ "$CFG_mode_type" == "palette" && "$CFG_palette_kind" == "custom" && "$CFG_palette_size" =~ ^[0-9]+$ ]]; then
+    if ((CFG_palette_size > 16)); then
+      CFG_palette_kind="vga16"
+      CFG_palette_size="16"
+      CFG_palette_custom_file=""
+      overrides+=("palette.kind=vga16")
+      overrides+=("palette.size=16")
+      changed=1
+    fi
+  fi
+
+  if [[ "$changed" -eq 1 ]]; then
+    compute_phosphor_rgb
+    compute_color_knobs
+    compute_scanline_knobs
+    SAFE_MODE_OVERRIDE_SUMMARY="${overrides[*]}"
+  fi
+}
+
+resolve_apply_session_type() {
+  local detected="$1"
+  local effective="$detected"
+
+  if [[ "$CFG_scope_x11" != "true" ]]; then
+    printf '%s' "$effective"
+    return 0
+  fi
+
+  if [[ "$detected" == "wayland" ]]; then
+    warn "wayland session detected; applying degraded outputs for x11 scope."
+    printf 'wayland'
+    return 0
+  fi
+
+  if detect_ssh_without_x11_forwarding; then
+    warn "SSH session without X11 forwarding detected; aborting X11 effect generation and using degraded outputs."
+    printf 'wayland'
+    return 0
+  fi
+
+  if [[ -z "${DISPLAY:-}" ]]; then
+    warn "DISPLAY is not set; aborting X11 effect generation and using degraded outputs."
+    printf 'wayland'
+    return 0
+  fi
+
+  printf '%s' "$effective"
 }
 
 compute_phosphor_rgb() {
@@ -1546,6 +1697,7 @@ compositor_required_current_profile() {
 compute_apply_input_hash() {
   local profile_path="$1"
   local session_type="$2"
+  local safe_mode="${3:-false}"
   local tmp_manifest template rel custom_path=""
   local -a files=()
   local digest
@@ -1568,6 +1720,7 @@ compute_apply_input_hash() {
   tmp_manifest="$(mktemp "$STATE_DIR/apply-input.XXXXXX")"
   {
     printf 'session_type=%s\n' "$session_type"
+    printf 'safe_mode=%s\n' "$safe_mode"
     printf 'version=%s\n' "$(read_version)"
     for template in "${files[@]}"; do
       rel="$template"
@@ -2384,6 +2537,49 @@ validate_generated_shader() {
   return 0
 }
 
+validate_shader_template_integrity() {
+  local file="$1"
+  local marker
+  local -a required_markers=(
+    "@MODE_PASSTHROUGH@"
+    "@MODE_MONO@"
+    "@MODE_PALETTE@"
+    "@MONO_BANDS@"
+    "@MONO_LEVELS@"
+    "@MONO_INV_LEVELS@"
+    "@PALETTE_SIZE@"
+    "@CUSTOM_PALETTE_BLOCK@"
+    "void main()"
+  )
+
+  [[ -f "$file" ]] || return 1
+  [[ -s "$file" ]] || return 1
+
+  for marker in "${required_markers[@]}"; do
+    grep -Fq "$marker" "$file" || return 1
+  done
+
+  return 0
+}
+
+validate_picom_conf_integrity() {
+  local file="$1"
+  [[ -f "$file" ]] || return 1
+  [[ -s "$file" ]] || return 1
+  grep -Fq 'backend = "glx";' "$file" || return 1
+  grep -Fq 'use-damage = true;' "$file" || return 1
+  if grep -Eq '@[A-Z0-9_]+@' "$file"; then
+    return 1
+  fi
+  return 0
+}
+
+collect_zero_byte_files() {
+  local dir="$1"
+  [[ -d "$dir" ]] || return 0
+  find "$dir" -type f -size 0 -print 2>/dev/null | sort
+}
+
 validate_stage_outputs() {
   local stage_dir="$1"
   local session_type="${2:-x11}"
@@ -2478,6 +2674,58 @@ validate_stage_with_picom() {
   return 0
 }
 
+run_stage_picom_runtime_test() {
+  local stage_dir="$1"
+  local log_file="$stage_dir/picom-compat.log"
+  local rc=0
+  local pid=0
+
+  if ! command -v picom >/dev/null 2>&1; then
+    printf 'missing-picom'
+    return 1
+  fi
+
+  if [[ -z "${DISPLAY:-}" ]]; then
+    printf 'missing-display'
+    return 1
+  fi
+
+  if command -v timeout >/dev/null 2>&1; then
+    (cd "$stage_dir" && timeout 3s picom --config picom.conf --log-file "$log_file" >/dev/null 2>&1) || rc=$?
+  else
+    (
+      cd "$stage_dir" || exit 1
+      picom --config picom.conf --log-file "$log_file" >/dev/null 2>&1
+    ) &
+    pid=$!
+    sleep 2
+    if kill -0 "$pid" >/dev/null 2>&1; then
+      kill "$pid" >/dev/null 2>&1 || true
+      wait "$pid" >/dev/null 2>&1 || true
+      rc=124
+    else
+      wait "$pid" >/dev/null 2>&1 || rc=$?
+    fi
+  fi
+
+  if [[ "$rc" -eq 0 || "$rc" -eq 124 ]]; then
+    if [[ -f "$log_file" ]] && grep -Eiq '(shader.*(fail|error)|compile error|error:)' "$log_file"; then
+      printf 'shader-error'
+      return 1
+    fi
+    printf 'ok'
+    return 0
+  fi
+
+  if [[ -f "$log_file" ]] && grep -Eiq 'another composite manager' "$log_file"; then
+    printf 'compositor-active'
+    return 1
+  fi
+
+  printf 'picom-exit-%s' "$rc"
+  return 1
+}
+
 backup_active() {
   local profile_id="$1"
   local ts backup_name backup_dir
@@ -2555,12 +2803,13 @@ copy_active_to_last_good() {
   old="$STATE_DIR/last_good.old.$$.${RANDOM}"
   rm -rf "$old"
 
-  if [[ -d "$LAST_GOOD_DIR" ]]; then
-    mv "$LAST_GOOD_DIR" "$old"
+  if [[ -e "$LAST_GOOD_DIR" ]]; then
+    mv "$LAST_GOOD_DIR" "$old" || true
   fi
 
   mv "$staging" "$LAST_GOOD_DIR"
   rm -rf "$old"
+  write_last_good_checksum || true
 }
 
 restore_last_good() {
@@ -2583,6 +2832,7 @@ restore_last_good() {
 
   if mv "$restore_dir" "$ACTIVE_DIR"; then
     rm -rf "$old_active"
+    write_last_good_checksum || true
     return 0
   fi
 
@@ -4277,8 +4527,10 @@ cmd_new() {
 
 cmd_apply() {
   local profile_ref="$1"
-  local profile_path stage_dir profile_id session_type
+  local safe_mode="${2:-false}"
+  local profile_path stage_dir profile_id session_type detected_session
   local apply_input_sig old_sig
+  local safe_overrides=""
   local restart_required="false"
   local picom_changed=0 shader_changed=0
 
@@ -4286,13 +4538,28 @@ cmd_apply() {
   profile_path="$(resolve_profile_path "$profile_ref")" || die "profile not found: $profile_ref"
   profile_id="$(basename "$profile_path")"
   profile_id="${profile_id%.toml}"
-  session_type="$(detect_session_type)"
 
   load_profile "$profile_path"
-  apply_input_sig="$(compute_apply_input_hash "$profile_path" "$session_type")"
+  if [[ "$safe_mode" == "true" ]]; then
+    apply_safe_mode_overrides
+    safe_overrides="$SAFE_MODE_OVERRIDE_SUMMARY"
+    if [[ -n "$safe_overrides" ]]; then
+      log "safe-mode overrides applied: $safe_overrides"
+    else
+      log "safe-mode enabled: profile already within low-risk limits."
+    fi
+  fi
+
+  detected_session="$(detect_session_type)"
+  session_type="$(resolve_apply_session_type "$detected_session")"
+
+  apply_input_sig="$(compute_apply_input_hash "$profile_path" "$session_type" "$safe_mode")"
   old_sig="$(read_active_apply_signature)"
 
   if [[ -n "$old_sig" && "$old_sig" == "$apply_input_sig" ]] && active_state_complete_for_session "$session_type"; then
+    if [[ ! -f "$ACTIVE_CHECKSUM_FILE" && -d "$LAST_GOOD_DIR" ]]; then
+      write_last_good_checksum || true
+    fi
     log "No changes; skipping apply."
     return 0
   fi
@@ -4314,6 +4581,9 @@ cmd_apply() {
     TXN_ACTIVE=0
     TXN_STAGE_DIR=""
     rm -rf "$stage_dir"
+    if [[ ! -f "$ACTIVE_CHECKSUM_FILE" && -d "$LAST_GOOD_DIR" ]]; then
+      write_last_good_checksum || true
+    fi
     log "No changes; skipping apply."
     return 0
   fi
@@ -4374,7 +4644,7 @@ cmd_apply() {
   restart_picom_if_running "$restart_required" || true
 
   TXN_ACTIVE=0
-  if [[ "$session_type" == "wayland" ]]; then
+  if [[ "$session_type" == "wayland" && "$CFG_scope_x11" == "true" ]]; then
     log "Wayland session detected: shader pipeline disabled; applied degraded outputs only."
   fi
   log "applied profile '$profile_id'"
@@ -4757,7 +5027,10 @@ cmd_self_check() {
   local ok=1
   local profile_count=0
   local -a missing=()
+  local -a warnings=()
   local -a parse_errors=()
+  local -a zero_files=()
+  local checksum_expected checksum_current
   local -a required_common=(
     "$ACTIVE_DIR/profile.toml"
     "$ACTIVE_DIR/profile.env"
@@ -4768,6 +5041,7 @@ cmd_self_check() {
     "$ACTIVE_DIR/tty-palette.env"
     "$ACTIVE_DIR/tty-palette.txt"
     "$ACTIVE_DIR/meta"
+    "$ACTIVE_DIR/$APPLY_SIG_FILE_NAME"
   )
   local -a required_templates=(
     "$TEMPLATES_DIR/shader.glsl.in"
@@ -4782,6 +5056,9 @@ cmd_self_check() {
   for f in "${required_common[@]}"; do
     if [[ ! -f "$f" ]]; then
       missing+=("$f")
+      ok=0
+    elif [[ ! -s "$f" ]]; then
+      parse_errors+=("zero-byte file: $f")
       ok=0
     fi
   done
@@ -4807,9 +5084,21 @@ cmd_self_check() {
     if [[ ! -f "$ACTIVE_DIR/picom.conf" ]]; then
       missing+=("$ACTIVE_DIR/picom.conf")
       ok=0
+    elif [[ ! -s "$ACTIVE_DIR/picom.conf" ]]; then
+      parse_errors+=("zero-byte file: $ACTIVE_DIR/picom.conf")
+      ok=0
+    elif ! validate_picom_conf_integrity "$ACTIVE_DIR/picom.conf"; then
+      parse_errors+=("active/picom.conf failed integrity validation")
+      ok=0
     fi
     if [[ ! -f "$ACTIVE_DIR/shader.glsl" ]]; then
       missing+=("$ACTIVE_DIR/shader.glsl")
+      ok=0
+    elif [[ ! -s "$ACTIVE_DIR/shader.glsl" ]]; then
+      parse_errors+=("zero-byte file: $ACTIVE_DIR/shader.glsl")
+      ok=0
+    elif ! validate_generated_shader "$ACTIVE_DIR"; then
+      parse_errors+=("active/shader.glsl failed validation")
       ok=0
     fi
   fi
@@ -4823,8 +5112,23 @@ cmd_self_check() {
     if [[ ! -f "$template" ]]; then
       missing+=("$template")
       ok=0
+    elif [[ ! -s "$template" ]]; then
+      parse_errors+=("zero-byte template file: $template")
+      ok=0
     fi
   done
+
+  if ! validate_shader_template_integrity "$TEMPLATES_DIR/shader.glsl.in"; then
+    parse_errors+=("shader template is malformed: $TEMPLATES_DIR/shader.glsl.in")
+    ok=0
+  fi
+
+  if [[ -f "$TEMPLATES_DIR/picom.conf.in" ]]; then
+    if ! grep -Fq 'use-damage = true;' "$TEMPLATES_DIR/picom.conf.in"; then
+      parse_errors+=("picom template missing use-damage=true requirement")
+      ok=0
+    fi
+  fi
 
   while IFS= read -r profile_path; do
     [[ -f "$profile_path" ]] || continue
@@ -4840,12 +5144,44 @@ cmd_self_check() {
     ok=0
   fi
 
+  while IFS= read -r f; do
+    [[ -z "$f" ]] && continue
+    zero_files+=("$f")
+  done < <(collect_zero_byte_files "$ACTIVE_DIR")
+  while IFS= read -r f; do
+    [[ -z "$f" ]] && continue
+    zero_files+=("$f")
+  done < <(collect_zero_byte_files "$LAST_GOOD_DIR")
+  if ((${#zero_files[@]} > 0)); then
+    parse_errors+=("detected zero-byte/partially written files in active or last_good")
+    ok=0
+  fi
+
+  if dir_has_files "$LAST_GOOD_DIR"; then
+    checksum_expected="$(read_last_good_checksum)"
+    checksum_current="$(directory_hash "$LAST_GOOD_DIR")"
+    if [[ -z "$checksum_expected" ]]; then
+      warnings+=("active checksum file missing; run repair to refresh integrity baseline")
+      ok=0
+    elif [[ "$checksum_expected" != "$checksum_current" ]]; then
+      warnings+=("active checksum mismatch detected (stored checksum does not match last_good)")
+      parse_errors+=("last_good checksum mismatch")
+      ok=0
+    fi
+  fi
+
   if [[ "$ok" -eq 1 ]]; then
     log "self-check passed"
     return 0
   fi
 
   warn "self-check failed"
+  if ((${#warnings[@]} > 0)); then
+    printf 'Warnings:\n' >&2
+    for f in "${warnings[@]}"; do
+      printf '  - %s\n' "$f" >&2
+    done
+  fi
   if ((${#missing[@]} > 0)); then
     printf 'Missing files:\n' >&2
     for f in "${missing[@]}"; do
@@ -4859,6 +5195,13 @@ cmd_self_check() {
       printf '  - %s\n' "$err" >&2
     done
   fi
+  if ((${#zero_files[@]} > 0)); then
+    printf 'Zero-byte files:\n' >&2
+    for f in "${zero_files[@]}"; do
+      printf '  - %s\n' "$f" >&2
+    done
+  fi
+  printf 'Suggested action: run `retrofx repair`\n' >&2
   return 1
 }
 
@@ -4924,7 +5267,7 @@ cmd_perf() {
 
   parse_start="$(now_ms)"
   load_profile "$profile_path"
-  input_sig="$(compute_apply_input_hash "$profile_path" "$session_type")"
+  input_sig="$(compute_apply_input_hash "$profile_path" "$session_type" "false")"
   parse_end="$(now_ms)"
 
   stage_dir="$(mktemp -d "$STATE_DIR/perf-stage.$(now_ts_compact).$$.XXXXXX")"
@@ -4961,6 +5304,255 @@ cmd_perf() {
   printf '  total_ms=%d\n' "$total_ms"
 }
 
+print_check_result() {
+  local label="$1"
+  local passed="$2"
+  local detail="$3"
+
+  if [[ "$passed" -eq 1 ]]; then
+    printf '  %-24s PASS - %s\n' "$label" "$detail"
+  else
+    printf '  %-24s FAIL - %s\n' "$label" "$detail"
+  fi
+}
+
+write_runtime_test_profile() {
+  local out_file="$1"
+  cat >"$out_file" <<'PROFILE'
+name = "Runtime Compatibility Test"
+version = 1
+
+[mode]
+type = "passthrough"
+
+[effects]
+blur_strength = 1
+scanlines = false
+flicker = false
+dither = "none"
+vignette = false
+
+[scope]
+x11 = true
+tty = false
+tuigreet = false
+PROFILE
+}
+
+cmd_compatibility_check() {
+  local session_type wm_de
+  local picom_present=0
+  local glx_backend_pass=0
+  local shader_compile_pass=0
+  local blur_capability_pass=0
+  local degraded_pass=0
+  local glx_runtime_ok=0
+  local glxinfo_present=0
+  local rc=2
+  local shader_reason glx_reason blur_reason degraded_reason
+  local status gpu_vendor
+  local tmp_profile stage_dir
+  local picom_ver
+
+  ensure_dirs
+  session_type="$(detect_session_type)"
+  wm_de="$(detect_wm_de)"
+  picom_ver="$(picom_version)"
+  gpu_vendor="unknown"
+
+  if command -v picom >/dev/null 2>&1; then
+    picom_present=1
+  fi
+
+  if [[ "$picom_present" -eq 1 ]] && picom_has_glx; then
+    glx_backend_pass=1
+    glx_reason="picom advertises GLX backend support"
+  elif [[ "$picom_present" -eq 1 ]]; then
+    glx_reason="picom installed but GLX backend not detected"
+  else
+    glx_reason="picom is not installed"
+  fi
+
+  if [[ "$session_type" == "x11" && -n "${DISPLAY:-}" ]]; then
+    if command -v glxinfo >/dev/null 2>&1; then
+      glxinfo_present=1
+      if glxinfo -B >/dev/null 2>&1; then
+        glx_runtime_ok=1
+        gpu_vendor="$(glxinfo -B 2>/dev/null | grep -Ei 'vendor|renderer' | head -n1 | sed 's/^[[:space:]]*//' || true)"
+        gpu_vendor="${gpu_vendor:-unknown}"
+      fi
+    fi
+  fi
+
+  tmp_profile="$(mktemp "$STATE_DIR/compat-profile.$(now_ts_compact).$$.XXXXXX.toml")"
+  write_runtime_test_profile "$tmp_profile"
+
+  if load_profile "$tmp_profile" >/dev/null 2>&1; then
+    stage_dir="$(mktemp -d "$STATE_DIR/compat-stage-wayland.$(now_ts_compact).$$.XXXXXX")"
+    if render_templates "$stage_dir" "$tmp_profile" "wayland" "compat-wayland" &&
+      validate_stage_outputs "$stage_dir" "wayland"; then
+      degraded_pass=1
+      degraded_reason="degraded output generation is available"
+    else
+      degraded_reason="unable to generate degraded outputs"
+    fi
+    rm -rf "$stage_dir"
+  else
+    degraded_reason="failed to load compatibility profile"
+  fi
+
+  if [[ "$picom_present" -eq 1 && "$glx_backend_pass" -eq 1 ]]; then
+    blur_capability_pass=1
+    blur_reason="picom + GLX backend available"
+  else
+    blur_reason="requires picom with GLX backend"
+  fi
+
+  if [[ "$session_type" == "x11" && -n "${DISPLAY:-}" && "$picom_present" -eq 1 && "$glx_backend_pass" -eq 1 ]]; then
+    stage_dir="$(mktemp -d "$STATE_DIR/compat-stage-x11.$(now_ts_compact).$$.XXXXXX")"
+    if render_templates "$stage_dir" "$tmp_profile" "x11" "compat-x11" &&
+      validate_stage_outputs "$stage_dir" "x11"; then
+      status="$(run_stage_picom_runtime_test "$stage_dir")"
+      if [[ "$status" == "ok" ]]; then
+        shader_compile_pass=1
+        shader_reason="minimal runtime shader test started successfully"
+      else
+        shader_reason="runtime shader test failed ($status)"
+      fi
+    else
+      shader_reason="failed to generate compatibility runtime stage"
+    fi
+    rm -rf "$stage_dir"
+  elif [[ "$session_type" != "x11" ]]; then
+    shader_reason="X11 session required for runtime shader test"
+  elif [[ -z "${DISPLAY:-}" ]]; then
+    shader_reason="DISPLAY is not set"
+  elif [[ "$picom_present" -ne 1 ]]; then
+    shader_reason="picom is not installed"
+  else
+    shader_reason="GLX backend unavailable"
+  fi
+
+  rm -f "$tmp_profile"
+
+  printf 'RetroFX compatibility-check\n'
+  printf '  Session: %s\n' "$session_type"
+  printf '  WM/DE: %s\n' "$wm_de"
+  printf '  Picom: %s\n' "$picom_ver"
+  if [[ "$glxinfo_present" -eq 1 ]]; then
+    if [[ "$glx_runtime_ok" -eq 1 ]]; then
+      printf '  GPU: %s\n' "$gpu_vendor"
+    else
+      printf '  GPU: unknown (glxinfo runtime query failed)\n'
+    fi
+  else
+    printf '  GPU: unknown (glxinfo not available)\n'
+  fi
+
+  print_check_result "Shader compile" "$shader_compile_pass" "$shader_reason"
+  print_check_result "GLX backend" "$glx_backend_pass" "$glx_reason"
+  print_check_result "Blur capability" "$blur_capability_pass" "$blur_reason"
+  print_check_result "Degraded mode" "$degraded_pass" "$degraded_reason"
+
+  if [[ "$session_type" == "x11" && "$shader_compile_pass" -eq 1 && "$glx_backend_pass" -eq 1 && "$blur_capability_pass" -eq 1 ]]; then
+    rc=0
+  elif [[ "$degraded_pass" -eq 1 ]]; then
+    rc=1
+  else
+    rc=2
+  fi
+
+  return "$rc"
+}
+
+cmd_sanity_perf() {
+  local tmp_profile stage_dir
+  local start_ms end_ms elapsed_ms
+  local threshold_ms=1500
+  local status
+
+  ensure_dirs
+  tmp_profile="$(mktemp "$STATE_DIR/sanity-perf.$(now_ts_compact).$$.XXXXXX.toml")"
+  cat >"$tmp_profile" <<'PROFILE'
+name = "Sanity Perf"
+version = 1
+
+[mode]
+type = "monochrome"
+
+[monochrome]
+bands = 256
+phosphor = "green"
+hotcore = false
+
+[effects]
+blur_strength = 1
+scanlines = false
+flicker = false
+dither = "none"
+vignette = false
+
+[scope]
+x11 = true
+tty = false
+tuigreet = false
+PROFILE
+
+  if ! load_profile "$tmp_profile" >/dev/null 2>&1; then
+    warn "sanity-perf: unable to load test profile"
+    rm -f "$tmp_profile"
+    return 0
+  fi
+
+  stage_dir="$(mktemp -d "$STATE_DIR/sanity-stage.$(now_ts_compact).$$.XXXXXX")"
+  if ! render_templates "$stage_dir" "$tmp_profile" "x11" "sanity-perf"; then
+    warn "sanity-perf: failed to render runtime stage"
+    rm -f "$tmp_profile"
+    rm -rf "$stage_dir"
+    return 0
+  fi
+
+  if ! validate_stage_outputs "$stage_dir" "x11"; then
+    warn "sanity-perf: generated stage failed static validation"
+    rm -f "$tmp_profile"
+    rm -rf "$stage_dir"
+    return 0
+  fi
+
+  if [[ -z "${DISPLAY:-}" || "$(detect_session_type)" != "x11" ]]; then
+    warn "sanity-perf: X11 runtime unavailable; skipping compositor startup timing"
+    rm -f "$tmp_profile"
+    rm -rf "$stage_dir"
+    return 0
+  fi
+
+  if ! command -v picom >/dev/null 2>&1; then
+    warn "sanity-perf: picom not installed; skipping compositor startup timing"
+    rm -f "$tmp_profile"
+    rm -rf "$stage_dir"
+    return 0
+  fi
+
+  start_ms="$(now_ms)"
+  status="$(run_stage_picom_runtime_test "$stage_dir")"
+  end_ms="$(now_ms)"
+  elapsed_ms=$((end_ms - start_ms))
+
+  printf 'RetroFX sanity-perf\n'
+  printf '  startup_ms=%d\n' "$elapsed_ms"
+  printf '  runtime_result=%s\n' "$status"
+  if ((elapsed_ms > threshold_ms)); then
+    warn "sanity-perf: startup time exceeded ${threshold_ms}ms threshold"
+  fi
+  if [[ "$status" != "ok" ]]; then
+    warn "sanity-perf: runtime startup test did not complete cleanly"
+  fi
+
+  rm -f "$tmp_profile"
+  rm -rf "$stage_dir"
+  return 0
+}
+
 usage() {
   cat <<'USAGE'
 Usage:
@@ -4970,12 +5562,14 @@ Usage:
   retrofx gallery
   retrofx install-pack <packname>
   retrofx info <profile>
-  retrofx apply <profile>
+  retrofx apply <profile> [--safe]
   retrofx import base16 <path-to-json> --name <profile-name>
   retrofx export <alacritty|xresources|base16> <profile> <output_path>
   retrofx perf [profile]
+  retrofx compatibility-check
   retrofx self-check
   retrofx repair
+  retrofx sanity-perf
   retrofx status
   retrofx install [--yes] [--path <dir>]
   retrofx uninstall [--yes] [--keep-profiles]
@@ -5050,11 +5644,35 @@ main() {
       cmd_import "$@"
       ;;
     apply)
-      profile_ref="${2:--}"
-      audit_begin "apply" "$profile_ref"
       shift
-      [[ "$#" -eq 1 ]] || die "apply requires exactly one profile name/path"
-      cmd_apply "$1"
+      local safe_mode="false"
+      local apply_profile=""
+      while [[ "$#" -gt 0 ]]; do
+        case "$1" in
+          --safe)
+            safe_mode="true"
+            ;;
+          --*)
+            die "apply option not recognized: $1"
+            ;;
+          *)
+            if [[ -z "$apply_profile" ]]; then
+              apply_profile="$1"
+            else
+              die "apply accepts one profile plus optional --safe"
+            fi
+            ;;
+        esac
+        shift
+      done
+      [[ -n "$apply_profile" ]] || die "apply requires exactly one profile name/path"
+      profile_ref="$apply_profile"
+      if [[ "$safe_mode" == "true" ]]; then
+        audit_begin "apply" "$profile_ref|safe"
+      else
+        audit_begin "apply" "$profile_ref"
+      fi
+      cmd_apply "$profile_ref" "$safe_mode"
       ;;
     export)
       profile_ref="${3:--}"
@@ -5072,6 +5690,12 @@ main() {
       fi
       cmd_perf "$@"
       ;;
+    compatibility-check)
+      audit_begin "compatibility-check" "-"
+      shift
+      [[ "$#" -eq 0 ]] || die "compatibility-check takes no arguments"
+      cmd_compatibility_check
+      ;;
     self-check)
       audit_begin "self-check" "-"
       shift
@@ -5083,6 +5707,12 @@ main() {
       shift
       [[ "$#" -eq 0 ]] || die "repair takes no arguments"
       cmd_repair
+      ;;
+    sanity-perf)
+      audit_begin "sanity-perf" "-"
+      shift
+      [[ "$#" -eq 0 ]] || die "sanity-perf takes no arguments"
+      cmd_sanity_perf
       ;;
     status)
       shift

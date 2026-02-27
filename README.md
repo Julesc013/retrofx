@@ -2,7 +2,7 @@
 
 RetroFX is a profile-driven retro rendering toolkit with deterministic generation, atomic apply/off, rollback safety, and honest backend capability reporting.
 
-Current release: `0.1.0`
+Current release: `0.1.0-beta`
 
 ## What It Does
 
@@ -50,11 +50,13 @@ Current release: `0.1.0`
 ./scripts/retrofx list
 ./scripts/retrofx search <keyword>
 ./scripts/retrofx info <profile>
-./scripts/retrofx apply <profile>
+./scripts/retrofx apply <profile> [--safe]
 ./scripts/retrofx off [--tty|--all]
 ./scripts/retrofx doctor [--json]
+./scripts/retrofx compatibility-check
 ./scripts/retrofx self-check
 ./scripts/retrofx repair
+./scripts/retrofx sanity-perf
 ./scripts/retrofx perf [profile]
 ./scripts/retrofx preview [profile]
 ./scripts/retrofx new
@@ -111,6 +113,7 @@ No root required. No `/etc` modifications.
 - [Interop](docs/INTEROP.md)
 - [Testing](docs/TESTING.md)
 - [Troubleshooting](docs/TROUBLESHOOTING.md)
+- [Beta Notes](docs/BETA_NOTES.md)
 - [Releasing](docs/RELEASING.md)
 - [Roadmap](docs/ROADMAP.md)
 

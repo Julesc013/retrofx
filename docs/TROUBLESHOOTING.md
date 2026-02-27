@@ -9,6 +9,18 @@ If state looks broken:
 ./scripts/retrofx repair
 ```
 
+Before first-time setup on a new machine:
+
+```bash
+./scripts/retrofx compatibility-check
+```
+
+For low-risk fallback apply:
+
+```bash
+./scripts/retrofx apply <profile> --safe
+```
+
 To return to passthrough:
 
 ```bash
