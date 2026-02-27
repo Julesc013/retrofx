@@ -5,6 +5,39 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.0-beta.1] - 2026-02-27
+
+### Added
+- Profile-driven rendering system.
+- Monochrome 2–256 band support.
+- Structured palette modes (VGA16, cube256, etc.).
+- Ordered dithering.
+- Scanlines, flicker, vignette.
+- Safe-mode rendering.
+- Atomic apply/off.
+- TTY backend (optional).
+- Tuigreet theme generation.
+- Wayland degraded mode.
+- Install/uninstall mode.
+- Doctor, self-check, repair.
+- Compatibility-check.
+- Performance auditing.
+- Profile packs + wizard.
+- Base16 import/export.
+- Session-local font handling.
+
+### Safety Guarantees
+- No system-wide modification by default.
+- Atomic rollback.
+- Corruption detection.
+- Degraded fallback on failure.
+
+### Known Limitations
+- No global Wayland shader support.
+- No curvature or temporal persistence.
+- TTY limited to 16 colors.
+- Custom palettes limited to <=32 explicit entries.
+
 ## [0.1.0-beta] - 2026-02-27
 
 ### Added
