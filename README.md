@@ -1,6 +1,6 @@
 # RetroFX
 
-RetroFX is a profile-driven retro rendering and theming tool for Linux sessions. RetroFX 1.x is centered on a supported X11 + picom + GLX path, plus deterministic terminal/theme exports, scoped TTY and tuigreet outputs, user-local install mode, and explicit recovery tooling. Current repository version: `1.0.0-beta.1`.
+RetroFX is a profile-driven retro rendering and theming tool for Linux sessions. RetroFX 1.0 is stable for its documented support matrix: a supported X11 + picom + GLX path, plus deterministic terminal/theme exports, scoped TTY and tuigreet outputs, user-local install mode, and explicit recovery tooling. Current repository version: `1.0.0`.
 
 ## Current Support
 
@@ -35,7 +35,7 @@ RetroFX is a profile-driven retro rendering and theming tool for Linux sessions.
 
 ## Current Limits
 
-- `1.0.0-beta.1` is a public beta candidate, not a stable release.
+- `1.0.0` is stable for the documented support matrix, not a promise of universal Linux desktop theming.
 - Wayland support is degraded by design in 1.x.
 - Wrapper/Xsession integration is explicit for i3; other WM/DE setups are more manual.
 - Base16 import/export is intentionally lossy.
@@ -56,9 +56,10 @@ RetroFX is a profile-driven retro rendering and theming tool for Linux sessions.
 - [Beta Notes](docs/BETA_NOTES.md)
 - [Beta Triage](docs/BETA_TRIAGE.md)
 - [Bugfix Checklist](docs/BUGFIX_CHECKLIST.md)
-- [Release Notes (`1.0.0-beta.1`)](docs/RELEASE_NOTES_1.0.0-beta.1.md)
+- [Release Notes (`1.0.0`)](docs/RELEASE_NOTES_1.0.0.md)
 - [Release Checklist](docs/RELEASE_CHECKLIST.md)
 - [Releasing](docs/RELEASING.md)
+- [1.x Maintenance](docs/1x_MAINTENANCE.md)
 - [Roadmap](docs/ROADMAP.md)
 
 ## Development

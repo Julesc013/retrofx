@@ -7,12 +7,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-- Post-beta maintainer workflow docs for 1.x triage, bugfix checklists, and reproducible bug/environment reports.
+Post-1.0.x maintenance entries land here.
 
-### Changed
-- Post-beta 1.x fixes are now expected to carry a regression test or an explicit reason why automation is not possible.
-- Release progression guidance now explicitly defines the path from beta to RC to stable.
+## [1.0.0] - 2026-03-21
+
+### Stable Scope
+- Profile-driven retro rendering and theming workflow with strict TOML profile validation.
+- `passthrough`, `monochrome`, and `palette` modes.
+- Supported X11 + picom + GLX runtime path.
+- Optional TTY ANSI16 backend with rollback/mock support.
+- Optional tuigreet snippet generation.
+- Repo-local and user-local install/uninstall workflows.
+- `doctor`, `compatibility-check`, `self-check`, `repair`, `status`, `explain`, and `apply --dry-run`.
+- Import/export support for `xresources`, `alacritty`, and Base16 JSON.
+- Curated core pack profiles, user profiles, and pack install relocation into `profiles/user_assets/`.
+
+### Safety And Recovery
+- Atomic `apply` / `off` behavior with rollback snapshots in `state/last_good/`.
+- Manifest-based artifact contract for `apply`, `off`, `self-check`, `repair`, install-mode health, and status reporting.
+- Required/optional/export/runtime artifact semantics, including zero-byte optional-file handling and required-artifact enforcement.
+- Session wrapper compositor policy based on explicit runtime intent rather than file presence.
+- Stable CLI/operator safety with read-only `explain`, `apply --dry-run`, and clear apply/off/repair reporting.
+- Post-beta maintainer workflow docs for triage, bugfix checklists, and reproducible bug/environment reports.
+
+### Environment Support
+- Supported:
+  - X11 + picom + GLX
+  - repo-local mode
+  - user-local install mode
+  - TTY ANSI16 backend
+  - tuigreet snippet generation
+- Degraded or limited:
+  - Wayland sessions
+  - X11 integration outside the documented i3 wrapper path
+  - TTY font apply
+  - Base16 round-trip fidelity
+
+### Known Limitations
+- Wayland support remains degraded only; there is no global Wayland shader/compositor path.
+- X11 integration outside the documented i3 wrapper path is still more manual and less validated.
+- TTY output remains 16-color semantic output; `fonts.tty` is still best-effort host-dependent behavior.
+- Base16 import/export is deterministic but intentionally lossy.
+- RetroFX 1.x does not provide broad GTK/Qt/icon/cursor/theme orchestration.
 
 ## [1.0.0-beta.1] - 2026-03-21
 

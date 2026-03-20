@@ -1,14 +1,14 @@
 # RetroFX Release Checklist
 
-Use this checklist before creating a release tag. Current target: `1.0.0-beta.1`.
+Use this checklist before creating a release tag. Current target: `1.0.0`.
 
 ## Validation Outcome
 
-Latest local validation for `1.0.0-beta.1` was completed on `2026-03-21`.
+Latest local stable validation for `1.0.0` was completed on `2026-03-21`.
 
 - Automated checks passed: `./scripts/ci.sh`, `./scripts/test.sh`, `./scripts/retrofx --version`, `./scripts/retrofx list`, `./scripts/retrofx doctor`, `./scripts/retrofx status`, `./scripts/retrofx self-check`.
 - Practical smoke checks passed: `./scripts/retrofx compatibility-check`, `./scripts/retrofx apply crt-green-p1-4band`, `./scripts/retrofx off`, `./scripts/retrofx repair`, and temp-HOME `install --yes` / `uninstall --yes`.
-- Remaining human judgment: final publish approval still depends on the operator reviewing release notes, local archives, and any host-specific desktop smoke results they care about beyond the supported X11 path.
+- Stable judgment: supported X11 + picom + GLX path validated on a real host; degraded paths remain limited and non-destructive rather than pretending to be feature-complete.
 
 ## 1. Automated Validation
 
@@ -68,7 +68,7 @@ RETROFX_TTY_MODE=mock ./scripts/retrofx apply crt-green-p1-4band
 
 - `git status --short --branch` is clean.
 - No unintended untracked files are present.
-- `VERSION`, `CHANGELOG.md`, README, and release notes agree on the candidate version.
+- `VERSION`, `CHANGELOG.md`, README, and release notes agree on the release version.
 - `docs/1x_PRODUCT.md`, `docs/CAPABILITIES.md`, and `docs/TESTING.md` still match the code.
 
 ## 4. Packaging
@@ -88,7 +88,7 @@ Outputs are written under:
 Optional tag-based rebuild after tagging:
 
 ```bash
-./scripts/release-package.sh --ref v1.0.0-beta.1
+./scripts/release-package.sh --ref v1.0.0
 ```
 
 ## 5. Tagging
@@ -97,8 +97,8 @@ After the checklist passes and a human confirms the smoke results:
 
 ```bash
 git status --short --branch
-git tag -a v1.0.0-beta.1 -m "RetroFX v1.0.0-beta.1"
-./scripts/release-package.sh --ref v1.0.0-beta.1
+git tag -a v1.0.0 -m "RetroFX v1.0.0"
+./scripts/release-package.sh --ref v1.0.0
 ```
 
 Do not push automatically. Push only after the operator confirms the local tag and archive contents.

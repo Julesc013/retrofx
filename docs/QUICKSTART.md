@@ -1,6 +1,6 @@
 # RetroFX Quickstart
 
-RetroFX 1.x is best on X11 + picom + GLX. On Wayland, expect degraded outputs only. Run commands from the repository root unless you have installed RetroFX user-local.
+RetroFX 1.0 is best on X11 + picom + GLX. On Wayland, expect degraded outputs only. Run commands from the repository root unless you have installed RetroFX user-local.
 
 ## 1. Check Your Environment
 

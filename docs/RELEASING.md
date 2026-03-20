@@ -1,11 +1,12 @@
 # Releasing RetroFX
 
-Current beta-candidate target: `1.0.0-beta.1`.
+Current stable target: `1.0.0`.
 
 Use this file for the high-level sequence and `docs/RELEASE_CHECKLIST.md` for the exact pre-tag gate.
 
 For post-beta bug triage and fix discipline, also use:
 
+- `docs/1x_MAINTENANCE.md`
 - `docs/BETA_TRIAGE.md`
 - `docs/BUGFIX_CHECKLIST.md`
 - `docs/BUG_REPORT_TEMPLATE.md`
@@ -25,7 +26,7 @@ Do not land release-branch fixes as untracked one-offs.
 
 ## 0.1 Release Progression
 
-Use the 1.x beta/stable sequence explicitly:
+Historical 1.x promotion sequence:
 
 - `1.0.0-beta.1`
 - `1.0.0-beta.2`
@@ -33,7 +34,7 @@ Use the 1.x beta/stable sequence explicitly:
 - `1.0.0-rc1`
 - `1.0.0`
 
-Advance to the next stage only when these conditions hold:
+Stable promotion used these conditions:
 
 - Beta to next beta:
   - blocker/high-severity fixes are still landing
@@ -52,6 +53,14 @@ Advance to the next stage only when these conditions hold:
 
 Do not cut a new tag from the same version after a user-visible fix lands. Bump the prerelease identifier first.
 
+After `1.0.0`, stay on patch-only 1.x maintenance:
+
+- `1.0.1`
+- `1.0.2`
+- `1.0.3`
+
+Do not use the stable branch for new rendering modes, new backends, profile-schema redesign, or 2.0 platform work.
+
 ## 1. Align Release Metadata
 
 Update and cross-check:
@@ -59,11 +68,11 @@ Update and cross-check:
 - `VERSION`
 - `CHANGELOG.md`
 - `README.md`
-- `docs/BETA_NOTES.md`
-- `docs/BETA_RELEASE_NOTES.md`
-- versioned release notes such as `docs/RELEASE_NOTES_1.0.0-beta.1.md`
+- `docs/1x_PRODUCT.md`
+- versioned release notes such as `docs/RELEASE_NOTES_1.0.0.md`
+- `docs/1x_MAINTENANCE.md`
 
-Do not ship a release with mixed version strings or mixed beta/stable wording.
+Do not ship a release with mixed version strings or stale beta/stable wording.
 
 ## 2. Recheck Truth Docs
 
@@ -74,6 +83,7 @@ If support boundaries changed during the release cycle, sync:
 - `docs/ROADMAP.md`
 - `docs/TESTING.md`
 - `docs/INSTALL.md`
+- `docs/1x_MAINTENANCE.md`
 
 Do not ship a release with docs that overstate capability.
 
@@ -87,8 +97,10 @@ Minimum automated validation:
 ./scripts/ci.sh
 ./scripts/test.sh
 ./scripts/retrofx --version
+./scripts/retrofx list
 ./scripts/retrofx doctor
 ./scripts/retrofx status
+./scripts/retrofx self-check
 ```
 
 For blocker/high-severity fixes that cannot be fully validated in automation, record the manual host validation that was run and the outcome in the release checklist, release summary, or issue notes before tagging.
@@ -113,7 +125,9 @@ git tag -a vX.Y.Z -m "RetroFX vX.Y.Z"
 ./scripts/release-package.sh --ref vX.Y.Z
 ```
 
-Do not push automatically. Push only after a human confirms the final smoke results and the tag contents.
+For stable tags, also review `docs/1x_MAINTENANCE.md` so the branch stays patch-only after publication.
+
+Do not push automatically. Push only after a human confirms the final smoke results, the stable notes, and the tag contents.
 
 ## 6. Push When Approved
 
