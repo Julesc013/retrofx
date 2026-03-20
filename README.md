@@ -19,6 +19,8 @@ RetroFX is a profile-driven retro rendering and theming tool for Linux sessions.
 ```bash
 ./scripts/retrofx doctor
 ./scripts/retrofx list
+./scripts/retrofx explain crt-green-p1-4band
+./scripts/retrofx apply crt-green-p1-4band --dry-run
 ./scripts/retrofx apply crt-green-p1-4band
 ./scripts/retrofx status
 ./scripts/retrofx off

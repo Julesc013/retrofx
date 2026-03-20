@@ -43,9 +43,9 @@ RetroFX 1.x is a profile-driven retro rendering and theming tool for Linux sessi
 ## Command Surface Summary
 
 - Inspect:
-  - `--version`, `status`, `list`, `search`, `info`, `gallery`, `preview`, `doctor`, `compatibility-check`
+  - `--version`, `status`, `list`, `search`, `info`, `explain`, `gallery`, `preview`, `doctor`, `compatibility-check`
 - Lifecycle:
-  - `apply`, `off`, `self-check`, `repair`
+  - `apply`, `apply --dry-run`, `off`, `self-check`, `repair`
 - Profiles / interop:
   - `new`, `install-pack`, `import base16`, `export`
 - Install mode:

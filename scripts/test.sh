@@ -428,6 +428,11 @@ assert_contains "$version_output" "retrofx "
 assert_contains "$version_output" "x11=full"
 assert_contains "$version_output" "wayland=degraded"
 
+log "checking help output"
+help_output="$("$RETROFX" --help)"
+assert_contains "$help_output" "retrofx explain <profile>"
+assert_contains "$help_output" "retrofx apply <profile> [--safe] [--dry-run]"
+
 log "checking list command"
 list_output="$(run_retrofx_x11 list)"
 assert_contains "$list_output" "Core Pack:"
@@ -455,6 +460,18 @@ assert_contains "$info_font_output" "Font AA"
 info_c64_output="$(run_retrofx_x11 info c64)"
 assert_contains "$info_c64_output" "Profile: c64"
 assert_contains "$info_c64_output" "kind = custom"
+
+log "checking explain command"
+explain_passthrough_output="$(run_retrofx_x11 explain passthrough)"
+assert_contains "$explain_passthrough_output" "RetroFX explain"
+assert_contains "$explain_passthrough_output" "Profile: passthrough"
+assert_contains "$explain_passthrough_output" "Compositor required: no"
+assert_contains "$explain_passthrough_output" "Scoped backend hooks: (none)"
+assert_contains "$explain_passthrough_output" "Optional runtime artifacts: picom.conf, shader.glsl"
+explain_wayland_output="$(run_retrofx_wayland explain crt-green-p1-4band)"
+assert_contains "$explain_wayland_output" "Resolved apply session: wayland"
+assert_contains "$explain_wayland_output" "Runtime degraded: yes"
+assert_contains "$explain_wayland_output" "wayland session detected; applying degraded outputs for x11 scope."
 
 section "Interop / Export / Pack / Path"
 
@@ -825,8 +842,9 @@ tuigreet = false
 PROFILE
 first_apply_output="$(run_retrofx_x11 apply "$skip_profile" 2>&1)"
 assert_contains "$first_apply_output" "Compositor not required."
+assert_contains "$first_apply_output" "apply: applied profile"
 second_apply_output="$(run_retrofx_x11 apply "$skip_profile" 2>&1)"
-assert_contains "$second_apply_output" "No changes; skipping apply."
+assert_contains "$second_apply_output" "apply: No changes; skipping apply."
 assert_not_contains "$second_apply_output" "applied profile"
 
 cat >"$skip_profile" <<'PROFILE'
@@ -851,9 +869,34 @@ tuigreet = false
 PROFILE
 third_apply_output="$(run_retrofx_x11 apply "$skip_profile" 2>&1)"
 assert_not_contains "$third_apply_output" "No changes; skipping apply."
-assert_contains "$third_apply_output" "applied profile"
+assert_contains "$third_apply_output" "apply: applied profile"
 assert_not_contains "$third_apply_output" "picom not installed"
 assert_not_contains "$third_apply_output" "x11-picom:"
+
+log "apply --dry-run reports intent without mutating active state"
+run_retrofx_x11 apply passthrough
+dry_run_profile_hash_before="$(hash_file "$ACTIVE_DIR/profile.toml")"
+dry_run_meta_hash_before="$(hash_file "$ACTIVE_DIR/meta")"
+dry_run_manifest_hash_before="$(hash_file "$MANIFESTS_DIR/current.manifest")"
+dry_run_last_good_hash_before="$(hash_file "$MANIFESTS_DIR/last_good.manifest")"
+dry_run_output="$(run_retrofx_x11 apply crt-green-p1-4band --dry-run 2>&1)"
+assert_contains "$dry_run_output" "RetroFX apply --dry-run"
+assert_contains "$dry_run_output" "Profile: crt-green-p1-4band"
+assert_contains "$dry_run_output" "Compositor required: yes"
+assert_contains "$dry_run_output" "Static stage validation: passed"
+assert_contains "$dry_run_output" "Would update active state: yes"
+assert_contains "$dry_run_output" "apply --dry-run: no changes written to active/, manifests, or backups"
+assert_contains "$dry_run_output" "apply --dry-run: runtime validation and backend hooks are skipped"
+dry_run_profile_hash_after="$(hash_file "$ACTIVE_DIR/profile.toml")"
+dry_run_meta_hash_after="$(hash_file "$ACTIVE_DIR/meta")"
+dry_run_manifest_hash_after="$(hash_file "$MANIFESTS_DIR/current.manifest")"
+dry_run_last_good_hash_after="$(hash_file "$MANIFESTS_DIR/last_good.manifest")"
+[[ "$dry_run_profile_hash_before" == "$dry_run_profile_hash_after" ]] || die "apply --dry-run mutated active/profile.toml"
+[[ "$dry_run_meta_hash_before" == "$dry_run_meta_hash_after" ]] || die "apply --dry-run mutated active/meta"
+[[ "$dry_run_manifest_hash_before" == "$dry_run_manifest_hash_after" ]] || die "apply --dry-run mutated current manifest"
+[[ "$dry_run_last_good_hash_before" == "$dry_run_last_good_hash_after" ]] || die "apply --dry-run mutated last_good manifest"
+dry_run_noop_output="$(run_retrofx_x11 apply passthrough --dry-run 2>&1)"
+assert_contains "$dry_run_noop_output" "Would update active state: no"
 
 log "perf command outputs numeric stage timings"
 perf_output="$(run_retrofx_x11 perf "$skip_profile")"
@@ -1474,7 +1517,9 @@ rm -f "$ACTIVE_DIR/fontconfig.conf"
 if run_retrofx_x11 self-check >/dev/null 2>&1; then
   die "self-check should fail for missing required fontconfig.conf"
 fi
-run_retrofx_x11 repair
+repair_output="$(run_retrofx_x11 repair 2>&1)"
+assert_contains "$repair_output" "repair: restored active state from last_good"
+assert_contains "$repair_output" "repair: runtime contract is healthy after repair"
 repaired_hash="$(hash_file "$ACTIVE_DIR/fontconfig.conf")"
 [[ "$repaired_hash" == "$expected_repair_hash" ]] || die "repair did not restore last_good fontconfig state"
 run_retrofx_x11 self-check
@@ -1497,7 +1542,9 @@ rm -f "$ACTIVE_DIR/profile.env"
 if run_retrofx_x11 self-check >/dev/null 2>&1; then
   die "self-check should fail when active/profile.env is missing"
 fi
-run_retrofx_x11 repair
+repair_output="$(run_retrofx_x11 repair 2>&1)"
+assert_contains "$repair_output" "repair: restored active state from last_good"
+assert_contains "$repair_output" "repair: runtime contract is healthy after repair"
 run_retrofx_x11 self-check
 assert_manifest_has_entry "$MANIFESTS_DIR/current.manifest" "OPTIONAL_RUNTIME" "picom.conf"
 assert_manifest_lacks_entry "$MANIFESTS_DIR/current.manifest" "REQUIRED_RUNTIME" "fontconfig.conf"

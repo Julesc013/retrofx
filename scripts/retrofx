@@ -918,6 +918,37 @@ trim() {
   printf '%s' "$s"
 }
 
+bool_yes_no() {
+  case "$1" in
+    true | yes | 1)
+      printf 'yes'
+      ;;
+    *)
+      printf 'no'
+      ;;
+  esac
+}
+
+format_csv_list() {
+  local -n ref="$1"
+  local item=""
+  local out=""
+
+  if ((${#ref[@]} == 0)); then
+    printf '(none)'
+    return 0
+  fi
+
+  for item in "${ref[@]}"; do
+    if [[ -n "$out" ]]; then
+      out+=", "
+    fi
+    out+="$item"
+  done
+
+  printf '%s' "$out"
+}
+
 xml_escape() {
   local s="$1"
   s="${s//&/&amp;}"
@@ -1839,31 +1870,45 @@ apply_safe_mode_overrides() {
   fi
 }
 
-resolve_apply_session_type() {
+resolve_apply_session_plan() {
   local detected="$1"
-  local effective="$detected"
+  local -n session_ref="$2"
+  local -n note_ref="$3"
+
+  session_ref="$detected"
+  note_ref=""
 
   if [[ "$CFG_scope_x11" != "true" ]]; then
-    printf '%s' "$effective"
     return 0
   fi
 
   if [[ "$detected" == "wayland" ]]; then
-    warn "wayland session detected; applying degraded outputs for x11 scope."
-    printf 'wayland'
+    session_ref="wayland"
+    note_ref="wayland session detected; applying degraded outputs for x11 scope."
     return 0
   fi
 
   if detect_ssh_without_x11_forwarding; then
-    warn "SSH session without X11 forwarding detected; aborting X11 effect generation and using degraded outputs."
-    printf 'wayland'
+    session_ref="wayland"
+    note_ref="SSH session without X11 forwarding detected; aborting X11 effect generation and using degraded outputs."
     return 0
   fi
 
   if [[ -z "${DISPLAY:-}" ]]; then
-    warn "DISPLAY is not set; aborting X11 effect generation and using degraded outputs."
-    printf 'wayland'
+    session_ref="wayland"
+    note_ref="DISPLAY is not set; aborting X11 effect generation and using degraded outputs."
     return 0
+  fi
+}
+
+resolve_apply_session_type() {
+  local detected="$1"
+  local effective=""
+  local note=""
+
+  resolve_apply_session_plan "$detected" effective note
+  if [[ -n "$note" ]]; then
+    warn "$note"
   fi
 
   printf '%s' "$effective"
@@ -2532,6 +2577,178 @@ write_runtime_meta() {
       printf 'apply_input_hash=%s\n' "$input_sig"
     fi
   } >"$out_file"
+}
+
+collect_runtime_artifacts_by_class() {
+  local session_type="$1"
+  local artifact_root="${2:-current}"
+  local -n required_ref="$3"
+  local -n optional_ref="$4"
+  local -n export_ref="$5"
+  local entry class rel
+  local -a artifact_entries=()
+
+  required_ref=()
+  optional_ref=()
+  export_ref=()
+
+  resolve_runtime_artifact_entries_for_current_profile "$session_type" "$artifact_root" artifact_entries
+  for entry in "${artifact_entries[@]}"; do
+    class="${entry%%|*}"
+    rel="${entry#*|}"
+    case "$class" in
+      "$ARTIFACT_CLASS_REQUIRED_RUNTIME")
+        required_ref+=("$rel")
+        ;;
+      "$ARTIFACT_CLASS_OPTIONAL_RUNTIME")
+        optional_ref+=("$rel")
+        ;;
+      "$ARTIFACT_CLASS_EXPORT_ONLY")
+        export_ref+=("$rel")
+        ;;
+    esac
+  done
+}
+
+collect_backend_hooks_for_session() {
+  local session_type="$1"
+  local -n out_ref="$2"
+
+  out_ref=()
+
+  if x11_runtime_artifacts_enabled_for_session "$session_type" && compositor_required_current_profile; then
+    if [[ -x "$BACKEND_X11" ]]; then
+      out_ref+=("x11-picom")
+    else
+      out_ref+=("x11-picom (backend unavailable)")
+    fi
+  fi
+
+  if [[ "$CFG_scope_tty" == "true" ]]; then
+    if [[ -x "$BACKEND_TTY" ]]; then
+      out_ref+=("tty")
+    else
+      out_ref+=("tty (backend unavailable)")
+    fi
+  fi
+
+  if [[ "$CFG_scope_tuigreet" == "true" ]]; then
+    if [[ -x "$BACKEND_TUIGREET" ]]; then
+      out_ref+=("tuigreet")
+    else
+      out_ref+=("tuigreet (backend unavailable)")
+    fi
+  fi
+}
+
+print_profile_resolution_summary() {
+  local heading="$1"
+  local profile_id="$2"
+  local profile_path="$3"
+  local detected_session="$4"
+  local resolved_session="$5"
+  local safe_mode="${6:-false}"
+  local safe_summary="${7:-}"
+  local static_validation="${8:-}"
+  local would_update="${9:-}"
+  local session_note="${10:-}"
+  local x11_runtime_active="no"
+  local compositor_required="no"
+  local runtime_degraded="no"
+  local -a required_artifacts=()
+  local -a optional_artifacts=()
+  local -a export_artifacts=()
+  local -a backend_hooks=()
+  local -a notes=()
+  local note
+
+  if x11_runtime_artifacts_enabled_for_session "$resolved_session"; then
+    x11_runtime_active="yes"
+  fi
+  if shader_required_for_session "$resolved_session"; then
+    compositor_required="yes"
+  fi
+  if runtime_degraded_for_session "$resolved_session"; then
+    runtime_degraded="yes"
+  fi
+
+  collect_runtime_artifacts_by_class "$resolved_session" "current" required_artifacts optional_artifacts export_artifacts
+  collect_backend_hooks_for_session "$resolved_session" backend_hooks
+
+  if [[ -n "$session_note" ]]; then
+    notes+=("$session_note")
+  fi
+  if [[ "$CFG_scope_x11" != "true" ]]; then
+    notes+=("scope.x11=false disables active X11 runtime artifacts for this profile.")
+  elif [[ "$runtime_degraded" == "yes" ]]; then
+    notes+=("degraded mode keeps export/support outputs but skips the X11 shader/compositor path.")
+  elif [[ "$x11_runtime_active" == "yes" && "$compositor_required" == "no" ]]; then
+    notes+=("X11 runtime artifacts would be staged, but the compositor backend hook would be skipped for this profile.")
+  fi
+  if [[ "$safe_mode" == "true" ]]; then
+    if [[ -n "$safe_summary" ]]; then
+      notes+=("safe mode would adjust the requested profile: $safe_summary")
+    else
+      notes+=("safe mode requested, but the profile is already within current low-risk limits.")
+    fi
+  fi
+
+  printf '%s\n' "$heading"
+  printf 'Profile: %s\n' "$profile_id"
+  printf 'Path: %s\n' "$profile_path"
+  printf 'Execution mode: %s\n' "$(execution_mode)"
+  printf 'Detected session: %s\n' "$detected_session"
+  printf 'Resolved apply session: %s\n' "$resolved_session"
+  printf 'Mode: %s\n' "$CFG_mode_type"
+  printf 'Scopes: x11=%s tty=%s tuigreet=%s\n' \
+    "$(bool_yes_no "$CFG_scope_x11")" \
+    "$(bool_yes_no "$CFG_scope_tty")" \
+    "$(bool_yes_no "$CFG_scope_tuigreet")"
+  printf 'X11 runtime active: %s\n' "$x11_runtime_active"
+  printf 'Compositor required: %s\n' "$compositor_required"
+  printf 'Runtime degraded: %s\n' "$runtime_degraded"
+  printf 'Safe mode: %s\n' "$(bool_yes_no "$safe_mode")"
+  printf 'Scoped backend hooks: %s\n' "$(format_csv_list backend_hooks)"
+  printf 'Required runtime artifacts: %s\n' "$(format_csv_list required_artifacts)"
+  if ((${#optional_artifacts[@]} > 0)); then
+    printf 'Optional runtime artifacts: %s\n' "$(format_csv_list optional_artifacts)"
+  fi
+  printf 'Export/support artifacts: %s\n' "$(format_csv_list export_artifacts)"
+  if [[ -n "$static_validation" ]]; then
+    printf 'Static stage validation: %s\n' "$static_validation"
+  fi
+  if [[ -n "$would_update" ]]; then
+    printf 'Would update active state: %s\n' "$would_update"
+  fi
+  if ((${#notes[@]} > 0)); then
+    printf 'Notes:\n'
+    for note in "${notes[@]}"; do
+      printf '  - %s\n' "$note"
+    done
+  fi
+}
+
+current_runtime_contract_healthy() {
+  local manifest_path=""
+  local manifest_tmp=""
+  local -a notes=()
+
+  if ! dir_has_files "$ACTIVE_DIR"; then
+    return 1
+  fi
+
+  if ! resolve_runtime_manifest_for_tree "$ACTIVE_DIR" "$CURRENT_ARTIFACT_MANIFEST" "current" manifest_path manifest_tmp notes; then
+    [[ -n "$manifest_tmp" ]] && rm -f "$manifest_tmp"
+    return 1
+  fi
+
+  if validate_artifact_tree_with_manifest "$manifest_path" "$ACTIVE_DIR" "active" "integrity"; then
+    [[ -n "$manifest_tmp" ]] && rm -f "$manifest_tmp"
+    return 0
+  fi
+
+  [[ -n "$manifest_tmp" ]] && rm -f "$manifest_tmp"
+  return 1
 }
 
 compute_apply_input_hash() {
@@ -4236,6 +4453,31 @@ cmd_info() {
   printf '  tuigreet = %s\n' "$CFG_scope_tuigreet"
 }
 
+cmd_explain() {
+  local profile_ref="$1"
+  local profile_path profile_id detected_session resolved_session session_note
+
+  profile_path="$(resolve_profile_path "$profile_ref")" || die "profile not found: $profile_ref"
+  profile_id="$(basename "$profile_path")"
+  profile_id="${profile_id%.toml}"
+
+  load_profile "$profile_path"
+  detected_session="$(detect_session_type)"
+  resolve_apply_session_plan "$detected_session" resolved_session session_note
+
+  print_profile_resolution_summary \
+    "RetroFX explain" \
+    "$profile_id" \
+    "$profile_path" \
+    "$detected_session" \
+    "$resolved_session" \
+    "false" \
+    "" \
+    "" \
+    "" \
+    "$session_note"
+}
+
 json_escape_string() {
   local value="$1"
   value="${value//\\/\\\\}"
@@ -5690,14 +5932,70 @@ cmd_new() {
   log "wrote new profile: $out_path"
 }
 
+cmd_apply_dry_run_loaded() {
+  local profile_id="$1"
+  local profile_path="$2"
+  local detected_session="$3"
+  local session_type="$4"
+  local apply_input_sig="$5"
+  local safe_mode="${6:-false}"
+  local safe_overrides="${7:-}"
+  local session_note="${8:-}"
+  local stage_dir=""
+  local old_sig=""
+  local would_update="yes"
+
+  stage_dir="$(mktemp -d "$STATE_DIR/dry-run.$(now_ts_compact).$$.XXXXXX")"
+  render_templates "$stage_dir" "$profile_path" "$session_type" "$apply_input_sig"
+
+  if ! validate_stage_outputs "$stage_dir" "$session_type"; then
+    rm -rf "$stage_dir"
+    die "apply --dry-run failed: generated stage did not pass static validation"
+  fi
+
+  old_sig="$(read_active_apply_signature)"
+  if [[ -n "$old_sig" && "$old_sig" == "$apply_input_sig" ]] && active_state_complete_for_session "$session_type"; then
+    would_update="no"
+  elif stage_matches_active "$stage_dir" "$ACTIVE_DIR"; then
+    would_update="no"
+  fi
+
+  print_profile_resolution_summary \
+    "RetroFX apply --dry-run" \
+    "$profile_id" \
+    "$profile_path" \
+    "$detected_session" \
+    "$session_type" \
+    "$safe_mode" \
+    "$safe_overrides" \
+    "passed" \
+    "$would_update" \
+    "$session_note"
+
+  log "apply --dry-run: no changes written to active/, manifests, or backups"
+  if [[ "$would_update" == "no" ]]; then
+    log "apply --dry-run: No active-state changes would be required."
+  else
+    log "apply --dry-run: Active state would be updated on a real apply."
+  fi
+  log "apply --dry-run: runtime validation and backend hooks are skipped"
+
+  rm -rf "$stage_dir"
+}
+
 cmd_apply() {
   local profile_ref="$1"
   local safe_mode="${2:-false}"
+  local dry_run="${3:-false}"
   local profile_path stage_dir profile_id session_type detected_session
   local apply_input_sig old_sig
   local safe_overrides=""
+  local session_note=""
   local restart_required="false"
   local picom_changed=0 shader_changed=0
+  local x11_runtime_active="no"
+  local compositor_required="no"
+  local runtime_degraded="no"
 
   ensure_dirs
   profile_path="$(resolve_profile_path "$profile_ref")" || die "profile not found: $profile_ref"
@@ -5709,23 +6007,31 @@ cmd_apply() {
     apply_safe_mode_overrides
     safe_overrides="$SAFE_MODE_OVERRIDE_SUMMARY"
     if [[ -n "$safe_overrides" ]]; then
-      log "safe-mode overrides applied: $safe_overrides"
+      log "apply: safe-mode overrides applied: $safe_overrides"
     else
-      log "safe-mode enabled: profile already within low-risk limits."
+      log "apply: safe-mode enabled; profile already within low-risk limits."
     fi
   fi
 
   detected_session="$(detect_session_type)"
-  session_type="$(resolve_apply_session_type "$detected_session")"
+  resolve_apply_session_plan "$detected_session" session_type session_note
 
   apply_input_sig="$(compute_apply_input_hash "$profile_path" "$session_type" "$safe_mode")"
+  if [[ "$dry_run" == "true" ]]; then
+    cmd_apply_dry_run_loaded "$profile_id" "$profile_path" "$detected_session" "$session_type" "$apply_input_sig" "$safe_mode" "$safe_overrides" "$session_note"
+    return 0
+  fi
+  if [[ -n "$session_note" ]]; then
+    warn "$session_note"
+  fi
+
   old_sig="$(read_active_apply_signature)"
 
   if [[ -n "$old_sig" && "$old_sig" == "$apply_input_sig" ]] && active_state_complete_for_session "$session_type"; then
     if [[ ! -f "$ACTIVE_CHECKSUM_FILE" && -d "$LAST_GOOD_DIR" ]]; then
       write_last_good_checksum || true
     fi
-    log "No changes; skipping apply."
+    log "apply: No changes; skipping apply."
     return 0
   fi
 
@@ -5749,7 +6055,7 @@ cmd_apply() {
     if [[ ! -f "$ACTIVE_CHECKSUM_FILE" && -d "$LAST_GOOD_DIR" ]]; then
       write_last_good_checksum || true
     fi
-    log "No changes; skipping apply."
+    log "apply: No changes; skipping apply."
     return 0
   fi
 
@@ -5820,12 +6126,21 @@ cmd_apply() {
   restart_picom_if_running "$restart_required" || true
 
   TXN_ACTIVE=0
+  if x11_runtime_artifacts_enabled_for_session "$session_type"; then
+    x11_runtime_active="yes"
+  fi
+  if shader_required_for_session "$session_type"; then
+    compositor_required="yes"
+  fi
+  if runtime_degraded_for_session "$session_type"; then
+    runtime_degraded="yes"
+  fi
   if runtime_degraded_for_session "$session_type"; then
     log "Wayland session detected: shader pipeline disabled; applied degraded outputs only."
   elif [[ "$CFG_scope_x11" != "true" ]]; then
     log "X11 scope disabled: skipped X11 runtime artifacts and compositor backend."
   fi
-  log "applied profile '$profile_id'"
+  log "apply: applied profile '$profile_id' (session=$session_type, x11_runtime=$x11_runtime_active, compositor_required=$compositor_required, degraded=$runtime_degraded)"
 }
 
 cmd_off_profile() {
@@ -5860,6 +6175,8 @@ cmd_off_profile() {
   if [[ "$skip_tty_restore" != "true" && "$session_type" == "wayland" && "$old_scope_tty" == "true" ]]; then
     cmd_off_tty || return 1
   fi
+
+  log "off: active state returned to passthrough baseline"
 }
 
 cmd_off_tty() {
@@ -5869,6 +6186,7 @@ cmd_off_tty() {
     return 0
   fi
   "$BACKEND_TTY" off "$ACTIVE_DIR"
+  log "off: restored tty palette state"
 }
 
 cmd_off() {
@@ -6411,11 +6729,11 @@ cmd_self_check() {
   fi
 
   if [[ "$ok" -eq 1 ]]; then
-    log "self-check passed"
+    log "self-check: passed"
     return 0
   fi
 
-  warn "self-check failed"
+  warn "self-check: failed"
   if ((${#warnings[@]} > 0)); then
     printf 'Warnings:\n' >&2
     for f in "${warnings[@]}"; do
@@ -6460,6 +6778,11 @@ cmd_repair() {
       rm -f "$manifest_tmp"
       if restore_last_good; then
         log "repair: restored active state from last_good"
+        if current_runtime_contract_healthy; then
+          log "repair: runtime contract is healthy after repair"
+        else
+          warn "repair: restore completed but runtime contract still needs follow-up"
+        fi
         return 0
       fi
       die "repair failed: unable to restore last_good"
@@ -6500,6 +6823,11 @@ cmd_repair() {
   copy_active_to_last_good || warn "repair: failed to refresh last_good snapshot"
   rm -f "$tmp_profile"
   log "repair: applied degraded passthrough fallback"
+  if current_runtime_contract_healthy; then
+    log "repair: runtime contract is healthy after repair"
+  else
+    warn "repair: fallback apply completed but runtime contract still needs follow-up"
+  fi
 }
 
 cmd_perf() {
@@ -6830,7 +7158,8 @@ Usage:
   retrofx gallery
   retrofx install-pack <packname>
   retrofx info <profile>
-  retrofx apply <profile> [--safe]
+  retrofx explain <profile>
+  retrofx apply <profile> [--safe] [--dry-run]
   retrofx import base16 <path-to-json> --name <profile-name>
   retrofx export <alacritty|xresources|base16> <profile> <output_path>
   retrofx perf [profile]
@@ -6908,6 +7237,13 @@ main() {
       [[ "$#" -eq 1 ]] || die "info requires exactly one profile"
       cmd_info "$1"
       ;;
+    explain)
+      profile_ref="${2:--}"
+      audit_begin "explain" "$profile_ref"
+      shift
+      [[ "$#" -eq 1 ]] || die "explain requires exactly one profile"
+      cmd_explain "$1"
+      ;;
     import)
       profile_ref="${2:--}"
       audit_begin "import" "$profile_ref"
@@ -6918,11 +7254,15 @@ main() {
     apply)
       shift
       local safe_mode="false"
+      local dry_run="false"
       local apply_profile=""
       while [[ "$#" -gt 0 ]]; do
         case "$1" in
           --safe)
             safe_mode="true"
+            ;;
+          --dry-run)
+            dry_run="true"
             ;;
           --*)
             die "apply option not recognized: $1"
@@ -6931,7 +7271,7 @@ main() {
             if [[ -z "$apply_profile" ]]; then
               apply_profile="$1"
             else
-              die "apply accepts one profile plus optional --safe"
+              die "apply accepts one profile plus optional --safe/--dry-run"
             fi
             ;;
         esac
@@ -6939,12 +7279,19 @@ main() {
       done
       [[ -n "$apply_profile" ]] || die "apply requires exactly one profile name/path"
       profile_ref="$apply_profile"
-      if [[ "$safe_mode" == "true" ]]; then
-        audit_begin "apply" "$profile_ref|safe"
+      if [[ "$safe_mode" == "true" || "$dry_run" == "true" ]]; then
+        local audit_profile="$profile_ref"
+        if [[ "$safe_mode" == "true" ]]; then
+          audit_profile="$audit_profile|safe"
+        fi
+        if [[ "$dry_run" == "true" ]]; then
+          audit_profile="$audit_profile|dry-run"
+        fi
+        audit_begin "apply" "$audit_profile"
       else
         audit_begin "apply" "$profile_ref"
       fi
-      cmd_apply "$profile_ref" "$safe_mode"
+      cmd_apply "$profile_ref" "$safe_mode" "$dry_run"
       ;;
     export)
       profile_ref="${3:--}"

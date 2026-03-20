@@ -23,11 +23,15 @@ If you are on Wayland, RetroFX can still generate palette/session-local outputs,
 ## 3. Apply, Inspect, Revert
 
 ```bash
+./scripts/retrofx explain crt-green-p1-4band
+./scripts/retrofx apply crt-green-p1-4band --dry-run
 ./scripts/retrofx apply crt-green-p1-4band
 ./scripts/retrofx status
 ./scripts/retrofx preview crt-green-p1-4band
 ./scripts/retrofx off
 ```
+
+`explain` is read-only and reports the resolved runtime intent for the current environment. `apply --dry-run` renders and validates a temporary stage without changing `active/`, manifests, or backups.
 
 TTY rollback only:
 

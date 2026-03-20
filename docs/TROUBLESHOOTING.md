@@ -22,6 +22,13 @@ Before first-time setup on a new machine:
 ./scripts/retrofx compatibility-check
 ```
 
+Before a risky apply, preview the resolved intent first:
+
+```bash
+./scripts/retrofx explain <profile>
+./scripts/retrofx apply <profile> --dry-run
+```
+
 For low-risk fallback apply:
 
 ```bash
@@ -138,6 +145,9 @@ If needed, remove managed xsession entries:
 - If repeated applies keep restarting work:
   - ensure you are applying the same profile file without local edits.
   - unchanged inputs should print `No changes; skipping apply.`
+- If you want to understand what RetroFX would do before mutating state:
+  - use `./scripts/retrofx explain <profile>`
+  - use `./scripts/retrofx apply <profile> --dry-run`
 - For low-power or latency-sensitive sessions:
   - use passthrough/blur-free profiles when possible.
   - those profiles report `Compositor not required.` and avoid compositor backend application.

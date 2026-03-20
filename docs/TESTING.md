@@ -18,7 +18,7 @@ Pass criteria: command exits `0`.
 `scripts/test.sh` is intentionally organized around release-critical categories:
 
 - Parsing / CLI surface:
-  - `--version`, `list`, `gallery`, `search`, `info`
+  - `--version`, `list`, `gallery`, `search`, `info`, `explain`, `--help`
   - profile parsing, wizard generation, command help surface
 - Generation / static output:
   - export commands
@@ -33,6 +33,9 @@ Pass criteria: command exits `0`.
   - export-only gaps stay non-fatal for runtime integrity
   - `repair` restores manifest-valid `state/last_good/`
   - apply/off manifest transitions stay coherent
+- Operator safety:
+  - `apply --dry-run` must not mutate `active/`, manifests, or backups
+  - mutating commands must report clear skip/repair/success states
 - Wrapper / runtime intent:
   - compositor-required vs no-compositor wrapper policy
   - `scope.x11=false` suppresses X11 runtime outputs
