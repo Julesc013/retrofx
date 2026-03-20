@@ -401,6 +401,41 @@ log "checking install-pack command (community placeholder)"
 install_pack_output="$(run_retrofx_x11 install-pack community 2>&1)"
 assert_contains "$install_pack_output" "has no profiles"
 
+log "install-pack core relocates pack-local assets into user-owned storage"
+pack_home="$TEST_TMP_DIR/pack-install-home"
+mkdir -p "$pack_home"
+for item in backends templates scripts profiles palettes docs README.md VERSION CHANGELOG.md; do
+  if [[ -e "$ROOT_DIR/$item" ]]; then
+    cp -a "$ROOT_DIR/$item" "$pack_home/$item"
+  fi
+done
+mkdir -p "$pack_home/active" "$pack_home/state"
+pack_install_core_output="$(RETROFX_HOME="$pack_home" run_retrofx_x11 install-pack core 2>&1)"
+assert_contains "$pack_install_core_output" "install-pack 'core':"
+pack_c64_profile="$pack_home/profiles/user/c64.toml"
+require_file "$pack_c64_profile"
+pack_c64_asset_dir="$pack_home/profiles/user_assets/c64"
+[[ -d "$pack_c64_asset_dir" ]] || die "install-pack core did not create user asset directory for c64"
+pack_c64_asset="$(find "$pack_c64_asset_dir" -mindepth 1 -maxdepth 1 -type f | sort | head -n1 || true)"
+[[ -n "$pack_c64_asset" && -f "$pack_c64_asset" ]] || die "install-pack core did not copy c64 palette asset"
+grep -Fq 'custom_file = "../user_assets/c64/' "$pack_c64_profile" || die "installed c64 profile did not rewrite custom_file into user_assets"
+pack_c64_rel="$(grep '^custom_file = ' "$pack_c64_profile" | head -n1 | sed -E 's/^[^"]*"([^"]+)".*$/\1/' || true)"
+[[ -n "$pack_c64_rel" ]] || die "unable to read rewritten custom_file path from installed c64 profile"
+[[ -f "$(dirname "$pack_c64_profile")/$pack_c64_rel" ]] || die "rewritten custom_file path does not resolve from installed c64 profile"
+pack_apply_c64_output="$(RETROFX_HOME="$pack_home" run_retrofx_x11 apply c64 2>&1)"
+assert_not_contains "$pack_apply_c64_output" "custom palette file not found"
+require_file "$pack_home/active/profile.toml"
+pack_reinstall_core_output="$(RETROFX_HOME="$pack_home" run_retrofx_x11 install-pack core 2>&1)"
+assert_contains "$pack_reinstall_core_output" "copied=0"
+rm -f "$pack_c64_asset"
+missing_pack_asset_selfcheck_output="$(RETROFX_HOME="$pack_home" run_retrofx_x11 self-check 2>&1 || true)"
+assert_contains "$missing_pack_asset_selfcheck_output" "active source profile missing source asset for palette.custom_file"
+if RETROFX_HOME="$pack_home" run_retrofx_x11 self-check >/dev/null 2>&1; then
+  die "self-check should fail when relocated c64 asset is missing"
+fi
+missing_pack_asset_apply_output="$(RETROFX_HOME="$pack_home" run_retrofx_x11 apply c64 2>&1 || true)"
+assert_contains "$missing_pack_asset_apply_output" "custom palette file not found"
+
 log "compatibility-check command runs and reports checks"
 compat_output=""
 compat_rc=0

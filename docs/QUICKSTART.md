@@ -81,8 +81,11 @@ This affects apps launched from that shell/session only. Plasma/GNOME defaults r
 ./scripts/retrofx import base16 tests/fixtures/base16.json --name base16-demo
 ./scripts/retrofx export base16 base16-demo /tmp/base16-demo.json
 ./scripts/retrofx gallery
+./scripts/retrofx install-pack core
 ./scripts/retrofx install-pack community
 ```
+
+Pack-installed profiles are copied into `profiles/user/`. If a pack profile depends on a local asset such as a custom palette, RetroFX copies that asset into `profiles/user_assets/<profile-id>/` and rewrites the installed profile so it remains self-contained.
 
 ## Wayland Note (Degraded Mode)
 

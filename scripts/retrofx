@@ -31,6 +31,7 @@ readonly ROOT_DIR="$(resolve_runtime_root)"
 readonly SCRIPT_DIR="$ROOT_DIR/scripts"
 readonly PROFILES_DIR="$ROOT_DIR/profiles"
 readonly PROFILES_USER_DIR="$PROFILES_DIR/user"
+readonly PROFILES_USER_ASSETS_DIR="$PROFILES_DIR/user_assets"
 readonly PROFILES_PACKS_DIR="$PROFILES_DIR/packs"
 readonly TEMPLATES_DIR="$ROOT_DIR/templates"
 readonly ACTIVE_DIR="$ROOT_DIR/active"
@@ -2170,6 +2171,211 @@ resolve_custom_palette_path() {
   printf '%s/%s' "$profile_dir" "$custom_path"
 }
 
+profile_id_from_path() {
+  local profile_path="$1"
+  local profile_id
+
+  profile_id="$(basename "$profile_path")"
+  profile_id="${profile_id%.toml}"
+  printf '%s' "$profile_id"
+}
+
+asset_field_slug() {
+  local field_key="$1"
+  printf '%s' "$field_key" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9._-' '-'
+}
+
+build_relocated_profile_asset_name() {
+  local field_key="$1"
+  local src_path="$2"
+  local base_name field_slug
+
+  base_name="$(slugify_filename "$(basename "$src_path")")"
+  field_slug="$(asset_field_slug "$field_key")"
+  printf '%s-%s' "$field_slug" "$base_name"
+}
+
+collect_profile_asset_specs_for_loaded_profile() {
+  local -n out_ref="$1"
+  local resolved_path=""
+
+  out_ref=()
+
+  if [[ "$CFG_palette_kind" == "custom" && -n "$CFG_palette_custom_file" ]]; then
+    resolved_path="$(resolve_custom_palette_path || true)"
+    out_ref+=("palette.custom_file|$CFG_palette_custom_file|$resolved_path")
+  fi
+}
+
+rewrite_toml_string_key_value() {
+  local file_path="$1"
+  local key="$2"
+  local new_value="$3"
+  local tmp_file=""
+  local line
+  local replaced=0
+
+  tmp_file="$(mktemp "$(dirname -- "$file_path")/.rewrite.XXXXXX")"
+
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    if [[ "$replaced" -eq 0 && "$line" =~ ^([[:space:]]*)$key[[:space:]]*= ]]; then
+      printf '%s%s = "%s"\n' "${BASH_REMATCH[1]}" "$key" "$(toml_escape_string "$new_value")" >>"$tmp_file"
+      replaced=1
+    else
+      printf '%s\n' "$line" >>"$tmp_file"
+    fi
+  done <"$file_path"
+
+  if [[ "$replaced" -ne 1 ]]; then
+    rm -f "$tmp_file"
+    return 1
+  fi
+
+  mv "$tmp_file" "$file_path"
+}
+
+install_pack_profile_to_user() {
+  local src_profile="$1"
+  local dest_profile="$2"
+  local profile_id=""
+  local asset_dir=""
+  local tmp_profile=""
+  local tmp_asset_dir=""
+  local entry field_key original_ref resolved_path dest_asset_name dest_asset_path new_rel_path
+  local key_name=""
+  local -a asset_specs=()
+
+  if ! (load_profile "$src_profile" >/dev/null 2>&1); then
+    warn "install-pack: profile failed validation and was not installed: $src_profile"
+    return 1
+  fi
+  load_profile "$src_profile"
+  collect_profile_asset_specs_for_loaded_profile asset_specs
+
+  profile_id="$(profile_id_from_path "$dest_profile")"
+
+  if ((${#asset_specs[@]} == 0)); then
+    cp -a "$src_profile" "$dest_profile"
+    return 0
+  fi
+
+  asset_dir="$PROFILES_USER_ASSETS_DIR/$profile_id"
+  if [[ -e "$asset_dir" ]]; then
+    warn "install-pack: refusing to overwrite existing user asset directory: $asset_dir"
+    return 1
+  fi
+
+  mkdir -p "$PROFILES_USER_DIR" "$PROFILES_USER_ASSETS_DIR"
+  tmp_profile="$(mktemp "$PROFILES_USER_DIR/.install-pack.$profile_id.XXXXXX.toml")"
+  cp -a "$src_profile" "$tmp_profile"
+  tmp_asset_dir="$(mktemp -d "$PROFILES_USER_ASSETS_DIR/.install-pack.$profile_id.XXXXXX")"
+
+  for entry in "${asset_specs[@]}"; do
+    field_key="${entry%%|*}"
+    original_ref="${entry#*|}"
+    original_ref="${original_ref%%|*}"
+    resolved_path="${entry##*|}"
+
+    if [[ -z "$resolved_path" || ! -f "$resolved_path" ]]; then
+      warn "install-pack: referenced asset is missing for $src_profile ($field_key -> ${original_ref:-unset})"
+      rm -f "$tmp_profile"
+      rm -rf "$tmp_asset_dir"
+      return 1
+    fi
+
+    dest_asset_name="$(build_relocated_profile_asset_name "$field_key" "$resolved_path")"
+    dest_asset_path="$tmp_asset_dir/$dest_asset_name"
+    cp -a "$resolved_path" "$dest_asset_path"
+    new_rel_path="../user_assets/$profile_id/$dest_asset_name"
+
+    case "$field_key" in
+      palette.custom_file)
+        key_name="custom_file"
+        ;;
+      *)
+        warn "install-pack: unsupported relocatable asset field '$field_key'"
+        rm -f "$tmp_profile"
+        rm -rf "$tmp_asset_dir"
+        return 1
+        ;;
+    esac
+
+    if ! rewrite_toml_string_key_value "$tmp_profile" "$key_name" "$new_rel_path"; then
+      warn "install-pack: failed to rewrite $field_key in $tmp_profile"
+      rm -f "$tmp_profile"
+      rm -rf "$tmp_asset_dir"
+      return 1
+    fi
+  done
+
+  mv "$tmp_profile" "$dest_profile"
+  mv "$tmp_asset_dir" "$asset_dir"
+  return 0
+}
+
+validate_profile_source_assets() {
+  local source_profile_path="$1"
+  local snapshot_profile_path="$2"
+  local label="$3"
+  local -n missing_ref="$4"
+  local -n invalid_ref="$5"
+  local inspect_path=""
+  local source_profile_missing=0
+  local entry field_key resolved_path original_ref
+  local -a asset_specs=()
+
+  inspect_path="$source_profile_path"
+  if [[ -z "$inspect_path" || ! -f "$inspect_path" ]]; then
+    inspect_path="$snapshot_profile_path"
+    source_profile_missing=1
+  fi
+
+  if [[ -z "$inspect_path" || ! -f "$inspect_path" ]]; then
+    return 0
+  fi
+
+  if ! (load_profile "$inspect_path" >/dev/null 2>&1); then
+    invalid_ref+=("$label profile failed to parse: $inspect_path")
+    return 1
+  fi
+  load_profile "$inspect_path"
+  collect_profile_asset_specs_for_loaded_profile asset_specs
+
+  if [[ "$source_profile_missing" -eq 1 ]]; then
+    if ((${#asset_specs[@]} > 0)); then
+      invalid_ref+=("$label source profile is missing; cannot verify referenced assets: ${source_profile_path:-unset}")
+      return 1
+    fi
+    return 0
+  fi
+
+  for entry in "${asset_specs[@]}"; do
+    field_key="${entry%%|*}"
+    original_ref="${entry#*|}"
+    original_ref="${original_ref%%|*}"
+    resolved_path="${entry##*|}"
+
+    if [[ -z "$resolved_path" || ! -f "$resolved_path" ]]; then
+      missing_ref+=("$label missing source asset for $field_key: ${resolved_path:-$original_ref}")
+      continue
+    fi
+
+    case "$field_key" in
+      palette.custom_file)
+        if ! load_palette_hex_lines "$resolved_path" "$CFG_palette_size"; then
+          invalid_ref+=("$label invalid source asset for $field_key: $resolved_path")
+        fi
+        ;;
+    esac
+  done
+
+  if ((${#missing_ref[@]} > 0 || ${#invalid_ref[@]} > 0)); then
+    return 1
+  fi
+
+  return 0
+}
+
 declare -a PALETTE_HEX_LINES=()
 
 load_palette_hex_lines() {
@@ -4190,7 +4396,7 @@ cmd_gallery() {
 cmd_install_pack() {
   local pack_name="$1"
   local pack_dir="$PROFILES_PACKS_DIR/$pack_name"
-  local src base dest copied=0 skipped=0 count=0
+  local src base dest copied=0 skipped=0 count=0 failures=0
 
   [[ -d "$pack_dir" ]] || die "pack not found: $pack_name"
   mkdir -p "$PROFILES_USER_DIR"
@@ -4204,8 +4410,12 @@ cmd_install_pack() {
       skipped=$((skipped + 1))
       continue
     fi
-    cp -a "$src" "$dest"
-    copied=$((copied + 1))
+    if install_pack_profile_to_user "$src" "$dest"; then
+      copied=$((copied + 1))
+    else
+      skipped=$((skipped + 1))
+      failures=$((failures + 1))
+    fi
   done < <(find "$pack_dir" -mindepth 1 -maxdepth 1 -type f -name '*.toml' | sort)
 
   if [[ "$count" -eq 0 ]]; then
@@ -4213,7 +4423,10 @@ cmd_install_pack() {
     return 0
   fi
 
-  log "install-pack '$pack_name': copied=$copied skipped=$skipped destination=$PROFILES_USER_DIR"
+  log "install-pack '$pack_name': copied=$copied skipped=$skipped destination=$PROFILES_USER_DIR assets=$PROFILES_USER_ASSETS_DIR"
+  if [[ "$failures" -gt 0 ]]; then
+    return 1
+  fi
 }
 
 cmd_export() {
@@ -5552,9 +5765,10 @@ copy_install_payload() {
     fi
   done < <(iter_install_payload_items)
 
-  # User profiles are preserved from the destination tree; do not overwrite from source.
+  # User-managed profiles/assets are preserved from the destination tree; do not overwrite from source.
   rm -rf "$stage_dir/profiles/user"
-  mkdir -p "$stage_dir/profiles/user" "$stage_dir/active" "$stage_dir/state"
+  rm -rf "$stage_dir/profiles/user_assets"
+  mkdir -p "$stage_dir/profiles/user" "$stage_dir/profiles/user_assets" "$stage_dir/active" "$stage_dir/state"
 }
 
 backup_existing_user_profiles() {
@@ -5562,8 +5776,13 @@ backup_existing_user_profiles() {
   local out_dir="$2"
 
   if dir_has_files "$existing_home/profiles/user"; then
-    mkdir -p "$out_dir"
-    cp -a "$existing_home/profiles/user"/. "$out_dir"/
+    mkdir -p "$out_dir/user"
+    cp -a "$existing_home/profiles/user"/. "$out_dir/user"/
+  fi
+
+  if dir_has_files "$existing_home/profiles/user_assets"; then
+    mkdir -p "$out_dir/user_assets"
+    cp -a "$existing_home/profiles/user_assets"/. "$out_dir/user_assets"/
   fi
 }
 
@@ -5584,6 +5803,11 @@ preserve_existing_install_state() {
   if [[ -d "$existing_home/profiles/user" ]]; then
     mkdir -p "$stage_dir/profiles/user"
     cp -a "$existing_home/profiles/user"/. "$stage_dir/profiles/user"/
+  fi
+
+  if [[ -d "$existing_home/profiles/user_assets" ]]; then
+    mkdir -p "$stage_dir/profiles/user_assets"
+    cp -a "$existing_home/profiles/user_assets"/. "$stage_dir/profiles/user_assets"/
   fi
 }
 
@@ -5792,10 +6016,15 @@ cmd_uninstall() {
 
   append_home_log "$target_home" "uninstall" "-" "start" "keep_profiles=$keep_profiles"
 
-  if [[ "$keep_profiles" == "true" ]] && dir_has_files "$target_home/profiles/user"; then
+  if [[ "$keep_profiles" == "true" ]] && (dir_has_files "$target_home/profiles/user" || dir_has_files "$target_home/profiles/user_assets"); then
     kept_profiles_dir="${target_home}-profiles-$(now_ts_compact)"
     mkdir -p "$kept_profiles_dir"
-    cp -a "$target_home/profiles/user" "$kept_profiles_dir/user"
+    if [[ -d "$target_home/profiles/user" ]]; then
+      cp -a "$target_home/profiles/user" "$kept_profiles_dir/user"
+    fi
+    if [[ -d "$target_home/profiles/user_assets" ]]; then
+      cp -a "$target_home/profiles/user_assets" "$kept_profiles_dir/user_assets"
+    fi
   fi
 
   if [[ -e "$DEFAULT_LAUNCHER_PATH" ]] && (launcher_is_managed "$DEFAULT_LAUNCHER_PATH" || launcher_points_to_home "$DEFAULT_LAUNCHER_PATH" "$target_home"); then
@@ -5905,6 +6134,7 @@ cmd_version() {
 
 cmd_self_check() {
   local profile_path
+  local active_source_profile=""
   local ok=1
   local profile_count=0
   local -a missing=()
@@ -5913,6 +6143,8 @@ cmd_self_check() {
   local checksum_expected checksum_current
   local manifest_path=""
   local manifest_tmp=""
+  local -a source_missing=()
+  local -a source_invalid=()
   local f err
 
   ensure_dirs
@@ -5926,6 +6158,23 @@ cmd_self_check() {
       append_issue_list missing "${ARTIFACT_CHECK_MISSING[@]}"
       append_issue_list parse_errors "${ARTIFACT_CHECK_INVALID[@]}"
     fi
+
+    active_source_profile="$(
+      (
+        unset PROFILE_PATH
+        if [[ -f "$ACTIVE_DIR/profile.env" ]]; then
+          # shellcheck source=/dev/null
+          source "$ACTIVE_DIR/profile.env" >/dev/null 2>&1 || true
+        fi
+        printf '%s' "${PROFILE_PATH:-}"
+      )
+    )"
+    if ! validate_profile_source_assets "$active_source_profile" "$ACTIVE_DIR/profile.toml" "active source profile" source_missing source_invalid; then
+      ok=0
+      append_issue_list missing "${source_missing[@]}"
+      append_issue_list parse_errors "${source_invalid[@]}"
+    fi
+
     [[ -n "$manifest_tmp" ]] && rm -f "$manifest_tmp"
   else
     parse_errors+=("active artifact manifest is missing and fallback contract could not be derived")

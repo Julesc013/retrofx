@@ -38,7 +38,9 @@ Profiles are TOML files under:
 - `size` = integer `2..256`
 - `custom_file` = optional path (required for `kind = "custom"`)
   - custom palettes are limited to `2..32` colors
+  - relative paths resolve relative to the profile file location
   - for structured kinds, size must match kind (`mono2=2`, `cube64=64`, etc.)
+  - `install-pack` rewrites pack-installed `custom_file` references to copied assets under `profiles/user_assets/<profile-id>/`
 
 ### `[effects]` (required)
 

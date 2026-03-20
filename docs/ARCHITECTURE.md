@@ -17,6 +17,7 @@ RetroFX is a profile-driven renderer that generates deterministic session-local 
 - `templates/*`: static templates rendered into active artifacts.
 - `profiles/packs/core/`: curated built-in profile pack.
 - `profiles/user/`: user-generated profiles from the wizard.
+- `profiles/user_assets/`: copied support assets for user-owned profiles installed from packs.
 - `active/`: currently active generated config set.
 - `state/manifests/current.manifest`: artifact contract for the current active state.
 - `state/manifests/last_good.manifest`: artifact contract for the rollback snapshot.
@@ -45,6 +46,17 @@ RetroFX is a profile-driven renderer that generates deterministic session-local 
    - `tty` and `tuigreet` by profile scope
 9. Write `state/manifests/current.manifest` from the resolved applied state.
 10. Persist new `state/last_good/` snapshot and matching `state/manifests/last_good.manifest`.
+
+## Pack Install Relocation
+
+- `install-pack <packname>` copies pack profiles into `profiles/user/` without leaving them dependent on the original pack directory.
+- When a pack profile references a local support file (currently `palette.custom_file`), RetroFX:
+  - resolves the source asset from the original profile location
+  - copies it into `profiles/user_assets/<profile-id>/`
+  - rewrites the installed user profile to reference the copied asset via a stable relative path
+- Reinstall is conservative:
+  - existing user profiles are not overwritten
+  - existing `profiles/user_assets/<profile-id>/` directories are not overwritten implicitly
 
 ## Failure Handling
 

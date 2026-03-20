@@ -57,6 +57,14 @@ To return to passthrough:
 - `self-check` now reports these as missing required artifacts instead of treating the whole tree generically.
 - `repair` restores the last known-good snapshot when its contract still validates.
 
+## Missing Installed Profile Assets
+
+- Pack-installed or imported profiles can depend on user-owned support files such as custom palettes.
+- For pack installs, RetroFX copies these into `profiles/user_assets/<profile-id>/` and rewrites the installed profile to point there.
+- If one of those copied assets is deleted later:
+  - `retrofx apply <profile>` fails clearly
+  - `retrofx self-check` reports the missing active source asset for the current profile
+
 ## Optional / Runtime Files
 
 - Files such as `active/picom-compat.log` are treated as runtime-ephemeral.

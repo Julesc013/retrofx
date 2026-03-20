@@ -35,6 +35,7 @@ After install:
 - launcher: `~/.local/bin/retrofx`
 - home: `~/.config/retrofx`
 - runtime dirs: `active/`, `state/`, `profiles/`, `templates/`, etc.
+- user-owned pack assets: `profiles/user_assets/`
 - `retrofx status` reports runtime state separately from install-asset health
 
 Check mode and active profile:
@@ -44,6 +45,8 @@ retrofx status
 ```
 
 Installed mode keeps managed scripts/templates/backend assets under the install home. These are validated separately from `active/` runtime artifacts so an incomplete install does not get mistaken for a broken applied profile.
+
+`install-pack <packname>` copies pack profiles into `profiles/user/`. If a pack profile references local support files such as a custom palette, RetroFX also copies those assets into `profiles/user_assets/<profile-id>/` and rewrites the installed profile to use the copied asset path.
 
 ## Uninstall
 
