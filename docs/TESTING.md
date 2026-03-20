@@ -22,8 +22,10 @@ Pass criteria:
   - invalid Base16 colors are rejected
 - `--version` outputs version + capability summary
 - `doctor --json` emits machine-readable diagnostics with required keys
-- `self-check` detects missing/corrupted state in isolated runtime copy
-- `repair` restores `active/` from `state/last_good/`
+- `self-check` validates required generated artifacts via `state/manifests/*.manifest`
+- zero-byte optional/runtime artifacts do not fail `self-check`
+- missing or zero-byte required generated artifacts do fail `self-check`
+- `repair` restores `active/` from a manifest-valid `state/last_good/`
 - font-enabled profile paths generate:
   - `active/fontconfig.conf` (when requested)
   - `active/alacritty.toml`
@@ -87,6 +89,15 @@ RETROFX_TTY_MODE=mock ./scripts/retrofx apply <profile-with-tty-scope>
 ```
 
 Mock mode still validates palette generation, semantic mapping, and rollback files.
+
+## Integrity Regression Cases
+
+`scripts/test.sh` includes explicit integrity regressions for:
+
+- zero-byte optional runtime artifacts such as `active/picom-compat.log`
+- missing required generated artifacts such as `active/fontconfig.conf`
+- zero-byte required generated artifacts such as `active/shader.glsl`
+- manifest-aware `repair` restoring from `state/last_good/`
 
 ## Troubleshooting
 

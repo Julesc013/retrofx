@@ -18,6 +18,8 @@ RetroFX is a profile-driven renderer that generates deterministic session-local 
 - `profiles/packs/core/`: curated built-in profile pack.
 - `profiles/user/`: user-generated profiles from the wizard.
 - `active/`: currently active generated config set.
+- `state/manifests/current.manifest`: artifact contract for the current active state.
+- `state/manifests/last_good.manifest`: artifact contract for the rollback snapshot.
 - `state/backups/`: timestamped active snapshots (pruned to last N, default 10).
 - `state/last_good/`: canonical rollback snapshot for failed apply.
 - `state/logs/retrofx.log`: append-only audit log.
@@ -41,7 +43,8 @@ RetroFX is a profile-driven renderer that generates deterministic session-local 
 8. Apply scoped backends:
    - `x11-picom` only outside Wayland
    - `tty` and `tuigreet` by profile scope
-9. Persist new `state/last_good/` snapshot.
+9. Write `state/manifests/current.manifest` from the resolved applied state.
+10. Persist new `state/last_good/` snapshot and matching `state/manifests/last_good.manifest`.
 
 ## Failure Handling
 
@@ -50,6 +53,19 @@ RetroFX is a profile-driven renderer that generates deterministic session-local 
 - TTY backend failure: treated as critical when scoped, triggers rollback.
 - Tuigreet backend failure: non-critical, logged warning only.
 - Logging failures are best-effort and never fail commands.
+
+## Integrity Contract
+
+- RetroFX records a small artifact contract under `state/manifests/`.
+- The contract is generated from the resolved apply result, not from docs.
+- File classes are explicit:
+  - required generated: must exist and be non-empty for the applied state
+  - optional generated: may be absent without failing integrity
+  - runtime ephemeral: may be absent or zero-byte without failing integrity
+  - ignored log/cache: tracked for clarity but not treated as health failures
+- `self-check` validates `active/` and `state/last_good/` against these manifests when present.
+- If a manifest is missing, `self-check` falls back to a conservative contract derived from the snapshot and warns that integrity metadata is incomplete.
+- `repair` prefers a manifest-valid `last_good` snapshot; otherwise it falls back to a degraded passthrough recovery state.
 
 ## Rendering Pipeline (Formal Order)
 

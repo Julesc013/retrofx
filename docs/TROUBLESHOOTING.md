@@ -9,6 +9,8 @@ If state looks broken:
 ./scripts/retrofx repair
 ```
 
+`self-check` validates the current state against the artifact contract in `state/manifests/` when available. If a manifest is missing, it falls back to a conservative snapshot-derived check and warns that integrity metadata is incomplete.
+
 Before first-time setup on a new machine:
 
 ```bash
@@ -46,6 +48,20 @@ To return to passthrough:
   - `./scripts/retrofx self-check`
 - On failure, RetroFX rolls back to `state/last_good/`.
 - Ensure templates are intact under `templates/`.
+
+## Missing Required Generated Artifacts
+
+- Typical examples:
+  - `active/fontconfig.conf` for a font-enabled profile
+  - `active/shader.glsl` or `active/picom.conf` for an X11 apply
+- `self-check` now reports these as missing required artifacts instead of treating the whole tree generically.
+- `repair` restores the last known-good snapshot when its contract still validates.
+
+## Optional / Runtime Files
+
+- Files such as `active/picom-compat.log` are treated as runtime-ephemeral.
+- They may be missing or zero-byte without failing `self-check` on their own.
+- Log/cache files under `state/` are not treated as direct health failures.
 
 ## X11 vs Wayland Confusion
 

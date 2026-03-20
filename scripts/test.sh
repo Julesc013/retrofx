@@ -6,6 +6,7 @@ ROOT_DIR="$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)"
 RETROFX="$ROOT_DIR/scripts/retrofx"
 ACTIVE_DIR="$ROOT_DIR/active"
 STATE_DIR="$ROOT_DIR/state"
+MANIFESTS_DIR="$STATE_DIR/manifests"
 PROFILES_DIR="$ROOT_DIR/profiles"
 TEST_TMP_DIR="$STATE_DIR/tests"
 BASE16_FIXTURE="$ROOT_DIR/tests/fixtures/base16.json"
@@ -98,6 +99,8 @@ validate_active_files() {
   require_file "$ACTIVE_DIR/semantic.env"
   require_file "$ACTIVE_DIR/tty-palette.env"
   require_file "$ACTIVE_DIR/tty-palette.txt"
+  require_file "$MANIFESTS_DIR/current.manifest"
+  require_file "$MANIFESTS_DIR/last_good.manifest"
 
   if [[ "$mode" == "wayland" ]]; then
     [[ ! -f "$ACTIVE_DIR/picom.conf" ]] || die "wayland active should not contain picom.conf"
@@ -965,6 +968,30 @@ assert_contains "$checksum_selfcheck_output" "Suggested action: run \`retrofx re
 run_retrofx_x11 repair
 run_retrofx_x11 self-check
 
+log "self-check ignores zero-byte optional runtime artifacts"
+run_retrofx_x11 apply crt-green-p1-4band
+: >"$ACTIVE_DIR/picom-compat.log"
+run_retrofx_x11 self-check
+
+log "self-check detects missing required generated fontconfig artifact"
+run_retrofx_x11 apply crt-green-fonts-aa
+rm -f "$ACTIVE_DIR/fontconfig.conf"
+missing_fontconfig_output="$(run_retrofx_x11 self-check 2>&1 || true)"
+assert_contains "$missing_fontconfig_output" "Missing required artifacts:"
+assert_contains "$missing_fontconfig_output" "active/fontconfig.conf"
+if run_retrofx_x11 self-check >/dev/null 2>&1; then
+  die "self-check should fail when active/fontconfig.conf is missing"
+fi
+
+log "self-check detects zero-byte required generated shader artifact"
+run_retrofx_x11 apply crt-green-p1-4band
+: >"$ACTIVE_DIR/shader.glsl"
+zero_shader_output="$(run_retrofx_x11 self-check 2>&1 || true)"
+assert_contains "$zero_shader_output" "active/shader.glsl is zero-byte"
+if run_retrofx_x11 self-check >/dev/null 2>&1; then
+  die "self-check should fail for zero-byte active/shader.glsl"
+fi
+
 log "sanity-perf command runs without failure"
 sanity_perf_output="$(run_retrofx_x11 sanity-perf 2>&1)"
 assert_contains "$sanity_perf_output" "sanity-perf"
@@ -1000,16 +1027,16 @@ HOME="$install_home" run_retrofx_x11 uninstall --yes
 [[ ! -e "$install_home/.local/bin/retrofx" ]] || die "uninstall did not remove launcher"
 
 log "repair restores active from last_good"
-run_retrofx_x11 apply crt-green-p1-4band
-require_file "$STATE_DIR/last_good/profile.toml"
-expected_repair_hash="$(hash_file "$STATE_DIR/last_good/profile.toml")"
-printf 'corrupted=true\n' >"$ACTIVE_DIR/profile.toml"
+run_retrofx_x11 apply crt-green-fonts-aa
+require_file "$STATE_DIR/last_good/fontconfig.conf"
+expected_repair_hash="$(hash_file "$STATE_DIR/last_good/fontconfig.conf")"
+rm -f "$ACTIVE_DIR/fontconfig.conf"
 if run_retrofx_x11 self-check >/dev/null 2>&1; then
-  die "self-check should fail for corrupted active/profile.toml"
+  die "self-check should fail for missing required fontconfig.conf"
 fi
 run_retrofx_x11 repair
-repaired_hash="$(hash_file "$ACTIVE_DIR/profile.toml")"
-[[ "$repaired_hash" == "$expected_repair_hash" ]] || die "repair did not restore last_good profile state"
+repaired_hash="$(hash_file "$ACTIVE_DIR/fontconfig.conf")"
+[[ "$repaired_hash" == "$expected_repair_hash" ]] || die "repair did not restore last_good fontconfig state"
 run_retrofx_x11 self-check
 
 log "verifying apply -> off returns to passthrough baseline"

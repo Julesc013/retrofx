@@ -35,6 +35,7 @@ readonly PROFILES_PACKS_DIR="$PROFILES_DIR/packs"
 readonly TEMPLATES_DIR="$ROOT_DIR/templates"
 readonly ACTIVE_DIR="$ROOT_DIR/active"
 readonly STATE_DIR="$ROOT_DIR/state"
+readonly MANIFESTS_DIR="$STATE_DIR/manifests"
 readonly BACKUPS_DIR="$STATE_DIR/backups"
 readonly LAST_GOOD_DIR="$STATE_DIR/last_good"
 readonly LOGS_DIR="$STATE_DIR/logs"
@@ -51,6 +52,9 @@ readonly XS_MARKER_KEY="X-RetroFX-Managed=true"
 readonly VERSION_FILE="$ROOT_DIR/VERSION"
 readonly APPLY_SIG_FILE_NAME="apply-input.sha256"
 readonly ACTIVE_CHECKSUM_FILE="$STATE_DIR/active_checksum"
+readonly CURRENT_ARTIFACT_MANIFEST="$MANIFESTS_DIR/current.manifest"
+readonly LAST_GOOD_ARTIFACT_MANIFEST="$MANIFESTS_DIR/last_good.manifest"
+readonly ARTIFACT_MANIFEST_VERSION="1"
 
 BACKUP_KEEP="${RETROFX_BACKUP_KEEP:-$BACKUP_KEEP_DEFAULT}"
 if [[ ! "$BACKUP_KEEP" =~ ^[0-9]+$ ]] || ((BACKUP_KEEP < 1)); then
@@ -70,6 +74,24 @@ declare TXN_ACTIVE=0
 declare TXN_STAGE_DIR=""
 declare LAST_BACKUP_PATH=""
 declare SAFE_MODE_OVERRIDE_SUMMARY=""
+declare MANIFEST_LOAD_ERROR=""
+declare MANIFEST_VERSION=""
+declare MANIFEST_GENERATED_AT=""
+declare MANIFEST_EXECUTION_MODE=""
+declare MANIFEST_PROFILE_ID=""
+declare MANIFEST_SESSION_TYPE=""
+declare MANIFEST_SCOPE_X11=""
+declare MANIFEST_SCOPE_TTY=""
+declare MANIFEST_SCOPE_TUIGREET=""
+declare MANIFEST_COMPOSITOR_REQUIRED=""
+declare MANIFEST_ARTIFACT_ROOT=""
+declare MANIFEST_APPLY_INPUT_HASH=""
+declare -a MANIFEST_REQUIRED_FILES=()
+declare -a MANIFEST_OPTIONAL_FILES=()
+declare -a MANIFEST_RUNTIME_FILES=()
+declare -a MANIFEST_IGNORED_STATE_GLOBS=()
+declare -a ARTIFACT_CHECK_MISSING=()
+declare -a ARTIFACT_CHECK_INVALID=()
 
 declare CFG_PROFILE_PATH=""
 declare CFG_name=""
@@ -251,6 +273,315 @@ read_last_good_checksum() {
   printf '%s' "$digest"
 }
 
+reset_loaded_artifact_manifest() {
+  MANIFEST_LOAD_ERROR=""
+  MANIFEST_VERSION=""
+  MANIFEST_GENERATED_AT=""
+  MANIFEST_EXECUTION_MODE=""
+  MANIFEST_PROFILE_ID=""
+  MANIFEST_SESSION_TYPE=""
+  MANIFEST_SCOPE_X11=""
+  MANIFEST_SCOPE_TTY=""
+  MANIFEST_SCOPE_TUIGREET=""
+  MANIFEST_COMPOSITOR_REQUIRED=""
+  MANIFEST_ARTIFACT_ROOT=""
+  MANIFEST_APPLY_INPUT_HASH=""
+  MANIFEST_REQUIRED_FILES=()
+  MANIFEST_OPTIONAL_FILES=()
+  MANIFEST_RUNTIME_FILES=()
+  MANIFEST_IGNORED_STATE_GLOBS=()
+}
+
+write_artifact_manifest_file() {
+  local out_file="$1"
+  local artifact_root="$2"
+  local profile_id="$3"
+  local session_type="$4"
+  local apply_input_hash="${5:-}"
+  local compositor_required="false"
+  local rel
+  local -a required_files=(
+    "profile.toml"
+    "profile.env"
+    "xresources"
+    "Xresources"
+    "alacritty.toml"
+    "semantic.env"
+    "tty-palette.env"
+    "tty-palette.txt"
+    "meta"
+    "$APPLY_SIG_FILE_NAME"
+  )
+
+  if compositor_required_current_profile; then
+    compositor_required="true"
+  fi
+
+  {
+    printf 'manifest_version=%s\n' "$ARTIFACT_MANIFEST_VERSION"
+    printf 'generated_at=%s\n' "$(now_ts)"
+    printf 'execution_mode=%s\n' "$(execution_mode)"
+    printf 'profile_id=%s\n' "$profile_id"
+    printf 'artifact_root=%s\n' "$artifact_root"
+    printf 'session_type=%s\n' "$session_type"
+    printf 'scope_x11=%s\n' "$CFG_scope_x11"
+    printf 'scope_tty=%s\n' "$CFG_scope_tty"
+    printf 'scope_tuigreet=%s\n' "$CFG_scope_tuigreet"
+    printf 'compositor_required=%s\n' "$compositor_required"
+    if [[ -n "$apply_input_hash" ]]; then
+      printf 'apply_input_hash=%s\n' "$apply_input_hash"
+    fi
+    printf 'current_manifest_rel=manifests/current.manifest\n'
+    printf 'last_good_manifest_rel=manifests/last_good.manifest\n'
+    for rel in "${required_files[@]}"; do
+      printf 'required_file=%s\n' "$rel"
+    done
+    if [[ "$session_type" != "wayland" ]]; then
+      printf 'required_file=picom.conf\n'
+      printf 'required_file=shader.glsl\n'
+      printf 'runtime_file=picom-compat.log\n'
+    fi
+    if fonts_requested; then
+      printf 'required_file=fontconfig.conf\n'
+    fi
+    if [[ "$CFG_scope_tuigreet" == "true" ]]; then
+      printf 'optional_file=tuigreet.conf\n'
+    fi
+    printf 'ignored_state_glob=logs/retrofx.log\n'
+    printf 'ignored_state_glob=compat-profile.*\n'
+    printf 'ignored_state_glob=compat-stage-*\n'
+    printf 'ignored_state_glob=hash-manifest.*\n'
+    printf 'ignored_state_glob=tty-backups/*\n'
+  } >"$out_file"
+}
+
+copy_artifact_manifest_with_root() {
+  local src_manifest="$1"
+  local dst_manifest="$2"
+  local new_root="$3"
+  local line
+
+  [[ -f "$src_manifest" ]] || return 1
+
+  : >"$dst_manifest"
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    case "$line" in
+      artifact_root=*)
+        printf 'artifact_root=%s\n' "$new_root" >>"$dst_manifest"
+        ;;
+      generated_at=*)
+        printf 'generated_at=%s\n' "$(now_ts)" >>"$dst_manifest"
+        ;;
+      *)
+        printf '%s\n' "$line" >>"$dst_manifest"
+        ;;
+    esac
+  done <"$src_manifest"
+}
+
+write_current_artifact_manifest() {
+  local profile_id="$1"
+  local session_type="$2"
+  local apply_input_hash="${3:-}"
+  local tmp_manifest=""
+
+  ensure_dirs
+  tmp_manifest="$(mktemp "$MANIFESTS_DIR/current.XXXXXX")"
+  if ! write_artifact_manifest_file "$tmp_manifest" "current" "$profile_id" "$session_type" "$apply_input_hash"; then
+    rm -f "$tmp_manifest"
+    return 1
+  fi
+  mv "$tmp_manifest" "$CURRENT_ARTIFACT_MANIFEST"
+}
+
+snapshot_last_good_artifact_manifest() {
+  local tmp_manifest=""
+
+  ensure_dirs
+  [[ -f "$CURRENT_ARTIFACT_MANIFEST" ]] || return 1
+  tmp_manifest="$(mktemp "$MANIFESTS_DIR/last_good.XXXXXX")"
+  if ! copy_artifact_manifest_with_root "$CURRENT_ARTIFACT_MANIFEST" "$tmp_manifest" "last_good"; then
+    rm -f "$tmp_manifest"
+    return 1
+  fi
+  mv "$tmp_manifest" "$LAST_GOOD_ARTIFACT_MANIFEST"
+}
+
+sync_current_artifact_manifest_from_last_good() {
+  local tmp_manifest=""
+
+  ensure_dirs
+  [[ -f "$LAST_GOOD_ARTIFACT_MANIFEST" ]] || return 1
+  tmp_manifest="$(mktemp "$MANIFESTS_DIR/current-from-last-good.XXXXXX")"
+  if ! copy_artifact_manifest_with_root "$LAST_GOOD_ARTIFACT_MANIFEST" "$tmp_manifest" "current"; then
+    rm -f "$tmp_manifest"
+    return 1
+  fi
+  mv "$tmp_manifest" "$CURRENT_ARTIFACT_MANIFEST"
+}
+
+load_artifact_manifest() {
+  local manifest_path="$1"
+  local line key value
+
+  reset_loaded_artifact_manifest
+  [[ -f "$manifest_path" ]] || {
+    MANIFEST_LOAD_ERROR="missing manifest: $manifest_path"
+    return 1
+  }
+
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    line="${line%$'\r'}"
+    line="$(trim "$line")"
+    [[ -z "$line" || "$line" == \#* ]] && continue
+    if [[ "$line" != *=* ]]; then
+      MANIFEST_LOAD_ERROR="invalid manifest line: $line"
+      return 1
+    fi
+    key="${line%%=*}"
+    value="${line#*=}"
+    case "$key" in
+      manifest_version)
+        MANIFEST_VERSION="$value"
+        ;;
+      generated_at)
+        MANIFEST_GENERATED_AT="$value"
+        ;;
+      execution_mode)
+        MANIFEST_EXECUTION_MODE="$value"
+        ;;
+      profile_id)
+        MANIFEST_PROFILE_ID="$value"
+        ;;
+      session_type)
+        MANIFEST_SESSION_TYPE="$value"
+        ;;
+      scope_x11)
+        MANIFEST_SCOPE_X11="$value"
+        ;;
+      scope_tty)
+        MANIFEST_SCOPE_TTY="$value"
+        ;;
+      scope_tuigreet)
+        MANIFEST_SCOPE_TUIGREET="$value"
+        ;;
+      compositor_required)
+        MANIFEST_COMPOSITOR_REQUIRED="$value"
+        ;;
+      artifact_root)
+        MANIFEST_ARTIFACT_ROOT="$value"
+        ;;
+      apply_input_hash)
+        MANIFEST_APPLY_INPUT_HASH="$value"
+        ;;
+      required_file)
+        MANIFEST_REQUIRED_FILES+=("$value")
+        ;;
+      optional_file)
+        MANIFEST_OPTIONAL_FILES+=("$value")
+        ;;
+      runtime_file)
+        MANIFEST_RUNTIME_FILES+=("$value")
+        ;;
+      ignored_state_glob)
+        MANIFEST_IGNORED_STATE_GLOBS+=("$value")
+        ;;
+      current_manifest_rel | last_good_manifest_rel)
+        ;;
+      *)
+        ;;
+    esac
+  done <"$manifest_path"
+
+  if [[ "$MANIFEST_VERSION" != "$ARTIFACT_MANIFEST_VERSION" ]]; then
+    MANIFEST_LOAD_ERROR="unsupported manifest version: ${MANIFEST_VERSION:-missing}"
+    return 1
+  fi
+  [[ -n "$MANIFEST_PROFILE_ID" ]] || {
+    MANIFEST_LOAD_ERROR="manifest missing profile_id"
+    return 1
+  }
+  [[ -n "$MANIFEST_SESSION_TYPE" ]] || {
+    MANIFEST_LOAD_ERROR="manifest missing session_type"
+    return 1
+  }
+  [[ -n "$MANIFEST_ARTIFACT_ROOT" ]] || {
+    MANIFEST_LOAD_ERROR="manifest missing artifact_root"
+    return 1
+  }
+  ((${#MANIFEST_REQUIRED_FILES[@]} > 0)) || {
+    MANIFEST_LOAD_ERROR="manifest has no required_file entries"
+    return 1
+  }
+
+  return 0
+}
+
+artifact_session_type_from_tree() {
+  local tree_dir="$1"
+  local session_type="x11"
+
+  if [[ -f "$tree_dir/meta" ]]; then
+    session_type="$(grep '^session_type=' "$tree_dir/meta" | head -n1 | cut -d= -f2 || true)"
+    session_type="$(trim "$session_type")"
+  fi
+
+  printf '%s' "${session_type:-x11}"
+}
+
+artifact_profile_id_from_tree() {
+  local tree_dir="$1"
+  local profile_id=""
+  local profile_meta=""
+
+  if [[ -f "$tree_dir/profile.env" ]]; then
+    profile_id="$(
+      (
+        unset PROFILE_ID
+        # shellcheck source=/dev/null
+        source "$tree_dir/profile.env" >/dev/null 2>&1 || exit 0
+        printf '%s' "${PROFILE_ID:-}"
+      )
+    )"
+  fi
+
+  if [[ -z "$profile_id" && -f "$tree_dir/meta" ]]; then
+    profile_meta="$(grep '^profile=' "$tree_dir/meta" | head -n1 | cut -d= -f2 || true)"
+    profile_meta="$(trim "$profile_meta")"
+    profile_id="${profile_meta%.toml}"
+  fi
+
+  printf '%s' "$profile_id"
+}
+
+build_artifact_manifest_from_tree() {
+  local tree_dir="$1"
+  local out_file="$2"
+  local artifact_root="$3"
+  local profile_id=""
+  local session_type=""
+  local apply_input_hash=""
+
+  [[ -f "$tree_dir/profile.toml" ]] || return 1
+  parse_profile "$tree_dir/profile.toml" >/dev/null 2>&1 || return 1
+
+  profile_id="$(artifact_profile_id_from_tree "$tree_dir")"
+  [[ -n "$profile_id" ]] || return 1
+  session_type="$(artifact_session_type_from_tree "$tree_dir")"
+
+  if [[ -f "$tree_dir/$APPLY_SIG_FILE_NAME" ]]; then
+    IFS= read -r apply_input_hash <"$tree_dir/$APPLY_SIG_FILE_NAME" || true
+    apply_input_hash="$(trim "$apply_input_hash")"
+  fi
+
+  write_artifact_manifest_file "$out_file" "$artifact_root" "$profile_id" "$session_type" "$apply_input_hash"
+}
+
+reset_artifact_validation_result() {
+  ARTIFACT_CHECK_MISSING=()
+  ARTIFACT_CHECK_INVALID=()
+}
+
 picom_version() {
   local line
   if ! command -v picom >/dev/null 2>&1; then
@@ -305,7 +636,7 @@ confirm_or_die() {
 }
 
 ensure_dirs() {
-  mkdir -p "$ACTIVE_DIR" "$STATE_DIR" "$BACKUPS_DIR" "$LOGS_DIR"
+  mkdir -p "$ACTIVE_DIR" "$STATE_DIR" "$MANIFESTS_DIR" "$BACKUPS_DIR" "$LOGS_DIR"
 }
 
 append_audit_log() {
@@ -1820,6 +2151,7 @@ active_state_complete_for_session() {
   [[ -f "$ACTIVE_DIR/tty-palette.env" ]] || return 1
   [[ -f "$ACTIVE_DIR/tty-palette.txt" ]] || return 1
   [[ -f "$ACTIVE_DIR/$APPLY_SIG_FILE_NAME" ]] || return 1
+  [[ -f "$CURRENT_ARTIFACT_MANIFEST" ]] || return 1
 
   if [[ "$session_type" == "wayland" ]]; then
     [[ ! -f "$ACTIVE_DIR/picom.conf" ]] || return 1
@@ -2597,10 +2929,144 @@ validate_picom_conf_integrity() {
   return 0
 }
 
+validate_fontconfig_integrity() {
+  local file="$1"
+  [[ -f "$file" ]] || return 1
+  [[ -s "$file" ]] || return 1
+  grep -Fq '<fontconfig>' "$file" || return 1
+  grep -Fq '</fontconfig>' "$file" || return 1
+  if grep -Eq '@[A-Z0-9_]+@' "$file"; then
+    return 1
+  fi
+  return 0
+}
+
+validate_required_artifact_file() {
+  local base_dir="$1"
+  local rel="$2"
+  local path="$base_dir/$rel"
+  local file_sig=""
+  local meta_session=""
+
+  case "$rel" in
+    profile.toml)
+      parse_profile "$path" >/dev/null 2>&1
+      ;;
+    profile.env)
+      grep -Eq '^PROFILE_ID=' "$path"
+      ;;
+    xresources | Xresources)
+      if grep -Eq '@[A-Z0-9_]+@' "$path"; then
+        return 1
+      fi
+      grep -Fq '*.background:' "$path" || return 1
+      grep -Fq '*.color0:' "$path"
+      ;;
+    alacritty.toml)
+      grep -Fq '# RetroFX generated Alacritty config' "$path" || return 1
+      grep -Fq '[colors.primary]' "$path"
+      ;;
+    semantic.env)
+      grep -Eq '^SEM_BACKGROUND=' "$path" || return 1
+      grep -Eq '^MODE_TYPE=' "$path"
+      ;;
+    tty-palette.env)
+      grep -Eq '^ANSI_0=' "$path" || return 1
+      grep -Eq '^SEM_BACKGROUND=' "$path"
+      ;;
+    tty-palette.txt)
+      grep -Fq '# RetroFX ANSI16 palette' "$path"
+      ;;
+    meta)
+      meta_session="$(grep '^session_type=' "$path" | head -n1 | cut -d= -f2 || true)"
+      meta_session="$(trim "$meta_session")"
+      [[ -n "$meta_session" ]] || return 1
+      grep -Eq '^compositor_required=' "$path"
+      ;;
+    "$APPLY_SIG_FILE_NAME")
+      IFS= read -r file_sig <"$path" || true
+      file_sig="$(trim "$file_sig")"
+      [[ -n "$file_sig" ]]
+      ;;
+    picom.conf)
+      validate_picom_conf_integrity "$path"
+      ;;
+    shader.glsl)
+      validate_generated_shader "$base_dir"
+      ;;
+    fontconfig.conf)
+      validate_fontconfig_integrity "$path"
+      ;;
+    *)
+      return 0
+      ;;
+  esac
+}
+
 collect_zero_byte_files() {
   local dir="$1"
   [[ -d "$dir" ]] || return 0
   find "$dir" -type f -size 0 -print 2>/dev/null | sort
+}
+
+validate_artifact_tree_with_manifest() {
+  local manifest_path="$1"
+  local base_dir="$2"
+  local label="$3"
+  local rel path file_sig meta_session
+
+  reset_artifact_validation_result
+
+  if ! load_artifact_manifest "$manifest_path"; then
+    ARTIFACT_CHECK_INVALID+=("$label manifest is invalid: $MANIFEST_LOAD_ERROR")
+    return 1
+  fi
+
+  for rel in "${MANIFEST_REQUIRED_FILES[@]}"; do
+    path="$base_dir/$rel"
+    if [[ ! -f "$path" ]]; then
+      ARTIFACT_CHECK_MISSING+=("$label/$rel")
+      continue
+    fi
+    if [[ ! -s "$path" ]]; then
+      ARTIFACT_CHECK_INVALID+=("$label/$rel is zero-byte")
+      continue
+    fi
+    if ! validate_required_artifact_file "$base_dir" "$rel"; then
+      ARTIFACT_CHECK_INVALID+=("$label/$rel failed integrity validation")
+    fi
+  done
+
+  if [[ -n "$MANIFEST_APPLY_INPUT_HASH" && -f "$base_dir/$APPLY_SIG_FILE_NAME" ]]; then
+    IFS= read -r file_sig <"$base_dir/$APPLY_SIG_FILE_NAME" || true
+    file_sig="$(trim "$file_sig")"
+    if [[ "$file_sig" != "$MANIFEST_APPLY_INPUT_HASH" ]]; then
+      ARTIFACT_CHECK_INVALID+=("$label/$APPLY_SIG_FILE_NAME does not match manifest apply_input_hash")
+    fi
+  fi
+
+  if [[ -f "$base_dir/meta" ]]; then
+    meta_session="$(grep '^session_type=' "$base_dir/meta" | head -n1 | cut -d= -f2 || true)"
+    meta_session="$(trim "$meta_session")"
+    if [[ -n "$meta_session" && "$meta_session" != "$MANIFEST_SESSION_TYPE" ]]; then
+      ARTIFACT_CHECK_INVALID+=("$label/meta session_type does not match manifest")
+    fi
+  fi
+
+  if [[ "$MANIFEST_SESSION_TYPE" == "wayland" ]]; then
+    if [[ -f "$base_dir/picom.conf" ]]; then
+      ARTIFACT_CHECK_INVALID+=("$label/picom.conf should not exist for wayland contract")
+    fi
+    if [[ -f "$base_dir/shader.glsl" ]]; then
+      ARTIFACT_CHECK_INVALID+=("$label/shader.glsl should not exist for wayland contract")
+    fi
+  fi
+
+  if ((${#ARTIFACT_CHECK_MISSING[@]} > 0 || ${#ARTIFACT_CHECK_INVALID[@]} > 0)); then
+    return 1
+  fi
+
+  return 0
 }
 
 validate_stage_outputs() {
@@ -2609,6 +3075,7 @@ validate_stage_outputs() {
 
   [[ -f "$stage_dir/profile.toml" ]] || return 1
   [[ -f "$stage_dir/profile.env" ]] || return 1
+  [[ -f "$stage_dir/$APPLY_SIG_FILE_NAME" ]] || return 1
   [[ -f "$stage_dir/xresources" ]] || return 1
   [[ -f "$stage_dir/Xresources" ]] || return 1
   [[ -f "$stage_dir/alacritty.toml" ]] || return 1
@@ -2845,6 +3312,7 @@ copy_active_to_last_good() {
 
   mv "$staging" "$LAST_GOOD_DIR"
   rm -rf "$old"
+  snapshot_last_good_artifact_manifest || return 1
   write_last_good_checksum || true
 }
 
@@ -2868,6 +3336,16 @@ restore_last_good() {
 
   if mv "$restore_dir" "$ACTIVE_DIR"; then
     rm -rf "$old_active"
+    if ! sync_current_artifact_manifest_from_last_good; then
+      local tmp_manifest=""
+      tmp_manifest="$(mktemp "$MANIFESTS_DIR/current-from-restore.XXXXXX")"
+      if build_artifact_manifest_from_tree "$ACTIVE_DIR" "$tmp_manifest" "current"; then
+        mv "$tmp_manifest" "$CURRENT_ARTIFACT_MANIFEST"
+      else
+        rm -f "$tmp_manifest"
+        warn "restored active state but could not refresh artifact manifest"
+      fi
+    fi
     write_last_good_checksum || true
     return 0
   fi
@@ -4658,6 +5136,13 @@ cmd_apply() {
     return 1
   fi
 
+  if ! write_current_artifact_manifest "$profile_id" "$session_type" "$apply_input_sig"; then
+    LAST_ERROR="failed to write current artifact manifest"
+    restore_last_good || true
+    TXN_ACTIVE=0
+    return 1
+  fi
+
   if ! copy_active_to_last_good; then
     LAST_ERROR="failed to update last_good snapshot"
     restore_last_good || true
@@ -5058,90 +5543,85 @@ cmd_version() {
 
 cmd_self_check() {
   local template
-  local session_hint="x11"
   local profile_path
   local ok=1
   local profile_count=0
   local -a missing=()
   local -a warnings=()
   local -a parse_errors=()
-  local -a zero_files=()
   local checksum_expected checksum_current
-  local -a required_common=(
-    "$ACTIVE_DIR/profile.toml"
-    "$ACTIVE_DIR/profile.env"
-    "$ACTIVE_DIR/xresources"
-    "$ACTIVE_DIR/Xresources"
-    "$ACTIVE_DIR/alacritty.toml"
-    "$ACTIVE_DIR/semantic.env"
-    "$ACTIVE_DIR/tty-palette.env"
-    "$ACTIVE_DIR/tty-palette.txt"
-    "$ACTIVE_DIR/meta"
-    "$ACTIVE_DIR/$APPLY_SIG_FILE_NAME"
-  )
+  local manifest_path=""
+  local manifest_tmp=""
   local -a required_templates=(
     "$TEMPLATES_DIR/shader.glsl.in"
     "$TEMPLATES_DIR/picom.conf.in"
     "$TEMPLATES_DIR/xresources.in"
     "$TEMPLATES_DIR/fontconfig.conf.in"
   )
-  local f
+  local f err
 
   ensure_dirs
 
-  for f in "${required_common[@]}"; do
-    if [[ ! -f "$f" ]]; then
-      missing+=("$f")
-      ok=0
-    elif [[ ! -s "$f" ]]; then
-      parse_errors+=("zero-byte file: $f")
-      ok=0
-    fi
-  done
-
-  if [[ -f "$ACTIVE_DIR/meta" ]]; then
-    session_hint="$(grep '^session_type=' "$ACTIVE_DIR/meta" | head -n1 | cut -d= -f2 || true)"
-    session_hint="${session_hint:-x11}"
-  fi
-
-  if [[ -f "$ACTIVE_DIR/profile.toml" ]]; then
-    if ! (parse_profile "$ACTIVE_DIR/profile.toml" >/dev/null 2>&1); then
-      parse_errors+=("active/profile.toml failed to parse")
-      ok=0
-    fi
-  fi
-
-  if [[ "$session_hint" == "wayland" ]]; then
-    if [[ -f "$ACTIVE_DIR/picom.conf" || -f "$ACTIVE_DIR/shader.glsl" ]]; then
-      parse_errors+=("wayland active state should not contain picom/shader artifacts")
-      ok=0
-    fi
+  if ! dir_has_files "$ACTIVE_DIR"; then
+    parse_errors+=("active state is missing or empty")
+    ok=0
   else
-    if [[ ! -f "$ACTIVE_DIR/picom.conf" ]]; then
-      missing+=("$ACTIVE_DIR/picom.conf")
-      ok=0
-    elif [[ ! -s "$ACTIVE_DIR/picom.conf" ]]; then
-      parse_errors+=("zero-byte file: $ACTIVE_DIR/picom.conf")
-      ok=0
-    elif ! validate_picom_conf_integrity "$ACTIVE_DIR/picom.conf"; then
-      parse_errors+=("active/picom.conf failed integrity validation")
-      ok=0
+    manifest_path="$CURRENT_ARTIFACT_MANIFEST"
+    manifest_tmp=""
+    if [[ ! -f "$manifest_path" ]]; then
+      manifest_tmp="$(mktemp "$MANIFESTS_DIR/self-check-current.XXXXXX")"
+      if build_artifact_manifest_from_tree "$ACTIVE_DIR" "$manifest_tmp" "current"; then
+        warnings+=("artifact manifest missing: $CURRENT_ARTIFACT_MANIFEST (using conservative fallback contract)")
+        manifest_path="$manifest_tmp"
+      else
+        rm -f "$manifest_tmp"
+        manifest_tmp=""
+        parse_errors+=("active artifact manifest is missing and fallback contract could not be derived")
+        ok=0
+      fi
     fi
-    if [[ ! -f "$ACTIVE_DIR/shader.glsl" ]]; then
-      missing+=("$ACTIVE_DIR/shader.glsl")
+
+    if [[ -n "$manifest_path" ]] && ! validate_artifact_tree_with_manifest "$manifest_path" "$ACTIVE_DIR" "active"; then
       ok=0
-    elif [[ ! -s "$ACTIVE_DIR/shader.glsl" ]]; then
-      parse_errors+=("zero-byte file: $ACTIVE_DIR/shader.glsl")
-      ok=0
-    elif ! validate_generated_shader "$ACTIVE_DIR"; then
-      parse_errors+=("active/shader.glsl failed validation")
-      ok=0
+      for f in "${ARTIFACT_CHECK_MISSING[@]}"; do
+        missing+=("$f")
+      done
+      for err in "${ARTIFACT_CHECK_INVALID[@]}"; do
+        parse_errors+=("$err")
+      done
     fi
+    [[ -n "$manifest_tmp" ]] && rm -f "$manifest_tmp"
   fi
 
   if ! dir_has_files "$LAST_GOOD_DIR"; then
     parse_errors+=("last_good backup is missing or empty")
     ok=0
+  else
+    manifest_path="$LAST_GOOD_ARTIFACT_MANIFEST"
+    manifest_tmp=""
+    if [[ ! -f "$manifest_path" ]]; then
+      manifest_tmp="$(mktemp "$MANIFESTS_DIR/self-check-last-good.XXXXXX")"
+      if build_artifact_manifest_from_tree "$LAST_GOOD_DIR" "$manifest_tmp" "last_good"; then
+        warnings+=("last_good artifact manifest missing: $LAST_GOOD_ARTIFACT_MANIFEST (using conservative fallback contract)")
+        manifest_path="$manifest_tmp"
+      else
+        rm -f "$manifest_tmp"
+        manifest_tmp=""
+        parse_errors+=("last_good artifact manifest is missing and fallback contract could not be derived")
+        ok=0
+      fi
+    fi
+
+    if [[ -n "$manifest_path" ]] && ! validate_artifact_tree_with_manifest "$manifest_path" "$LAST_GOOD_DIR" "last_good"; then
+      ok=0
+      for f in "${ARTIFACT_CHECK_MISSING[@]}"; do
+        missing+=("$f")
+      done
+      for err in "${ARTIFACT_CHECK_INVALID[@]}"; do
+        parse_errors+=("$err")
+      done
+    fi
+    [[ -n "$manifest_tmp" ]] && rm -f "$manifest_tmp"
   fi
 
   for template in "${required_templates[@]}"; do
@@ -5180,19 +5660,6 @@ cmd_self_check() {
     ok=0
   fi
 
-  while IFS= read -r f; do
-    [[ -z "$f" ]] && continue
-    zero_files+=("$f")
-  done < <(collect_zero_byte_files "$ACTIVE_DIR")
-  while IFS= read -r f; do
-    [[ -z "$f" ]] && continue
-    zero_files+=("$f")
-  done < <(collect_zero_byte_files "$LAST_GOOD_DIR")
-  if ((${#zero_files[@]} > 0)); then
-    parse_errors+=("detected zero-byte/partially written files in active or last_good")
-    ok=0
-  fi
-
   if dir_has_files "$LAST_GOOD_DIR"; then
     checksum_expected="$(read_last_good_checksum)"
     checksum_current="$(directory_hash "$LAST_GOOD_DIR")"
@@ -5219,22 +5686,15 @@ cmd_self_check() {
     done
   fi
   if ((${#missing[@]} > 0)); then
-    printf 'Missing files:\n' >&2
+    printf 'Missing required artifacts:\n' >&2
     for f in "${missing[@]}"; do
       printf '  - %s\n' "$f" >&2
     done
   fi
   if ((${#parse_errors[@]} > 0)); then
     printf 'Validation issues:\n' >&2
-    local err
     for err in "${parse_errors[@]}"; do
       printf '  - %s\n' "$err" >&2
-    done
-  fi
-  if ((${#zero_files[@]} > 0)); then
-    printf 'Zero-byte files:\n' >&2
-    for f in "${zero_files[@]}"; do
-      printf '  - %s\n' "$f" >&2
     done
   fi
   printf 'Suggested action: run `retrofx repair`\n' >&2
@@ -5244,24 +5704,53 @@ cmd_self_check() {
 cmd_repair() {
   local stage_dir=""
   local tmp_profile=""
+  local input_sig=""
+  local manifest_path=""
+  local manifest_tmp=""
 
   ensure_dirs
 
   if dir_has_files "$LAST_GOOD_DIR"; then
-    if restore_last_good; then
-      log "repair: restored active state from last_good"
-      return 0
+    manifest_path="$LAST_GOOD_ARTIFACT_MANIFEST"
+    manifest_tmp=""
+    if [[ ! -f "$manifest_path" ]]; then
+      manifest_tmp="$(mktemp "$MANIFESTS_DIR/repair-last-good.XXXXXX")"
+      if build_artifact_manifest_from_tree "$LAST_GOOD_DIR" "$manifest_tmp" "last_good"; then
+        warn "repair: last_good artifact manifest missing; using conservative fallback contract"
+        manifest_path="$manifest_tmp"
+      else
+        rm -f "$manifest_tmp"
+        manifest_tmp=""
+        manifest_path=""
+      fi
     fi
-    die "repair failed: unable to restore last_good"
+
+    if [[ -n "$manifest_path" ]] && validate_artifact_tree_with_manifest "$manifest_path" "$LAST_GOOD_DIR" "last_good"; then
+      if [[ -n "$manifest_tmp" ]]; then
+        cp -f "$manifest_tmp" "$LAST_GOOD_ARTIFACT_MANIFEST"
+      fi
+      rm -f "$manifest_tmp"
+      if restore_last_good; then
+        log "repair: restored active state from last_good"
+        return 0
+      fi
+      die "repair failed: unable to restore last_good"
+    fi
+
+    rm -f "$manifest_tmp"
+    warn "repair: last_good snapshot failed integrity validation; generating degraded passthrough fallback"
   fi
 
-  warn "repair: last_good missing; generating degraded passthrough fallback"
+  if ! dir_has_files "$LAST_GOOD_DIR"; then
+    warn "repair: last_good missing; generating degraded passthrough fallback"
+  fi
   tmp_profile="$(mktemp "$STATE_DIR/repair-passthrough.$(now_ts_compact).$$.XXXXXX.toml")"
   create_builtin_passthrough_profile "$tmp_profile"
   load_profile "$tmp_profile"
+  input_sig="$(compute_apply_input_hash "$tmp_profile" "wayland" "false")"
 
   stage_dir="$(mktemp -d "$STATE_DIR/repair-stage.$(now_ts_compact).$$.XXXXXX")"
-  render_templates "$stage_dir" "$tmp_profile" "wayland"
+  render_templates "$stage_dir" "$tmp_profile" "wayland" "$input_sig"
   validate_stage_outputs "$stage_dir" "wayland" || {
     rm -f "$tmp_profile"
     rm -rf "$stage_dir"
@@ -5274,6 +5763,11 @@ cmd_repair() {
     rm -rf "$stage_dir"
     die "repair failed: atomic swap failed"
   }
+
+  if ! write_current_artifact_manifest "passthrough" "wayland" "$input_sig"; then
+    rm -f "$tmp_profile"
+    die "repair failed: unable to write artifact manifest for fallback state"
+  fi
 
   copy_active_to_last_good || warn "repair: failed to refresh last_good snapshot"
   rm -f "$tmp_profile"
