@@ -431,13 +431,55 @@ rm -f "$interop_profile_file" "$interop_palette_file"
 run_retrofx_x11 import base16 "$BASE16_FIXTURE" --name "$interop_profile_name"
 require_file "$interop_profile_file"
 require_file "$interop_palette_file"
+run_retrofx_x11 apply "$interop_profile_name"
+validate_active_files
 base16_export_path="$TEST_TMP_DIR/exported.base16.json"
+base16_export_path_again="$TEST_TMP_DIR/exported-again.base16.json"
 run_retrofx_x11 export base16 "$interop_profile_name" "$base16_export_path"
+run_retrofx_x11 export base16 "$interop_profile_name" "$base16_export_path_again"
 require_file "$base16_export_path"
+require_file "$base16_export_path_again"
 grep -q '"system": "base16"' "$base16_export_path" || die "base16 export missing system key"
 grep -q '"base00":' "$base16_export_path" || die "base16 export missing base00 key"
 grep -q '"base0f":' "$base16_export_path" || die "base16 export missing base0f key"
-rm -f "$interop_profile_file" "$interop_palette_file"
+cmp -s "$base16_export_path" "$base16_export_path_again" || die "base16 export should be deterministic for the same profile"
+BASE16_FIXTURE_PATH="$BASE16_FIXTURE" BASE16_EXPORT_PATH="$base16_export_path" python3 - <<'PY'
+import json
+import os
+import sys
+
+with open(os.environ["BASE16_FIXTURE_PATH"], "r", encoding="utf-8") as fh:
+    src = json.load(fh)
+with open(os.environ["BASE16_EXPORT_PATH"], "r", encoding="utf-8") as fh:
+    out = json.load(fh)
+
+for key in [f"base{i:02x}" for i in range(16)]:
+    if key not in out:
+        raise SystemExit(f"missing exported key: {key}")
+
+if out.get("system") != "base16":
+    raise SystemExit("base16 export system key mismatch")
+if out.get("generated_by") != "retrofx":
+    raise SystemExit("base16 export generated_by mismatch")
+if out.get("mapping") != "resolved-retrofx-ansi16":
+    raise SystemExit("base16 export mapping metadata mismatch")
+if out.get("round_trip") != "lossy-best-effort":
+    raise SystemExit("base16 export round_trip metadata mismatch")
+if "generated_at" in out:
+    raise SystemExit("base16 export should not contain generated_at")
+
+# Import keeps all 16 source slots in the custom palette file, but export
+# serializes the resolved RetroFX ANSI16 palette after semantic anchors.
+if out["base00"] != src["base00"].lower():
+    raise SystemExit("base00 should preserve the imported background anchor")
+if out["base05"] != src["base05"].lower():
+    raise SystemExit("base05 should preserve the imported semantic foreground")
+if out["base07"] != src["base05"].lower():
+    raise SystemExit("base07 should reflect the resolved RetroFX ANSI7 foreground")
+if out["base07"] == src["base07"].lower():
+    raise SystemExit("base07 unexpectedly round-tripped losslessly")
+PY
+rm -f "$interop_profile_file" "$interop_palette_file" "$base16_export_path" "$base16_export_path_again"
 
 log "checking base16 sanitation rejects invalid colors"
 invalid_base16="$TEST_TMP_DIR/base16-invalid.json"
@@ -461,6 +503,8 @@ cat >"$invalid_base16" <<'JSON'
   "base0f": "#ffffff"
 }
 JSON
+invalid_base16_output="$(run_retrofx_x11 import base16 "$invalid_base16" --name base16-invalid 2>&1 || true)"
+assert_contains "$invalid_base16_output" "base16 parse error"
 if run_retrofx_x11 import base16 "$invalid_base16" --name base16-invalid >/dev/null 2>&1; then
   die "base16 import accepted invalid color data"
 fi

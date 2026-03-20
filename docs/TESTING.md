@@ -17,8 +17,9 @@ Pass criteria:
 - profile pack discovery works (`list`, `search`, `info`)
 - interop checks pass:
   - `gallery` output includes pack entries
-  - `import base16` creates user profile + palette files from fixture JSON
-  - `export base16` emits expected `base00..base0f` keys
+  - `import base16` creates a usable user profile + palette files from fixture JSON
+  - `export base16` is deterministic and emits expected `base00..base0f` keys plus mapping metadata
+  - Base16 import -> export round-trip follows the documented lossy contract
   - invalid Base16 colors are rejected
 - `--version` outputs version + capability summary
 - `doctor --json` emits machine-readable diagnostics with required keys

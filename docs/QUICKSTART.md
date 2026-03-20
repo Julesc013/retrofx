@@ -85,6 +85,8 @@ This affects apps launched from that shell/session only. Plasma/GNOME defaults r
 ./scripts/retrofx install-pack community
 ```
 
+Base16 import/export in 1.x is a deterministic best-effort ANSI16 bridge, not a lossless round-trip converter. Exported Base16 JSON reflects the resolved RetroFX ANSI16 palette for the profile you exported.
+
 Pack-installed profiles are copied into `profiles/user/`. If a pack profile depends on a local asset such as a custom palette, RetroFX copies that asset into `profiles/user_assets/<profile-id>/` and rewrites the installed profile so it remains self-contained.
 
 ## Wayland Note (Degraded Mode)

@@ -10,6 +10,7 @@ Current release: `0.1.0-beta`
 - Supports degraded Wayland mode (palette/export/session-safe outputs only).
 - Generates terminal/theming artifacts (`alacritty`, `Xresources`, semantic ANSI mapping).
 - Supports scoped backends: X11, TTY palette, and tuigreet theme snippets.
+- Provides Base16 JSON import/export as a deterministic best-effort ANSI16 bridge.
 - Maintains rollback snapshots and audit logs under `state/`.
 
 ## Core Guarantees

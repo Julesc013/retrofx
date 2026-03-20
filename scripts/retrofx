@@ -4399,7 +4399,7 @@ cmd_import_base16() {
   tmp_palette="$(mktemp "$ROOT_DIR/palettes/imported/.base16-import.XXXXXX")"
   {
     printf '# RetroFX imported Base16 palette (%s)\n' "$scheme_basename"
-    printf '# ANSI index order 0..15\n'
+    printf '# Base16 slots preserved in order base00..base0f\n'
     for ((i = 0; i < 16; i++)); do
       printf '%s\n' "${BASE16_COLORS[$i]}"
     done
@@ -4432,6 +4432,10 @@ cmd_import_base16() {
     printf 'x11 = true\n'
     printf 'tty = false\n'
     printf 'tuigreet = false\n\n'
+    # Base16 import preserves all 16 source slots in the custom palette file, but
+    # RetroFX still anchors semantic background/foreground for its generated
+    # terminal exports. Re-export therefore serializes the resolved ANSI16 view,
+    # not a verbatim copy of the source Base16 document.
     printf '[colors]\n'
     printf 'background = "%s"\n' "${BASE16_COLORS[0]}"
     printf 'foreground = "%s"\n' "${BASE16_COLORS[5]}"
@@ -4552,11 +4556,14 @@ cmd_export() {
       mkdir -p "$out_dir"
       tmp_out="$(mktemp "$out_dir/.retrofx-base16.XXXXXX")"
       {
+        # Base16 export is a deterministic Base16-shaped view of the resolved
+        # RetroFX ANSI16 palette, not a lossless re-serialization of any source
+        # Base16 scheme that may have been imported earlier.
         printf '{\n'
         printf '  "system": "base16",\n'
         printf '  "generated_by": "retrofx",\n'
-        printf '  "generated_at": "%s",\n' "$(now_ts)"
-        printf '  "mapping": "direct-ansi-index",\n'
+        printf '  "mapping": "resolved-retrofx-ansi16",\n'
+        printf '  "round_trip": "lossy-best-effort",\n'
         printf '  "profile": "%s",\n' "$(json_escape_string "$profile_id")"
         printf '  "name": "%s",\n' "$(json_escape_string "$CFG_name")"
         for ((i = 0; i < 16; i++)); do
@@ -4570,7 +4577,7 @@ cmd_export() {
         printf '}\n'
       } >"$tmp_out"
       mv "$tmp_out" "$out_path"
-      log "exported base16 to $out_path"
+      log "exported base16 ANSI16 approximation to $out_path"
       ;;
     *)
       die "export format must be 'alacritty', 'xresources', or 'base16'"
@@ -6838,6 +6845,10 @@ Usage:
   retrofx doctor [--json]
   retrofx preview [profile]
   retrofx new
+
+Notes:
+  base16 import/export is a deterministic best-effort ANSI16 bridge.
+  It is not a lossless Base16 round-trip converter.
 USAGE
 }
 

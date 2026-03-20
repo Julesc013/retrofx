@@ -31,18 +31,39 @@ RetroFX interop is intentionally minimal and offline-first.
 - Imported palette files are written to:
   - `palettes/imported/<name>.txt`
 
-Import uses a direct 16-color mapping:
+RetroFX 1.x treats Base16 interop as a deterministic ANSI16 semantic bridge, not a lossless format conversion.
 
-- `base00` -> ANSI 0
-- `base01` -> ANSI 1
-- ...
-- `base0f` -> ANSI 15
+Import behavior:
 
-Profile defaults for imported schemes are safe:
+- The imported palette file preserves all 16 source slots in order:
+  - `base00` -> line 0 / ANSI slot 0
+  - ...
+  - `base0f` -> line 15 / ANSI slot 15
+- The generated profile then anchors RetroFX semantic colors to:
+  - `background = base00`
+  - `foreground = base05`
+- That keeps the imported profile usable in RetroFX's normal terminal/export pipeline, but it means later export is not a verbatim copy of the source scheme.
+
+Export behavior:
+
+- `retrofx export base16 ...` writes a Base16-shaped JSON approximation of the resolved RetroFX ANSI16 palette.
+- Export metadata is explicit:
+  - `"mapping": "resolved-retrofx-ansi16"`
+  - `"round_trip": "lossy-best-effort"`
+- Export is deterministic for the same profile/input.
+- Round-trip fidelity is not guaranteed.
+  - Example: importing the bundled fixture and exporting it again collapses `base07` to the resolved semantic foreground (`base05`) because RetroFX drives ANSI slot 7 from its foreground anchor.
+
+Profile defaults for imported schemes are conservative:
 
 - blur = 2
 - scanlines = false
 - flicker = false
+
+Recommended use:
+
+- Use Base16 import/export to bridge palettes between tools that already speak ANSI16/Base16-shaped JSON.
+- Do not use it as a lossless archival round-trip format for RetroFX profiles.
 
 ## Sharing Profiles
 
