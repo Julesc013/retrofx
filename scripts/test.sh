@@ -62,6 +62,26 @@ assert_regex() {
   fi
 }
 
+assert_manifest_has_entry() {
+  local manifest="$1"
+  local class="$2"
+  local rel="$3"
+
+  if ! grep -Fqx "artifact=$class|$rel" "$manifest"; then
+    die "expected manifest $manifest to contain artifact=$class|$rel"
+  fi
+}
+
+assert_manifest_lacks_entry() {
+  local manifest="$1"
+  local class="$2"
+  local rel="$3"
+
+  if grep -Fqx "artifact=$class|$rel" "$manifest"; then
+    die "expected manifest $manifest to omit artifact=$class|$rel"
+  fi
+}
+
 require_file() {
   local path="$1"
   [[ -f "$path" ]] || die "missing expected file: $path"
@@ -947,6 +967,9 @@ required = [
     "last_good_present",
     "tty_backend_available",
     "tuigreet_backend_available",
+    "runtime_contract_healthy",
+    "generated_artifacts_complete",
+    "install_assets_healthy",
     "compositor_required_for_current_profile",
     "warnings",
     "errors",
@@ -970,11 +993,13 @@ run_retrofx_x11 self-check
 
 log "self-check ignores zero-byte optional runtime artifacts"
 run_retrofx_x11 apply crt-green-p1-4band
+assert_manifest_has_entry "$MANIFESTS_DIR/current.manifest" "EPHEMERAL_RUNTIME" "picom-compat.log"
 : >"$ACTIVE_DIR/picom-compat.log"
 run_retrofx_x11 self-check
 
 log "self-check detects missing required generated fontconfig artifact"
 run_retrofx_x11 apply crt-green-fonts-aa
+assert_manifest_has_entry "$MANIFESTS_DIR/current.manifest" "REQUIRED_RUNTIME" "fontconfig.conf"
 rm -f "$ACTIVE_DIR/fontconfig.conf"
 missing_fontconfig_output="$(run_retrofx_x11 self-check 2>&1 || true)"
 assert_contains "$missing_fontconfig_output" "Missing required artifacts:"
@@ -986,11 +1011,26 @@ fi
 log "self-check detects zero-byte required generated shader artifact"
 run_retrofx_x11 apply crt-green-p1-4band
 : >"$ACTIVE_DIR/shader.glsl"
+assert_manifest_has_entry "$MANIFESTS_DIR/current.manifest" "REQUIRED_RUNTIME" "shader.glsl"
 zero_shader_output="$(run_retrofx_x11 self-check 2>&1 || true)"
 assert_contains "$zero_shader_output" "active/shader.glsl is zero-byte"
 if run_retrofx_x11 self-check >/dev/null 2>&1; then
   die "self-check should fail for zero-byte active/shader.glsl"
 fi
+
+log "export-only artifacts do not fail self-check but do block no-op apply"
+run_retrofx_x11 apply crt-green-p1-4band
+assert_manifest_has_entry "$MANIFESTS_DIR/current.manifest" "EXPORT_ONLY" "xresources"
+assert_manifest_has_entry "$MANIFESTS_DIR/current.manifest" "EXPORT_ONLY" "Xresources"
+rm -f "$ACTIVE_DIR/xresources" "$ACTIVE_DIR/Xresources"
+run_retrofx_x11 self-check
+export_gap_status_output="$(run_retrofx_x11 status 2>&1)"
+assert_contains "$export_gap_status_output" "Runtime contract: healthy"
+assert_contains "$export_gap_status_output" "Generated exports/support artifacts: incomplete"
+reapply_after_export_gap_output="$(run_retrofx_x11 apply crt-green-p1-4band 2>&1)"
+assert_not_contains "$reapply_after_export_gap_output" "No changes; skipping apply."
+require_file "$ACTIVE_DIR/xresources"
+require_file "$ACTIVE_DIR/Xresources"
 
 log "sanity-perf command runs without failure"
 sanity_perf_output="$(run_retrofx_x11 sanity-perf 2>&1)"
@@ -1020,8 +1060,14 @@ HOME="$install_home" run_retrofx_x11 install --yes
 [[ -x "$install_home/.local/bin/retrofx" ]] || die "install did not create launcher ~/.local/bin/retrofx"
 install_status_output="$(HOME="$install_home" "$install_home/.local/bin/retrofx" status 2>&1)"
 assert_contains "$install_status_output" "Execution mode: installed"
+assert_contains "$install_status_output" "Runtime contract: inactive"
+assert_contains "$install_status_output" "Install assets: healthy"
 install_list_output="$(HOME="$install_home" "$install_home/.local/bin/retrofx" list 2>&1)"
 assert_contains "$install_list_output" "Core Pack:"
+rm -f "$install_home/.config/retrofx/templates/shader.glsl.in"
+install_status_broken_output="$(HOME="$install_home" "$install_home/.local/bin/retrofx" status 2>&1)"
+assert_contains "$install_status_broken_output" "Runtime contract: inactive"
+assert_contains "$install_status_broken_output" "Install assets: incomplete"
 HOME="$install_home" run_retrofx_x11 uninstall --yes
 [[ ! -d "$install_home/.config/retrofx" ]] || die "uninstall did not remove ~/.config/retrofx"
 [[ ! -e "$install_home/.local/bin/retrofx" ]] || die "uninstall did not remove launcher"
@@ -1043,10 +1089,24 @@ log "verifying apply -> off returns to passthrough baseline"
 run_retrofx_x11 apply passthrough
 baseline_hash="$(hash_file "$ACTIVE_DIR/profile.toml")"
 [[ ! -f "$ACTIVE_DIR/fontconfig.conf" ]] || die "passthrough should not generate fontconfig.conf by default"
+assert_manifest_has_entry "$MANIFESTS_DIR/current.manifest" "OPTIONAL_RUNTIME" "picom.conf"
+assert_manifest_lacks_entry "$MANIFESTS_DIR/current.manifest" "REQUIRED_RUNTIME" "fontconfig.conf"
 run_retrofx_x11 apply "$mono_profile"
 run_retrofx_x11 off
 post_off_hash="$(hash_file "$ACTIVE_DIR/profile.toml")"
 [[ "$baseline_hash" == "$post_off_hash" ]] || die "off did not restore passthrough profile state"
+assert_manifest_has_entry "$MANIFESTS_DIR/current.manifest" "OPTIONAL_RUNTIME" "picom.conf"
+assert_manifest_lacks_entry "$MANIFESTS_DIR/current.manifest" "REQUIRED_RUNTIME" "fontconfig.conf"
+
+log "repair after off restores passthrough last_good contract"
+rm -f "$ACTIVE_DIR/profile.env"
+if run_retrofx_x11 self-check >/dev/null 2>&1; then
+  die "self-check should fail when active/profile.env is missing"
+fi
+run_retrofx_x11 repair
+run_retrofx_x11 self-check
+assert_manifest_has_entry "$MANIFESTS_DIR/current.manifest" "OPTIONAL_RUNTIME" "picom.conf"
+assert_manifest_lacks_entry "$MANIFESTS_DIR/current.manifest" "REQUIRED_RUNTIME" "fontconfig.conf"
 
 log "verifying wayland off keeps degraded outputs and succeeds"
 RETROFX_TTY_MODE=mock run_retrofx_wayland apply "$tty_mono_profile"

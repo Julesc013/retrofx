@@ -35,12 +35,15 @@ After install:
 - launcher: `~/.local/bin/retrofx`
 - home: `~/.config/retrofx`
 - runtime dirs: `active/`, `state/`, `profiles/`, `templates/`, etc.
+- `retrofx status` reports runtime state separately from install-asset health
 
 Check mode and active profile:
 
 ```bash
 retrofx status
 ```
+
+Installed mode keeps managed scripts/templates/backend assets under the install home. These are validated separately from `active/` runtime artifacts so an incomplete install does not get mistaken for a broken applied profile.
 
 ## Uninstall
 

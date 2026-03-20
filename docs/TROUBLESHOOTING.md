@@ -9,7 +9,7 @@ If state looks broken:
 ./scripts/retrofx repair
 ```
 
-`self-check` validates the current state against the artifact contract in `state/manifests/` when available. If a manifest is missing, it falls back to a conservative snapshot-derived check and warns that integrity metadata is incomplete.
+`self-check` validates the current state against the artifact contract in `state/manifests/` when available. It enforces required runtime artifacts and install assets, but it does not fail only because an export-only or ephemeral file is absent/empty. If a manifest is missing, it falls back to a conservative snapshot-derived check and warns that integrity metadata is incomplete.
 
 Before first-time setup on a new machine:
 
@@ -62,6 +62,19 @@ To return to passthrough:
 - Files such as `active/picom-compat.log` are treated as runtime-ephemeral.
 - They may be missing or zero-byte without failing `self-check` on their own.
 - Log/cache files under `state/` are not treated as direct health failures.
+
+## Export-Only Gaps
+
+- Files such as `active/xresources`, `active/Xresources`, `active/alacritty.toml`, `active/semantic.env`, and `active/tuigreet.conf` are generated exports/support files.
+- Missing export-only files do not fail `self-check` by themselves.
+- `status` and `doctor` report these separately as generated-export incompleteness.
+- Reapplying the same profile regenerates them instead of incorrectly reporting `No changes; skipping apply.`
+
+## Install Asset Damage
+
+- If templates, backend scripts, or other managed install assets are missing, `status`, `doctor`, and `self-check` report install-asset problems separately from runtime state.
+- In installed mode, this usually means the install tree is incomplete or partially modified.
+- Reinstall with `retrofx install --yes` from a healthy source tree if required.
 
 ## X11 vs Wayland Confusion
 

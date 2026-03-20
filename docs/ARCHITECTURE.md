@@ -56,16 +56,20 @@ RetroFX is a profile-driven renderer that generates deterministic session-local 
 
 ## Integrity Contract
 
-- RetroFX records a small artifact contract under `state/manifests/`.
+- RetroFX records a line-based artifact contract under `state/manifests/`.
 - The contract is generated from the resolved apply result, not from docs.
-- File classes are explicit:
-  - required generated: must exist and be non-empty for the applied state
-  - optional generated: may be absent without failing integrity
-  - runtime ephemeral: may be absent or zero-byte without failing integrity
-  - ignored log/cache: tracked for clarity but not treated as health failures
-- `self-check` validates `active/` and `state/last_good/` against these manifests when present.
+- Artifact classes are explicit and reused across lifecycle commands:
+  - `REQUIRED_RUNTIME`: required for current runtime correctness
+  - `OPTIONAL_RUNTIME`: generated runtime-side files that do not define health
+  - `EPHEMERAL_RUNTIME`: transient runtime/validation files
+  - `IGNORED_LOG_OR_CACHE`: logs/caches that never directly define health
+  - `EXPORT_ONLY`: generated exports/snippets that are useful but not required for current runtime correctness
+  - `INSTALL_ASSET`: scripts/templates/backend assets required for future install/apply/repair operations
+- `self-check` validates `active/` and `state/last_good/` against `REQUIRED_RUNTIME`, and validates install assets separately.
 - If a manifest is missing, `self-check` falls back to a conservative contract derived from the snapshot and warns that integrity metadata is incomplete.
+- `apply` no-op detection uses a stricter generation-completeness check (`REQUIRED_RUNTIME + OPTIONAL_RUNTIME + EXPORT_ONLY`) so missing exports trigger regeneration instead of a false "No changes" result.
 - `repair` prefers a manifest-valid `last_good` snapshot; otherwise it falls back to a degraded passthrough recovery state.
+- `status` and `doctor` report runtime health, generated export completeness, and install-asset health separately.
 
 ## Rendering Pipeline (Formal Order)
 

@@ -25,6 +25,7 @@ Pass criteria:
 - `self-check` validates required generated artifacts via `state/manifests/*.manifest`
 - zero-byte optional/runtime artifacts do not fail `self-check`
 - missing or zero-byte required generated artifacts do fail `self-check`
+- missing export-only artifacts do not fail `self-check`, but they do block no-op apply reuse
 - `repair` restores `active/` from a manifest-valid `state/last_good/`
 - font-enabled profile paths generate:
   - `active/fontconfig.conf` (when requested)
@@ -38,6 +39,7 @@ Pass criteria:
 - user-local install smoke test passes in isolated `HOME`:
   - `install --yes` creates `~/.config/retrofx` and `~/.local/bin/retrofx`
   - installed launcher can run `status`/`list`
+  - `status` distinguishes inactive runtime state from missing install assets
   - `uninstall --yes` removes install tree and launcher
 - export commands write target files:
   - `retrofx export alacritty ...`
@@ -97,6 +99,8 @@ Mock mode still validates palette generation, semantic mapping, and rollback fil
 - zero-byte optional runtime artifacts such as `active/picom-compat.log`
 - missing required generated artifacts such as `active/fontconfig.conf`
 - zero-byte required generated artifacts such as `active/shader.glsl`
+- export-only gaps such as missing `active/xresources`
+- install-asset damage in isolated installed homes
 - manifest-aware `repair` restoring from `state/last_good/`
 
 ## Troubleshooting

@@ -7,6 +7,7 @@ RETROFX="$ROOT_DIR/scripts/retrofx"
 PROFILES_DIR="$ROOT_DIR/profiles"
 PROFILES_PACKS_DIR="$PROFILES_DIR/packs"
 ACTIVE_DIR="$ROOT_DIR/active"
+CURRENT_MANIFEST="$ROOT_DIR/state/manifests/current.manifest"
 RETROFX_ENV_HELPER="$ROOT_DIR/scripts/integrate/retrofx-env.sh"
 
 readonly DEFAULT_PRIMARY_PROFILE="crt-green-p1-4band"
@@ -28,6 +29,49 @@ profile_exists() {
     find "$PROFILES_PACKS_DIR" -type f -name '*.toml' -printf '%f\n' 2>/dev/null | sed 's/\.toml$//' | grep -Fxq "$ref" && return 0
   fi
   return 1
+}
+
+current_manifest_artifact_class() {
+  local rel="$1"
+  local class session_type compositor_required
+
+  [[ -f "$CURRENT_MANIFEST" ]] || return 1
+
+  for class in REQUIRED_RUNTIME OPTIONAL_RUNTIME EXPORT_ONLY EPHEMERAL_RUNTIME IGNORED_LOG_OR_CACHE INSTALL_ASSET; do
+    if grep -Fqx "artifact=$class|$rel" "$CURRENT_MANIFEST"; then
+      printf '%s' "$class"
+      return 0
+    fi
+  done
+
+  if grep -Fqx 'manifest_version=1' "$CURRENT_MANIFEST"; then
+    session_type="$(grep '^session_type=' "$CURRENT_MANIFEST" | head -n1 | cut -d= -f2 || true)"
+    compositor_required="$(grep '^compositor_required=' "$CURRENT_MANIFEST" | head -n1 | cut -d= -f2 || true)"
+    case "$rel" in
+      picom.conf | shader.glsl)
+        [[ "$session_type" == "wayland" ]] && return 1
+        if [[ "$compositor_required" == "true" ]]; then
+          printf 'REQUIRED_RUNTIME'
+        else
+          printf 'OPTIONAL_RUNTIME'
+        fi
+        return 0
+        ;;
+      fontconfig.conf)
+        if grep -Fqx 'required_file=fontconfig.conf' "$CURRENT_MANIFEST"; then
+          printf 'REQUIRED_RUNTIME'
+          return 0
+        fi
+        ;;
+    esac
+  fi
+
+  return 1
+}
+
+current_artifact_is_required_runtime() {
+  local rel="$1"
+  [[ "$(current_manifest_artifact_class "$rel" 2>/dev/null || true)" == "REQUIRED_RUNTIME" ]]
 }
 
 pick_profile() {
@@ -69,8 +113,13 @@ start_picom_if_possible() {
     return 0
   fi
 
+  if ! current_artifact_is_required_runtime "picom.conf"; then
+    log "current artifact contract does not require picom; skipping compositor launch"
+    return 0
+  fi
+
   if [[ ! -f "$ACTIVE_DIR/picom.conf" ]]; then
-    warn "active/picom.conf is missing; skipping picom launch"
+    warn "artifact contract requires active/picom.conf but the file is missing; skipping picom launch"
     return 0
   fi
 
