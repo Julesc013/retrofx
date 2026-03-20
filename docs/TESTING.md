@@ -81,6 +81,27 @@ The suite is designed to stay runnable in repo-local mode without a full live de
   - compositor startup in a real session
   - any desktop-environment-specific integration not covered by the mocked wrapper tests
 
+## Post-Beta Bugfix Expectations
+
+Every accepted post-beta 1.x fix should add a regression to `scripts/test.sh` unless automation is genuinely unsafe or impossible.
+
+- Expected default:
+  - add a regression that fails before the fix and passes after it
+- Acceptable exception:
+  - host-only runtime bugs that cannot be automated safely in repo-local tests
+  - when this happens, document the exact manual validation that was run and why the regression remains manual
+- User-visible fixes:
+  - update `CHANGELOG.md`
+  - update release notes if support boundaries, operator guidance, or recovery expectations changed
+
+For blocker-class fixes on the supported X11 path, maintainers should record:
+
+- the host/session shape used for manual validation
+- the exact command sequence run
+- the observed outcome
+
+Suitable places for that record are `docs/RELEASE_CHECKLIST.md`, the current versioned release notes, or the bug thread itself.
+
 ## Manual Command Checks
 
 ```bash

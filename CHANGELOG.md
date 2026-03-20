@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- Post-beta maintainer workflow docs for 1.x triage, bugfix checklists, and reproducible bug/environment reports.
+
+### Changed
+- Post-beta 1.x fixes are now expected to carry a regression test or an explicit reason why automation is not possible.
+- Release progression guidance now explicitly defines the path from beta to RC to stable.
+
 ## [1.0.0-beta.1] - 2026-03-21
 
 ### Present

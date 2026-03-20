@@ -54,6 +54,8 @@ RetroFX is a profile-driven retro rendering and theming tool for Linux sessions.
 - [Testing](docs/TESTING.md)
 - [Troubleshooting](docs/TROUBLESHOOTING.md)
 - [Beta Notes](docs/BETA_NOTES.md)
+- [Beta Triage](docs/BETA_TRIAGE.md)
+- [Bugfix Checklist](docs/BUGFIX_CHECKLIST.md)
 - [Release Notes (`1.0.0-beta.1`)](docs/RELEASE_NOTES_1.0.0-beta.1.md)
 - [Release Checklist](docs/RELEASE_CHECKLIST.md)
 - [Releasing](docs/RELEASING.md)
@@ -67,6 +69,8 @@ RetroFX is a profile-driven retro rendering and theming tool for Linux sessions.
 ```
 
 If `shellcheck` is not installed, checks still run with a warning.
+
+Post-beta maintenance expectations live in `docs/BETA_TRIAGE.md` and `docs/BUGFIX_CHECKLIST.md`.
 
 ## License
 
