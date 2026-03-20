@@ -65,12 +65,13 @@ run_shellcheck_if_available() {
 }
 
 main() {
-  log "running regression tests"
+  log "running regression tests (repo-local, simulated session envs, mocked integrations where needed)"
   "$ROOT_DIR/scripts/test.sh"
 
+  log "running shellcheck (optional static analysis)"
   run_shellcheck_if_available
 
-  log "running LF/executable checks"
+  log "running LF/executable checks (script hygiene)"
   run_format_checks
 
   log "ci checks passed"

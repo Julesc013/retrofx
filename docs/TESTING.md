@@ -8,43 +8,70 @@ Run tests from repository root.
 ./scripts/test.sh
 ```
 
-Pass criteria:
+Pass criteria: command exits `0`.
 
-- command exits `0`
-- profile applies generate expected active artifacts
-- shader static checks pass
-- Wayland degraded apply path omits `active/picom.conf` and `active/shader.glsl`
-- profile pack discovery works (`list`, `search`, `info`)
-- interop checks pass:
-  - `gallery` output includes pack entries
-  - `import base16` creates a usable user profile + palette files from fixture JSON
-  - `export base16` is deterministic and emits expected `base00..base0f` keys plus mapping metadata
-  - Base16 import -> export round-trip follows the documented lossy contract
+`scripts/test.sh` is intentionally organized around release-critical categories:
+
+- Parsing / CLI surface:
+  - `--version`, `list`, `gallery`, `search`, `info`
+  - profile parsing, wizard generation, command help surface
+- Generation / static output:
+  - export commands
+  - shader static checks
+  - profile apply matrix
+  - rules/picom template generation
+  - font/alacritty/fontconfig generation
+- Artifact / integrity / repair:
+  - manifest-aware `self-check`
+  - zero-byte optional/runtime artifacts do not fail
+  - missing or zero-byte required artifacts do fail
+  - export-only gaps stay non-fatal for runtime integrity
+  - `repair` restores manifest-valid `state/last_good/`
+  - apply/off manifest transitions stay coherent
+- Wrapper / runtime intent:
+  - compositor-required vs no-compositor wrapper policy
+  - `scope.x11=false` suppresses X11 runtime outputs
+  - stale X11 artifacts do not define active state
+  - degraded Wayland state does not pretend to be full X11 runtime
+- Install / pack / path:
+  - `install-pack` relocation for pack-local assets
+  - isolated `install --yes` / `uninstall --yes` cycle
+  - installed launcher health/status behavior
+- Interop:
+  - Base16 import creates usable user profile + palette files
+  - Base16 export is deterministic and emits the documented metadata
+  - Base16 round-trip follows the documented lossy contract
   - invalid Base16 colors are rejected
-- `--version` outputs version + capability summary
-- `doctor --json` emits machine-readable diagnostics with required keys
-- `self-check` validates required generated artifacts via `state/manifests/*.manifest`
-- zero-byte optional/runtime artifacts do not fail `self-check`
-- missing or zero-byte required generated artifacts do fail `self-check`
-- missing export-only artifacts do not fail `self-check`, but they do block no-op apply reuse
-- `repair` restores `active/` from a manifest-valid `state/last_good/`
-- font-enabled profile paths generate:
-  - `active/fontconfig.conf` (when requested)
-  - `active/alacritty.toml`
-- non-interactive wizard path works (`RETROFX_WIZARD_NONINTERACTIVE=1`)
-- semantic ANSI mapping files are generated and valid
-- TTY mock-mode backend checks pass (no console access needed)
-- tuigreet snippet generation check passes
-- doctor capability output includes expected X11/Wayland strings
-- `apply -> off` restores passthrough profile state
-- user-local install smoke test passes in isolated `HOME`:
-  - `install --yes` creates `~/.config/retrofx` and `~/.local/bin/retrofx`
-  - installed launcher can run `status`/`list`
-  - `status` distinguishes inactive runtime state from missing install assets
-  - `uninstall --yes` removes install tree and launcher
-- export commands write target files:
-  - `retrofx export alacritty ...`
-  - `retrofx export xresources ...`
+- Backend / degraded mode:
+  - Wayland degraded apply path omits `active/picom.conf` and `active/shader.glsl`
+  - TTY mock-mode backend checks pass
+  - tuigreet snippet generation check passes
+  - doctor capability output matches simulated X11/Wayland expectations
+
+## Execution Model
+
+The suite is designed to stay runnable in repo-local mode without a full live desktop session.
+
+- Simulated session environment:
+  - X11-sensitive command paths use `DISPLAY=:99` and `XDG_SESSION_TYPE=x11`
+  - Wayland-sensitive command paths use `WAYLAND_DISPLAY=wayland-0` and `XDG_SESSION_TYPE=wayland`
+- Mocked integrations:
+  - session wrapper tests stub `picom`, `i3`, and `pgrep`
+  - TTY backend tests use `RETROFX_TTY_MODE=mock`
+- Static validation:
+  - shader output, manifest state, generated files, and interop files are checked directly on disk
+- Optional host-sensitive validation:
+  - live X11/picom shader validation only happens when the host actually supports it
+  - if the environment lacks a reachable X11 server or `picom`, RetroFX warns and the suite continues with simulated/static coverage
+
+## Confidence And Limits
+
+- Passing `./scripts/test.sh` is necessary for 1.x release confidence.
+- Passing `./scripts/test.sh` is not sufficient for final release confidence.
+- Final release validation still needs host checks for:
+  - live X11 + picom + GLX behavior
+  - compositor startup in a real session
+  - any desktop-environment-specific integration not covered by the mocked wrapper tests
 
 ## Manual Command Checks
 
@@ -103,6 +130,8 @@ Mock mode still validates palette generation, semantic mapping, and rollback fil
 - export-only gaps such as missing `active/xresources`
 - install-asset damage in isolated installed homes
 - manifest-aware `repair` restoring from `state/last_good/`
+- apply/off manifest contract transitions for current runtime state
+- `scope.x11=false` stale-artifact rejection
 
 ## Troubleshooting
 

@@ -19,6 +19,14 @@ log() {
   printf '[test] %s\n' "$*"
 }
 
+section() {
+  printf '\n[test][section] %s\n' "$*"
+}
+
+note() {
+  printf '[test][note] %s\n' "$*"
+}
+
 warn() {
   printf '[test][warn] %s\n' "$*" >&2
 }
@@ -89,6 +97,34 @@ assert_manifest_lacks_entry() {
 require_file() {
   local path="$1"
   [[ -f "$path" ]] || die "missing expected file: $path"
+}
+
+assert_file_missing() {
+  local path="$1"
+  [[ ! -e "$path" ]] || die "unexpected file present: $path"
+}
+
+manifest_value() {
+  local manifest="$1"
+  local key="$2"
+
+  awk -F= -v key="$key" '
+    $1 == key {
+      print substr($0, index($0, "=") + 1)
+      exit
+    }
+  ' "$manifest"
+}
+
+assert_manifest_value() {
+  local manifest="$1"
+  local key="$2"
+  local expected="$3"
+  local actual
+
+  actual="$(manifest_value "$manifest" "$key")"
+  [[ -n "$actual" ]] || die "expected manifest $manifest to contain key '$key'"
+  [[ "$actual" == "$expected" ]] || die "expected manifest $manifest $key=$expected, got ${actual:-<empty>}"
 }
 
 hash_file() {
@@ -363,6 +399,11 @@ trap cleanup EXIT
 
 mkdir -p "$TEST_TMP_DIR"
 
+section "Preflight / Execution Model"
+note "repo-local regression suite with simulated X11/Wayland session env vars"
+note "wrapper tests stub picom/i3 binaries; TTY tests use RETROFX_TTY_MODE=mock"
+note "live X11/picom shader validation remains host-dependent and may be skipped"
+
 log "running shellcheck when available"
 if command -v shellcheck >/dev/null 2>&1; then
   shellcheck \
@@ -378,6 +419,8 @@ if command -v shellcheck >/dev/null 2>&1; then
 else
   warn "shellcheck not installed; skipping"
 fi
+
+section "CLI Surface / Basic Commands"
 
 log "checking version command"
 version_output="$("$RETROFX" --version)"
@@ -412,6 +455,8 @@ assert_contains "$info_font_output" "Font AA"
 info_c64_output="$(run_retrofx_x11 info c64)"
 assert_contains "$info_c64_output" "Profile: c64"
 assert_contains "$info_c64_output" "kind = custom"
+
+section "Interop / Export / Pack / Path"
 
 log "checking export commands"
 export_xr_path="$TEST_TMP_DIR/exported.Xresources"
@@ -548,6 +593,9 @@ fi
 missing_pack_asset_apply_output="$(RETROFX_HOME="$pack_home" run_retrofx_x11 apply c64 2>&1 || true)"
 assert_contains "$missing_pack_asset_apply_output" "custom palette file not found"
 
+section "Wrapper / Runtime Intent"
+note "session wrapper checks validate launch policy with stubbed picom/i3 commands, not a live desktop session"
+
 log "session wrapper skips picom for no-compositor runtime intent"
 wrapper_stub_dir="$TEST_TMP_DIR/wrapper-stubs"
 make_session_wrapper_stubs "$wrapper_stub_dir"
@@ -654,7 +702,7 @@ sleep 0.2
 assert_active_x11_runtime_enabled "false"
 assert_active_compositor_required "false"
 assert_contains "$wrapper_scope_x11_false_output" "active runtime metadata says X11 runtime is disabled; skipping compositor launch"
-[[ ! -f "$wrapper_picom_log" ]] || die "wrapper should not launch picom when scope.x11=false disables X11 runtime"
+assert_file_missing "$wrapper_picom_log"
 require_file "$wrapper_i3_log"
 
 log "explicit export stays separate from scope.x11=false active runtime"
@@ -704,6 +752,30 @@ assert_active_runtime_degraded "true"
 if retrofx_runtime_current_requires_compositor "$ROOT_DIR"; then
   die "wayland degraded runtime intent should not require a compositor"
 fi
+wayland_status_output="$(run_retrofx_wayland status 2>&1)"
+assert_contains "$wayland_status_output" "Active session: wayland"
+assert_contains "$wayland_status_output" "X11 runtime active: no"
+assert_contains "$wayland_status_output" "Compositor required: no"
+
+log "manifest contract follows apply/off transitions"
+run_retrofx_x11 apply crt-green-p1-4band
+assert_manifest_value "$MANIFESTS_DIR/current.manifest" "profile_id" "crt-green-p1-4band"
+assert_manifest_value "$MANIFESTS_DIR/current.manifest" "session_type" "x11"
+assert_manifest_value "$MANIFESTS_DIR/current.manifest" "scope_x11" "true"
+assert_manifest_value "$MANIFESTS_DIR/current.manifest" "compositor_required" "true"
+assert_manifest_has_entry "$MANIFESTS_DIR/current.manifest" "REQUIRED_RUNTIME" "picom.conf"
+assert_manifest_has_entry "$MANIFESTS_DIR/current.manifest" "REQUIRED_RUNTIME" "shader.glsl"
+run_retrofx_x11 off
+assert_manifest_value "$MANIFESTS_DIR/current.manifest" "profile_id" "passthrough"
+assert_manifest_value "$MANIFESTS_DIR/current.manifest" "session_type" "x11"
+assert_manifest_value "$MANIFESTS_DIR/current.manifest" "scope_x11" "true"
+assert_manifest_value "$MANIFESTS_DIR/current.manifest" "compositor_required" "false"
+assert_manifest_has_entry "$MANIFESTS_DIR/current.manifest" "OPTIONAL_RUNTIME" "picom.conf"
+assert_manifest_has_entry "$MANIFESTS_DIR/current.manifest" "OPTIONAL_RUNTIME" "shader.glsl"
+assert_active_x11_runtime_enabled "true"
+assert_active_compositor_required "false"
+
+section "Generation / Static Output"
 
 log "compatibility-check command runs and reports checks"
 compat_output=""
@@ -870,7 +942,7 @@ if [[ ! -e "${profiles[0]}" ]]; then
 fi
 
 if [[ -z "${DISPLAY:-}" ]] || ! command -v picom >/dev/null 2>&1; then
-  warn "X11 or picom unavailable; runtime shader validation is expected to be skipped"
+  warn "live X11/picom runtime validation unavailable; simulated X11/static generation coverage continues"
 fi
 
 log "applying each repository profile and validating generated active files"
@@ -1086,6 +1158,9 @@ assert_contains "$rules_cfg" "opacity < 0.950000"
 assert_contains "$rules_cfg" "detect-client-opacity = true;"
 assert_contains "$rules_cfg" "unredir-if-possible = false;"
 
+section "Degraded / Backend / Diagnostics"
+note "Wayland checks use simulated session vars; TTY backend checks run in mock mode"
+
 log "wayland degraded apply path"
 wayland_apply_output="$(run_retrofx_wayland apply "$mono_profile" 2>&1)"
 assert_contains "$wayland_apply_output" "Wayland session detected: shader pipeline disabled; applied degraded outputs only."
@@ -1259,6 +1334,8 @@ assert_contains "$doctor_wayland_output" "Session type: wayland"
 assert_contains "$doctor_wayland_output" "Global post-process shaders are not supported in this backend."
 assert_contains "$doctor_wayland_output" "Wayland backend: degraded outputs only"
 
+section "Integrity / Repair / Install Cycle"
+
 log "doctor JSON output"
 doctor_json_output="$(run_retrofx_x11 doctor --json)"
 assert_contains "$doctor_json_output" "\"mode\":"
@@ -1386,8 +1463,8 @@ install_status_broken_output="$(HOME="$install_home" "$install_home/.local/bin/r
 assert_contains "$install_status_broken_output" "Runtime contract: inactive"
 assert_contains "$install_status_broken_output" "Install assets: incomplete"
 HOME="$install_home" run_retrofx_x11 uninstall --yes
-[[ ! -d "$install_home/.config/retrofx" ]] || die "uninstall did not remove ~/.config/retrofx"
-[[ ! -e "$install_home/.local/bin/retrofx" ]] || die "uninstall did not remove launcher"
+assert_file_missing "$install_home/.config/retrofx"
+assert_file_missing "$install_home/.local/bin/retrofx"
 
 log "repair restores active from last_good"
 run_retrofx_x11 apply crt-green-fonts-aa
@@ -1432,5 +1509,11 @@ validate_active_files wayland
 
 log "checking audit log exists"
 require_file "$STATE_DIR/logs/retrofx.log"
+
+section "Summary"
+note "static generation, artifact integrity, wrapper launch policy, pack relocation, and install-cycle regressions passed"
+note "mocked coverage: wrapper launch tests, TTY backend application"
+note "simulated session coverage: X11/Wayland intent, status, doctor, degraded mode"
+note "outside automated guarantees: full live compositor/GLX behavior still requires host validation"
 
 log "all tests passed"
