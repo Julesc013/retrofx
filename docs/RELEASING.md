@@ -1,16 +1,23 @@
 # Releasing RetroFX
 
-## 1. Bump Version
+Current beta-candidate target: `1.0.0-beta.1`.
 
-Update `VERSION` to the next release value.
+Use this file for the high-level sequence and `docs/RELEASE_CHECKLIST.md` for the exact pre-tag gate.
 
-Also update any user-facing release markers that still carry an explicit version string:
+## 1. Align Release Metadata
 
+Update and cross-check:
+
+- `VERSION`
+- `CHANGELOG.md`
 - `README.md`
 - `docs/BETA_NOTES.md`
-- `docs/BETA_RELEASE_NOTES.md` (when relevant)
+- `docs/BETA_RELEASE_NOTES.md`
+- versioned release notes such as `docs/RELEASE_NOTES_1.0.0-beta.1.md`
 
-## 2. Recheck Product Truth Docs
+Do not ship a release with mixed version strings or mixed beta/stable wording.
+
+## 2. Recheck Truth Docs
 
 If support boundaries changed during the release cycle, sync:
 
@@ -18,43 +25,46 @@ If support boundaries changed during the release cycle, sync:
 - `docs/CAPABILITIES.md`
 - `docs/ROADMAP.md`
 - `docs/TESTING.md`
+- `docs/INSTALL.md`
 
 Do not ship a release with docs that overstate capability.
 
-## 3. Update Changelog
+## 3. Run The Release Checklist
 
-Edit `CHANGELOG.md`:
+Follow `docs/RELEASE_CHECKLIST.md` in order.
 
-- add release date
-- summarize notable changes
-- keep Keep a Changelog structure
-
-## 4. Run Validation
+Minimum automated validation:
 
 ```bash
 ./scripts/ci.sh
+./scripts/test.sh
 ./scripts/retrofx --version
-./scripts/retrofx list
-./scripts/retrofx doctor
+./scripts/retrofx status
 ```
 
-Optional installed-mode smoke test:
+## 4. Build Local Release Archives
+
+Use the helper:
 
 ```bash
-./scripts/retrofx install --yes
-~/.local/bin/retrofx --version
-~/.local/bin/retrofx status
+./scripts/release-package.sh
 ```
 
-## 5. Create Commit And Tag
+This writes deterministic local archives under `state/releases/<version>/`.
+
+## 5. Tag Only After Human Smoke Verification
+
+Recommended local sequence after the checklist passes:
 
 ```bash
-git add -A
-git commit -m "Release vX.Y.Z"
-git tag vX.Y.Z
+git status --short --branch
+git tag -a vX.Y.Z -m "RetroFX vX.Y.Z"
+./scripts/release-package.sh --ref vX.Y.Z
 ```
 
-## 6. Push
+Do not push automatically. Push only after a human confirms the final smoke results and the tag contents.
+
+## 6. Push When Approved
 
 ```bash
 git push

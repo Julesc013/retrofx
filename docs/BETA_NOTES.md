@@ -1,6 +1,6 @@
-# RetroFX Beta Notes (`0.1.0-beta.1`)
+# RetroFX Beta Notes (`1.0.0-beta.1`)
 
-RetroFX is still in beta. The supported 1.x core path is X11 + picom + GLX. Everything else should be judged against that support boundary, not against a future 2.0 vision.
+RetroFX `1.0.0-beta.1` is the first serious 1.x public beta candidate. The supported core path is X11 + picom + GLX. Everything else should be judged against that support boundary, not against a future 2.0 vision.
 
 ## Support Summary
 
@@ -8,7 +8,7 @@ RetroFX is still in beta. The supported 1.x core path is X11 + picom + GLX. Ever
   - X11 + picom + GLX
   - repo-local mode
   - user-local install mode
-  - `apply`, `off`, `status`, `doctor`, `self-check`, `repair`
+  - `apply`, `apply --dry-run`, `off`, `status`, `doctor`, `self-check`, `repair`, `explain`
   - TTY palette backend
   - tuigreet snippet generation
 - Degraded:
@@ -24,6 +24,7 @@ See:
 
 - `docs/1x_PRODUCT.md`
 - `docs/CAPABILITIES.md`
+- `docs/RELEASE_NOTES_1.0.0-beta.1.md`
 
 ## Safety / Recovery
 
@@ -35,6 +36,9 @@ See:
   - `./scripts/retrofx off`
 - Apply a lower-risk profile transform:
   - `./scripts/retrofx apply <profile> --safe`
+- Preview the resolved runtime intent first:
+  - `./scripts/retrofx explain <profile>`
+  - `./scripts/retrofx apply <profile> --dry-run`
 
 ## Before Daily Use
 

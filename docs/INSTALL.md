@@ -101,4 +101,4 @@ Suggested flow:
 3. Select that session entry in tuigreet or wire your own session launcher manually.
 4. Treat `active/tuigreet.conf` as a generated snippet, not a global config writer.
 
-For recovery and diagnostics see `docs/TROUBLESHOOTING.md`.
+For recovery and diagnostics see `docs/TROUBLESHOOTING.md`. For pre-tag smoke tests and local release packaging, see `docs/RELEASE_CHECKLIST.md`.

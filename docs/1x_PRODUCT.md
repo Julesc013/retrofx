@@ -66,7 +66,7 @@ Run `./scripts/retrofx --help` for the exact current CLI surface.
 
 ## Safety And Maturity
 
-- Current repository version: `0.1.0-beta.1`.
-- Current maturity: beta, not 1.0 stable.
+- Current repository version: `1.0.0-beta.1`.
+- Current maturity: public beta candidate, not 1.0 stable.
 - Atomic apply, rollback snapshotting, manifest-based `self-check`, and `repair` are core 1.x guarantees.
 - The automated suite is strong for regressions, but live host validation is still required before a stable release.
