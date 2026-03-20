@@ -7,11 +7,13 @@ RETROFX="$ROOT_DIR/scripts/retrofx"
 PROFILES_DIR="$ROOT_DIR/profiles"
 PROFILES_PACKS_DIR="$PROFILES_DIR/packs"
 ACTIVE_DIR="$ROOT_DIR/active"
-CURRENT_MANIFEST="$ROOT_DIR/state/manifests/current.manifest"
 RETROFX_ENV_HELPER="$ROOT_DIR/scripts/integrate/retrofx-env.sh"
+RUNTIME_STATE_HELPER="$ROOT_DIR/scripts/integrate/retrofx-runtime-state.sh"
 
 readonly DEFAULT_PRIMARY_PROFILE="crt-green-p1-4band"
 readonly DEFAULT_FALLBACK_PROFILE="passthrough"
+
+RUNTIME_STATE_HELPER_AVAILABLE=0
 
 log() {
   printf 'i3-retro-session: %s\n' "$*"
@@ -21,6 +23,12 @@ warn() {
   printf 'i3-retro-session: warning: %s\n' "$*" >&2
 }
 
+if [[ -f "$RUNTIME_STATE_HELPER" ]]; then
+  # shellcheck source=/dev/null
+  source "$RUNTIME_STATE_HELPER"
+  RUNTIME_STATE_HELPER_AVAILABLE=1
+fi
+
 profile_exists() {
   local ref="$1"
   [[ -f "$PROFILES_DIR/$ref.toml" || -f "$PROFILES_DIR/$ref" || -f "$ref" ]] && return 0
@@ -29,49 +37,6 @@ profile_exists() {
     find "$PROFILES_PACKS_DIR" -type f -name '*.toml' -printf '%f\n' 2>/dev/null | sed 's/\.toml$//' | grep -Fxq "$ref" && return 0
   fi
   return 1
-}
-
-current_manifest_artifact_class() {
-  local rel="$1"
-  local class session_type compositor_required
-
-  [[ -f "$CURRENT_MANIFEST" ]] || return 1
-
-  for class in REQUIRED_RUNTIME OPTIONAL_RUNTIME EXPORT_ONLY EPHEMERAL_RUNTIME IGNORED_LOG_OR_CACHE INSTALL_ASSET; do
-    if grep -Fqx "artifact=$class|$rel" "$CURRENT_MANIFEST"; then
-      printf '%s' "$class"
-      return 0
-    fi
-  done
-
-  if grep -Fqx 'manifest_version=1' "$CURRENT_MANIFEST"; then
-    session_type="$(grep '^session_type=' "$CURRENT_MANIFEST" | head -n1 | cut -d= -f2 || true)"
-    compositor_required="$(grep '^compositor_required=' "$CURRENT_MANIFEST" | head -n1 | cut -d= -f2 || true)"
-    case "$rel" in
-      picom.conf | shader.glsl)
-        [[ "$session_type" == "wayland" ]] && return 1
-        if [[ "$compositor_required" == "true" ]]; then
-          printf 'REQUIRED_RUNTIME'
-        else
-          printf 'OPTIONAL_RUNTIME'
-        fi
-        return 0
-        ;;
-      fontconfig.conf)
-        if grep -Fqx 'required_file=fontconfig.conf' "$CURRENT_MANIFEST"; then
-          printf 'REQUIRED_RUNTIME'
-          return 0
-        fi
-        ;;
-    esac
-  fi
-
-  return 1
-}
-
-current_artifact_is_required_runtime() {
-  local rel="$1"
-  [[ "$(current_manifest_artifact_class "$rel" 2>/dev/null || true)" == "REQUIRED_RUNTIME" ]]
 }
 
 pick_profile() {
@@ -108,18 +73,33 @@ pick_profile() {
 }
 
 start_picom_if_possible() {
+  if [[ "$RUNTIME_STATE_HELPER_AVAILABLE" -ne 1 ]]; then
+    warn "runtime metadata helper missing at $RUNTIME_STATE_HELPER; skipping compositor launch"
+    return 0
+  fi
+
+  if ! retrofx_runtime_load_active_metadata "$ROOT_DIR"; then
+    warn "active runtime metadata is missing or invalid ($RETROFX_RUNTIME_METADATA_ERROR); skipping compositor launch"
+    return 0
+  fi
+
+  if [[ "$RETROFX_RUNTIME_SESSION_TYPE" == "wayland" || "$RETROFX_RUNTIME_DEGRADED" == "true" ]]; then
+    log "active runtime metadata indicates degraded output mode; skipping compositor launch"
+    return 0
+  fi
+
+  if [[ "$RETROFX_RUNTIME_COMPOSITOR_REQUIRED" != "true" ]]; then
+    log "active runtime metadata says compositor is not required; skipping compositor launch"
+    return 0
+  fi
+
   if [[ -z "${DISPLAY:-}" ]]; then
     warn "DISPLAY is not set; skipping picom launch"
     return 0
   fi
 
-  if ! current_artifact_is_required_runtime "picom.conf"; then
-    log "current artifact contract does not require picom; skipping compositor launch"
-    return 0
-  fi
-
   if [[ ! -f "$ACTIVE_DIR/picom.conf" ]]; then
-    warn "artifact contract requires active/picom.conf but the file is missing; skipping picom launch"
+    warn "active runtime metadata requires a compositor but active/picom.conf is missing; skipping picom launch"
     return 0
   fi
 

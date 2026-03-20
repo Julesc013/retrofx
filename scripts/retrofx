@@ -29,6 +29,7 @@ resolve_runtime_root() {
 
 readonly ROOT_DIR="$(resolve_runtime_root)"
 readonly SCRIPT_DIR="$ROOT_DIR/scripts"
+readonly RUNTIME_STATE_HELPER="$SCRIPT_DIR/integrate/retrofx-runtime-state.sh"
 readonly PROFILES_DIR="$ROOT_DIR/profiles"
 readonly PROFILES_USER_DIR="$PROFILES_DIR/user"
 readonly PROFILES_USER_ASSETS_DIR="$PROFILES_DIR/user_assets"
@@ -62,6 +63,14 @@ readonly ARTIFACT_CLASS_EPHEMERAL_RUNTIME="EPHEMERAL_RUNTIME"
 readonly ARTIFACT_CLASS_IGNORED_LOG_OR_CACHE="IGNORED_LOG_OR_CACHE"
 readonly ARTIFACT_CLASS_INSTALL_ASSET="INSTALL_ASSET"
 readonly ARTIFACT_CLASS_EXPORT_ONLY="EXPORT_ONLY"
+
+RUNTIME_STATE_HELPER_AVAILABLE=0
+if [[ -f "$RUNTIME_STATE_HELPER" ]]; then
+  # shellcheck source=/dev/null
+  source "$RUNTIME_STATE_HELPER"
+  RUNTIME_STATE_HELPER_AVAILABLE=1
+fi
+readonly RUNTIME_STATE_HELPER_AVAILABLE
 
 BACKUP_KEEP="${RETROFX_BACKUP_KEEP:-$BACKUP_KEEP_DEFAULT}"
 if [[ ! "$BACKUP_KEEP" =~ ^[0-9]+$ ]] || ((BACKUP_KEEP < 1)); then
@@ -409,6 +418,7 @@ resolve_install_asset_entries() {
   artifact_contract_add_entry out_ref "$ARTIFACT_CLASS_INSTALL_ASSET" "scripts/test.sh"
   artifact_contract_add_entry out_ref "$ARTIFACT_CLASS_INSTALL_ASSET" "scripts/ci.sh"
   artifact_contract_add_entry out_ref "$ARTIFACT_CLASS_INSTALL_ASSET" "scripts/integrate/i3-retro-session.sh"
+  artifact_contract_add_entry out_ref "$ARTIFACT_CLASS_INSTALL_ASSET" "scripts/integrate/retrofx-runtime-state.sh"
   artifact_contract_add_entry out_ref "$ARTIFACT_CLASS_INSTALL_ASSET" "scripts/integrate/retrofx-env.sh"
   artifact_contract_add_entry out_ref "$ARTIFACT_CLASS_INSTALL_ASSET" "scripts/integrate/install-xsession.sh"
   artifact_contract_add_entry out_ref "$ARTIFACT_CLASS_INSTALL_ASSET" "scripts/integrate/remove-xsession.sh"
@@ -2445,6 +2455,68 @@ compositor_required_current_profile() {
   return 1
 }
 
+blur_enabled_current_profile() {
+  local blur="${CFG_effects_blur_strength:-0}"
+  ((blur > 0))
+}
+
+shader_required_for_session() {
+  local session_type="${1:-x11}"
+
+  [[ "$session_type" != "wayland" ]] || return 1
+  compositor_required_current_profile
+}
+
+runtime_degraded_for_session() {
+  local session_type="${1:-x11}"
+  [[ "$session_type" == "wayland" && "${CFG_scope_x11:-false}" == "true" ]]
+}
+
+write_runtime_meta() {
+  local out_file="$1"
+  local profile_path="$2"
+  local session_type="${3:-x11}"
+  local input_sig="${4:-}"
+  local profile_name=""
+  local profile_id=""
+  local compositor_required="false"
+  local shader_required="false"
+  local degraded="false"
+  local blur_enabled="false"
+
+  profile_name="$(basename "$profile_path")"
+  profile_id="${profile_name%.toml}"
+
+  if shader_required_for_session "$session_type"; then
+    compositor_required="true"
+    shader_required="true"
+  fi
+
+  if runtime_degraded_for_session "$session_type"; then
+    degraded="true"
+  fi
+
+  if blur_enabled_current_profile; then
+    blur_enabled="true"
+  fi
+
+  {
+    printf 'profile=%s\n' "$profile_name"
+    printf 'profile_id=%s\n' "$profile_id"
+    printf 'session_type=%s\n' "$session_type"
+    printf 'scope_x11=%s\n' "$CFG_scope_x11"
+    printf 'scope_tty=%s\n' "$CFG_scope_tty"
+    printf 'scope_tuigreet=%s\n' "$CFG_scope_tuigreet"
+    printf 'blur_enabled=%s\n' "$blur_enabled"
+    printf 'compositor_required=%s\n' "$compositor_required"
+    printf 'shader_required=%s\n' "$shader_required"
+    printf 'degraded=%s\n' "$degraded"
+    if [[ -n "$input_sig" ]]; then
+      printf 'apply_input_hash=%s\n' "$input_sig"
+    fi
+  } >"$out_file"
+}
+
 compute_apply_input_hash() {
   local profile_path="$1"
   local session_type="$2"
@@ -3163,11 +3235,6 @@ render_templates() {
   local profile_path="$2"
   local session_type="${3:-x11}"
   local input_sig="${4:-}"
-  local compositor_required="false"
-
-  if compositor_required_current_profile; then
-    compositor_required="true"
-  fi
 
   cp "$profile_path" "$stage_dir/profile.toml"
   write_profile_env "$stage_dir/profile.env"
@@ -3177,22 +3244,13 @@ render_templates() {
 
   if [[ "$session_type" == "wayland" ]]; then
     rm -f "$stage_dir/shader.glsl" "$stage_dir/picom.conf"
-    compositor_required="false"
   else
     render_shader "$stage_dir/shader.glsl"
     render_picom "$stage_dir/picom.conf"
   fi
 
   render_color_artifacts "$stage_dir"
-
-  {
-    printf 'profile=%s\n' "$(basename "$profile_path")"
-    printf 'session_type=%s\n' "$session_type"
-    printf 'compositor_required=%s\n' "$compositor_required"
-    if [[ -n "$input_sig" ]]; then
-      printf 'apply_input_hash=%s\n' "$input_sig"
-    fi
-  } >"$stage_dir/meta"
+  write_runtime_meta "$stage_dir/meta" "$profile_path" "$session_type" "$input_sig"
 }
 
 validate_generated_shader() {
@@ -3360,10 +3418,14 @@ validate_generated_artifact_file() {
       grep -Fq '# RetroFX ANSI16 palette' "$path"
       ;;
     meta)
-      meta_session="$(grep '^session_type=' "$path" | head -n1 | cut -d= -f2 || true)"
-      meta_session="$(trim "$meta_session")"
-      [[ -n "$meta_session" ]] || return 1
-      grep -Eq '^compositor_required=' "$path"
+      if [[ "$RUNTIME_STATE_HELPER_AVAILABLE" -eq 1 ]]; then
+        retrofx_runtime_load_metadata "$path" >/dev/null 2>&1
+      else
+        meta_session="$(grep '^session_type=' "$path" | head -n1 | cut -d= -f2 || true)"
+        meta_session="$(trim "$meta_session")"
+        [[ -n "$meta_session" ]] || return 1
+        grep -Eq '^compositor_required=' "$path"
+      fi
       ;;
     "$APPLY_SIG_FILE_NAME")
       IFS= read -r file_sig <"$path" || true
@@ -4578,6 +4640,7 @@ cmd_doctor() {
   local runtime_contract_healthy=0
   local generated_artifacts_complete=0
   local install_assets_healthy=0
+  local active_runtime_meta_warning=""
   local manifest_path=""
   local manifest_tmp=""
   local -a warnings=()
@@ -4674,14 +4737,31 @@ cmd_doctor() {
   if ! dir_has_files "$ACTIVE_DIR"; then
     warnings+=("active config missing (run: retrofx apply <profile>)")
   elif resolve_runtime_manifest_for_tree "$ACTIVE_DIR" "$CURRENT_ARTIFACT_MANIFEST" "current" manifest_path manifest_tmp warnings; then
+    if [[ "$RUNTIME_STATE_HELPER_AVAILABLE" -eq 1 ]]; then
+      if retrofx_runtime_load_active_metadata "$ROOT_DIR"; then
+        compositor_required_known=1
+        if [[ "$RETROFX_RUNTIME_COMPOSITOR_REQUIRED" == "true" ]]; then
+          compositor_required_value=1
+        fi
+      else
+        active_runtime_meta_warning="$RETROFX_RUNTIME_METADATA_ERROR"
+      fi
+    fi
+
     if load_artifact_manifest "$manifest_path"; then
       active_profile_id="${MANIFEST_PROFILE_ID:-$active_profile_id}"
-      compositor_required_known=1
-      if [[ "$MANIFEST_COMPOSITOR_REQUIRED" == "true" ]]; then
-        compositor_required_value=1
+      if [[ "$compositor_required_known" -eq 0 ]]; then
+        compositor_required_known=1
+        if [[ "$MANIFEST_COMPOSITOR_REQUIRED" == "true" ]]; then
+          compositor_required_value=1
+        fi
       fi
     else
       warnings+=("active artifact manifest could not be loaded: $MANIFEST_LOAD_ERROR")
+    fi
+
+    if [[ -n "$active_runtime_meta_warning" ]]; then
+      warnings+=("active runtime metadata missing or invalid: $active_runtime_meta_warning")
     fi
 
     if validate_artifact_tree_with_manifest "$manifest_path" "$ACTIVE_DIR" "active" "integrity"; then
@@ -6046,6 +6126,7 @@ cmd_uninstall() {
 cmd_status() {
   local mode active_profile="-"
   local active_session="-"
+  local compositor_required="unknown"
   local runtime_status="inactive"
   local generated_status="n/a"
   local install_status="healthy"
@@ -6060,10 +6141,31 @@ cmd_status() {
   fi
 
   if dir_has_files "$ACTIVE_DIR"; then
+    if [[ "$RUNTIME_STATE_HELPER_AVAILABLE" -eq 1 ]]; then
+      if retrofx_runtime_load_active_metadata "$ROOT_DIR"; then
+        active_profile="${RETROFX_RUNTIME_PROFILE_REF%.toml}"
+        active_session="${RETROFX_RUNTIME_SESSION_TYPE:--}"
+        if [[ "$RETROFX_RUNTIME_COMPOSITOR_REQUIRED" == "true" ]]; then
+          compositor_required="yes"
+        else
+          compositor_required="no"
+        fi
+      else
+        status_notes+=("active runtime metadata missing or invalid: $RETROFX_RUNTIME_METADATA_ERROR")
+      fi
+    fi
+
     if resolve_runtime_manifest_for_tree "$ACTIVE_DIR" "$CURRENT_ARTIFACT_MANIFEST" "current" manifest_path manifest_tmp status_notes; then
       if load_artifact_manifest "$manifest_path"; then
         active_profile="${MANIFEST_PROFILE_ID:--}"
         active_session="${MANIFEST_SESSION_TYPE:--}"
+        if [[ "$compositor_required" == "unknown" ]]; then
+          if [[ "$MANIFEST_COMPOSITOR_REQUIRED" == "true" ]]; then
+            compositor_required="yes"
+          else
+            compositor_required="no"
+          fi
+        fi
       elif [[ -f "$ACTIVE_DIR/profile.env" ]]; then
         # shellcheck source=/dev/null
         source "$ACTIVE_DIR/profile.env" || true
@@ -6113,10 +6215,11 @@ cmd_status() {
       printf 'Launcher: %s (present, unmanaged)\n' "$DEFAULT_LAUNCHER_PATH"
     fi
   else
-    printf 'Launcher: not found at %s\n' "$DEFAULT_LAUNCHER_PATH"
+  printf 'Launcher: not found at %s\n' "$DEFAULT_LAUNCHER_PATH"
   fi
   printf 'Active profile: %s\n' "$active_profile"
   printf 'Active session: %s\n' "$active_session"
+  printf 'Compositor required: %s\n' "$compositor_required"
   printf 'Runtime contract: %s\n' "$runtime_status"
   printf 'Generated exports/support artifacts: %s\n' "$generated_status"
   printf 'Install assets: %s\n' "$install_status"

@@ -38,7 +38,9 @@ To return to passthrough:
   - `picom` not installed
   - no active X11 `DISPLAY`
   - another compositor already running
-- RetroFX still keeps generated files in `active/`; runtime validation is best-effort.
+- Session wrappers decide compositor startup from `active/meta`, not from the mere presence of `active/picom.conf` or `active/shader.glsl`.
+- If `active/meta` is missing or invalid, the wrapper safely skips picom and continues with plain session startup.
+- RetroFX can still keep generated files in `active/`; file presence alone is not treated as runtime compositor intent.
 
 ## Shader Compile/Validation Failures
 
@@ -90,6 +92,7 @@ To return to passthrough:
   - `./scripts/retrofx doctor`
 - On Wayland, global post-process shaders are intentionally not available.
 - Wayland mode applies degraded outputs only (palette artifacts, optional tty/tuigreet).
+- In degraded Wayland active state, `active/meta` records `compositor_required=false`, so session wrappers do not auto-start picom.
 
 ## TTY Palette Not Applying
 

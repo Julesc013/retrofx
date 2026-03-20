@@ -19,6 +19,7 @@ RetroFX is a profile-driven renderer that generates deterministic session-local 
 - `profiles/user/`: user-generated profiles from the wizard.
 - `profiles/user_assets/`: copied support assets for user-owned profiles installed from packs.
 - `active/`: currently active generated config set.
+- `active/meta`: explicit resolved runtime intent for the active tree (`session_type`, `compositor_required`, `degraded`, scope flags).
 - `state/manifests/current.manifest`: artifact contract for the current active state.
 - `state/manifests/last_good.manifest`: artifact contract for the rollback snapshot.
 - `state/backups/`: timestamped active snapshots (pruned to last N, default 10).
@@ -35,6 +36,7 @@ RetroFX is a profile-driven renderer that generates deterministic session-local 
    - X11/unknown: shader + picom + palette artifacts
    - Wayland: degraded palette artifacts only (no shader/picom targets)
    - Optional fonts/AA: session-local `fontconfig.conf` when profile requests it
+   - Runtime intent metadata: `meta` with explicit compositor/degraded state
 4. Validate generated stage:
    - X11/unknown: shader static checks + artifact checks
    - Wayland: degraded artifact checks (and assert shader/picom absence)
@@ -82,6 +84,16 @@ RetroFX is a profile-driven renderer that generates deterministic session-local 
 - `apply` no-op detection uses a stricter generation-completeness check (`REQUIRED_RUNTIME + OPTIONAL_RUNTIME + EXPORT_ONLY`) so missing exports trigger regeneration instead of a false "No changes" result.
 - `repair` prefers a manifest-valid `last_good` snapshot; otherwise it falls back to a degraded passthrough recovery state.
 - `status` and `doctor` report runtime health, generated export completeness, and install-asset health separately.
+
+## Runtime Intent
+
+- RetroFX writes explicit runtime intent into `active/meta` during `apply`.
+- Session wrappers use that metadata to decide whether picom should start.
+- File presence alone is not treated as compositor intent:
+  - `active/picom.conf` may exist as a generated artifact
+  - the wrapper still skips picom unless `active/meta` says `compositor_required=true`
+- Safe fallback:
+  - if `active/meta` is missing or invalid, wrappers skip picom and continue the session without compositor effects
 
 ## Rendering Pipeline (Formal Order)
 

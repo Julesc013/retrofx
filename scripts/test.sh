@@ -10,6 +10,10 @@ MANIFESTS_DIR="$STATE_DIR/manifests"
 PROFILES_DIR="$ROOT_DIR/profiles"
 TEST_TMP_DIR="$STATE_DIR/tests"
 BASE16_FIXTURE="$ROOT_DIR/tests/fixtures/base16.json"
+RUNTIME_STATE_HELPER="$ROOT_DIR/scripts/integrate/retrofx-runtime-state.sh"
+
+# shellcheck source=/dev/null
+source "$RUNTIME_STATE_HELPER"
 
 log() {
   printf '[test] %s\n' "$*"
@@ -129,6 +133,60 @@ validate_active_files() {
     require_file "$ACTIVE_DIR/picom.conf"
     require_file "$ACTIVE_DIR/shader.glsl"
   fi
+}
+
+assert_active_runtime_metadata_valid() {
+  if ! retrofx_runtime_load_active_metadata "$ROOT_DIR"; then
+    die "active runtime metadata is invalid: $RETROFX_RUNTIME_METADATA_ERROR"
+  fi
+}
+
+assert_active_compositor_required() {
+  local expected="$1"
+
+  assert_active_runtime_metadata_valid
+  [[ "$RETROFX_RUNTIME_COMPOSITOR_REQUIRED" == "$expected" ]] ||
+    die "expected compositor_required=$expected, got ${RETROFX_RUNTIME_COMPOSITOR_REQUIRED:-unset}"
+}
+
+assert_active_runtime_degraded() {
+  local expected="$1"
+
+  assert_active_runtime_metadata_valid
+  [[ "$RETROFX_RUNTIME_DEGRADED" == "$expected" ]] ||
+    die "expected degraded=$expected, got ${RETROFX_RUNTIME_DEGRADED:-unset}"
+}
+
+make_session_wrapper_stubs() {
+  local stub_dir="$1"
+
+  mkdir -p "$stub_dir"
+
+  cat >"$stub_dir/picom" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+for arg in "$@"; do
+  if [[ "$arg" == "--log-file" ]]; then
+    exit 0
+  fi
+done
+printf '%s\n' "$*" >>"${RETROFX_TEST_PICOM_LOG:?}"
+exit 0
+EOF
+
+  cat >"$stub_dir/i3" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\n' "$*" >>"${RETROFX_TEST_I3_LOG:?}"
+exit 0
+EOF
+
+  cat >"$stub_dir/pgrep" <<'EOF'
+#!/usr/bin/env bash
+exit 1
+EOF
+
+  chmod +x "$stub_dir/picom" "$stub_dir/i3" "$stub_dir/pgrep"
 }
 
 validate_ansi_palette_env() {
@@ -303,6 +361,8 @@ if command -v shellcheck >/dev/null 2>&1; then
     "$RETROFX" \
     "$ROOT_DIR/scripts/test.sh" \
     "$ROOT_DIR/backends/tty/apply.sh" \
+    "$ROOT_DIR/scripts/integrate/retrofx-runtime-state.sh" \
+    "$ROOT_DIR/scripts/integrate/i3-retro-session.sh" \
     "$ROOT_DIR/scripts/integrate/retrofx-env.sh" \
     "$ROOT_DIR/scripts/integrate/install-xsession.sh" \
     "$ROOT_DIR/scripts/integrate/remove-xsession.sh" \
@@ -435,6 +495,79 @@ if RETROFX_HOME="$pack_home" run_retrofx_x11 self-check >/dev/null 2>&1; then
 fi
 missing_pack_asset_apply_output="$(RETROFX_HOME="$pack_home" run_retrofx_x11 apply c64 2>&1 || true)"
 assert_contains "$missing_pack_asset_apply_output" "custom palette file not found"
+
+log "session wrapper skips picom for no-compositor runtime intent"
+wrapper_stub_dir="$TEST_TMP_DIR/wrapper-stubs"
+make_session_wrapper_stubs "$wrapper_stub_dir"
+wrapper_picom_log="$TEST_TMP_DIR/wrapper-picom.log"
+wrapper_i3_log="$TEST_TMP_DIR/wrapper-i3.log"
+rm -f "$wrapper_picom_log" "$wrapper_i3_log"
+wrapper_passthrough_output="$(
+  RETROFX_TEST_PICOM_LOG="$wrapper_picom_log" \
+    RETROFX_TEST_I3_LOG="$wrapper_i3_log" \
+    PATH="$wrapper_stub_dir:$PATH" \
+    DISPLAY=':99' WAYLAND_DISPLAY='' XDG_SESSION_TYPE='x11' \
+    "$ROOT_DIR/scripts/integrate/i3-retro-session.sh" passthrough 2>&1
+)"
+sleep 0.2
+assert_active_compositor_required "false"
+assert_contains "$wrapper_passthrough_output" "active runtime metadata says compositor is not required; skipping compositor launch"
+[[ ! -f "$wrapper_picom_log" ]] || die "wrapper should not launch picom for passthrough runtime intent"
+require_file "$wrapper_i3_log"
+
+log "session wrapper starts picom for compositor-required runtime intent"
+rm -f "$wrapper_picom_log" "$wrapper_i3_log"
+wrapper_crt_output="$(
+  RETROFX_TEST_PICOM_LOG="$wrapper_picom_log" \
+    RETROFX_TEST_I3_LOG="$wrapper_i3_log" \
+    PATH="$wrapper_stub_dir:$PATH" \
+    DISPLAY=':99' WAYLAND_DISPLAY='' XDG_SESSION_TYPE='x11' \
+    "$ROOT_DIR/scripts/integrate/i3-retro-session.sh" crt-green-p1-4band 2>&1
+)"
+sleep 0.2
+assert_active_compositor_required "true"
+[[ -f "$wrapper_picom_log" ]] || die "wrapper should launch picom for compositor-required runtime intent"
+require_file "$wrapper_i3_log"
+assert_contains "$wrapper_crt_output" "applied profile 'crt-green-p1-4band'"
+
+log "runtime metadata missing or corrupt disables compositor intent safely"
+run_retrofx_x11 apply crt-green-p1-4band
+assert_active_compositor_required "true"
+mv "$ACTIVE_DIR/meta" "$TEST_TMP_DIR/active.meta.backup"
+if retrofx_runtime_current_requires_compositor "$ROOT_DIR"; then
+  die "runtime metadata reader should fail closed when active/meta is missing"
+fi
+assert_contains "$RETROFX_RUNTIME_METADATA_ERROR" "missing runtime metadata"
+cat >"$ACTIVE_DIR/meta" <<'META'
+profile=crt-green-p1-4band.toml
+session_type=x11
+compositor_required=maybe
+META
+if retrofx_runtime_current_requires_compositor "$ROOT_DIR"; then
+  die "runtime metadata reader should fail closed for invalid active/meta"
+fi
+assert_contains "$RETROFX_RUNTIME_METADATA_ERROR" "compositor_required"
+run_retrofx_x11 repair
+assert_active_compositor_required "true"
+
+log "off resets compositor runtime intent"
+run_retrofx_x11 apply crt-green-p1-4band
+assert_active_compositor_required "true"
+run_retrofx_x11 off
+assert_active_compositor_required "false"
+if retrofx_runtime_current_requires_compositor "$ROOT_DIR"; then
+  die "off should leave a no-compositor active runtime intent"
+fi
+
+log "wayland degraded runtime intent never requires a compositor"
+run_retrofx_wayland apply crt-green-p1-4band
+assert_active_runtime_metadata_valid
+[[ "$RETROFX_RUNTIME_SESSION_TYPE" == "wayland" ]] || die "expected active runtime session_type=wayland"
+assert_active_compositor_required "false"
+assert_active_runtime_degraded "true"
+if retrofx_runtime_current_requires_compositor "$ROOT_DIR"; then
+  die "wayland degraded runtime intent should not require a compositor"
+fi
 
 log "compatibility-check command runs and reports checks"
 compat_output=""

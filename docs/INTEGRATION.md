@@ -17,11 +17,14 @@ RetroFX now ships optional wrappers in `scripts/integrate/`:
    - `crt-green-p1-4band` if present
    - `passthrough` fallback
 2. Runs `./scripts/retrofx apply <profile>`
-3. Starts picom only when the current artifact contract marks `active/picom.conf` as `REQUIRED_RUNTIME`
-4. Applies session-local font hook (`FONTCONFIG_FILE`) only when the current artifact contract marks `active/fontconfig.conf` as `REQUIRED_RUNTIME`
-5. `exec i3`
+3. Reads explicit runtime intent from `active/meta`
+4. Starts picom only when `active/meta` says `compositor_required=true`
+5. Skips picom when runtime intent is degraded, missing, invalid, or explicitly no-compositor
+6. Applies session-local font hook (`FONTCONFIG_FILE`) only when the current artifact contract marks `active/fontconfig.conf` as `REQUIRED_RUNTIME`
+7. `exec i3`
 
 If `retrofx apply` fails, it logs a warning and still starts plain i3.
+If `active/meta` is missing or invalid, the wrapper logs a warning and starts i3 without auto-starting picom.
 
 Run directly from repo:
 
