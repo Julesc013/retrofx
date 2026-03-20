@@ -1,17 +1,17 @@
 # RetroFX Quickstart
 
-## Repo-Local Usage
+RetroFX 1.x is best on X11 + picom + GLX. On Wayland, expect degraded outputs only. Run commands from the repository root unless you have installed RetroFX user-local.
 
-No system install is required. Run all commands from the repository root.
+## 1. Check Your Environment
 
 ```bash
-cd /path/to/retrofx
-./scripts/retrofx list
+./scripts/retrofx doctor
+./scripts/retrofx compatibility-check
 ```
 
-## Pick A Profile
+If you are on Wayland, RetroFX can still generate palette/session-local outputs, but it will not provide a global compositor shader path.
 
-Discover built-in pack profiles:
+## 2. Browse Profiles
 
 ```bash
 ./scripts/retrofx list
@@ -20,17 +20,12 @@ Discover built-in pack profiles:
 ./scripts/retrofx info c64
 ```
 
-## Apply / Off
-
-Apply a profile:
+## 3. Apply, Inspect, Revert
 
 ```bash
 ./scripts/retrofx apply crt-green-p1-4band
-```
-
-Disable effects (passthrough):
-
-```bash
+./scripts/retrofx status
+./scripts/retrofx preview crt-green-p1-4band
 ./scripts/retrofx off
 ```
 
@@ -40,63 +35,48 @@ TTY rollback only:
 ./scripts/retrofx off --tty
 ```
 
-## Preview
-
-Preview color and quantization output:
+## 4. Recover Safely
 
 ```bash
-./scripts/retrofx preview
-./scripts/retrofx preview crt-amber-p3-6band
+./scripts/retrofx self-check
+./scripts/retrofx repair
+./scripts/retrofx apply crt-green-p1-4band --safe
 ```
 
-## Create Your Own Profile
-
-Run the wizard:
+## 5. Create, Import, Or Install Profiles
 
 ```bash
 ./scripts/retrofx new
+./scripts/retrofx import base16 tests/fixtures/base16.json --name base16-demo
+./scripts/retrofx install-pack core
 ```
 
-Profiles created by the wizard are saved under `profiles/user/`.
+- Wizard-created profiles are written to `profiles/user/`.
+- `install-pack core` copies profiles into `profiles/user/` and relocates pack-local assets into `profiles/user_assets/`.
+- Base16 import/export is a deterministic, lossy ANSI16 bridge, not a lossless round-trip format.
 
-## Palette Notes
-
-- Structured palette profiles (`palette-2` .. `palette-256`) are optimized and fast.
-- Custom palettes are supported up to 32 colors (see `palettes/c64.txt` and `docs/PALETTES.md`).
-
-## Fonts & AA (Session-Local)
-
-Use a profile that includes `[fonts]` / `[font_aa]` (example: `crt-green-fonts-aa`), then export the session-local fontconfig variable:
+## 6. Optional Session-Local Font Overrides
 
 ```bash
 ./scripts/retrofx apply crt-green-fonts-aa
 eval "$(./scripts/integrate/retrofx-env.sh)"
 ```
 
-This affects apps launched from that shell/session only. Plasma/GNOME defaults remain unchanged unless you opt in.
+This affects apps launched from that shell/session only. RetroFX does not modify global fontconfig by default.
 
-## Interop (Base16 + Packs)
+## 7. Optional User-Local Install
 
 ```bash
-./scripts/retrofx import base16 tests/fixtures/base16.json --name base16-demo
-./scripts/retrofx export base16 base16-demo /tmp/base16-demo.json
-./scripts/retrofx gallery
-./scripts/retrofx install-pack core
-./scripts/retrofx install-pack community
+./scripts/retrofx install --yes
+retrofx status
+retrofx list
 ```
-
-Base16 import/export in 1.x is a deterministic best-effort ANSI16 bridge, not a lossless round-trip converter. Exported Base16 JSON reflects the resolved RetroFX ANSI16 palette for the profile you exported.
-
-Pack-installed profiles are copied into `profiles/user/`. If a pack profile depends on a local asset such as a custom palette, RetroFX copies that asset into `profiles/user_assets/<profile-id>/` and rewrites the installed profile so it remains self-contained.
-
-## Wayland Note (Degraded Mode)
-
-On Wayland sessions, RetroFX does not provide global post-process compositor shaders. In this mode, `apply` generates degraded outputs only (terminal palette artifacts, optional TTY palette backend, optional tuigreet snippet) and reports this explicitly in command output and `doctor`.
 
 ## Need Help?
 
-- Run diagnostics:
-  - `./scripts/retrofx doctor`
-  - `./scripts/retrofx self-check`
-- Read:
+- Support boundaries:
+  - `docs/1x_PRODUCT.md`
+  - `docs/CAPABILITIES.md`
+- Recovery and diagnostics:
   - `docs/TROUBLESHOOTING.md`
+  - `docs/TESTING.md`

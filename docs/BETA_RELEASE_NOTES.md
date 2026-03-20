@@ -1,28 +1,35 @@
 # RetroFX 0.1.0-beta.1 Release Notes
 
-## 1) What RetroFX Is
+This beta is about stabilization, not feature expansion.
 
-RetroFX is a profile-driven rendering toolkit for retro-styled visual output with deterministic generation, atomic apply/off, rollback safety, and honest capability reporting across X11 and degraded Wayland paths.
+## What This Beta Covers
 
-## 2) Who Should Test It
+- Supported core path:
+  - X11 + picom + GLX
+- Degraded but intentional paths:
+  - Wayland palette/session-local outputs
+  - manual integration outside the documented i3 wrapper flow
+- Safety and recovery:
+  - atomic apply/off
+  - `state/last_good/`
+  - manifest-based `self-check`
+  - `repair`
 
-- Linux users on X11 (especially i3 + picom).
-- Users who can test degraded Wayland behavior honestly (no global compositor shader expectations).
-- Users willing to provide reproducible logs and environment details.
+## Canonical Truth Docs
 
-## 3) Supported Environments
+Use these as the current source of truth:
 
-- Full path: X11 + picom + GLX.
-- Degraded path: Wayland (palette/exports/session-local outputs only).
-- Optional backends: TTY ANSI16 palette, tuigreet snippet generation.
+- `docs/1x_PRODUCT.md`
+- `docs/CAPABILITIES.md`
+- `docs/TESTING.md`
 
-## 4) How To Install
-
-Repo mode:
+## How To Try It
 
 ```bash
+./scripts/retrofx doctor
 ./scripts/retrofx list
 ./scripts/retrofx apply <profile>
+./scripts/retrofx status
 ```
 
 User-local install mode:
@@ -32,7 +39,7 @@ User-local install mode:
 ~/.local/bin/retrofx status
 ```
 
-## 5) How To Revert
+## Recovery
 
 ```bash
 ./scripts/retrofx off --all
@@ -40,13 +47,14 @@ User-local install mode:
 ./scripts/retrofx repair
 ```
 
-Installed mode full removal:
+## Known Limits
 
-```bash
-retrofx uninstall --yes
-```
+- No global Wayland shader support.
+- No automatic broad desktop-environment theming.
+- Base16 import/export is intentionally lossy.
+- TTY output remains 16-color semantic output.
 
-## 6) How To Report Issues
+## Reporting Issues
 
 Include:
 
@@ -56,23 +64,3 @@ Include:
 - failing profile file
 - `state/logs/retrofx.log` excerpts
 - whether `--safe` was used
-
-## 7) Known Limitations
-
-- No global Wayland shader support.
-- No curvature or temporal persistence.
-- TTY limited to 16 colors.
-- Custom palettes limited to <=32 explicit entries.
-
-## 8) Performance Expectations
-
-- Single-pass shader pipeline with bounded loops.
-- No frame history and no multi-pass effects.
-- Apply path skips unchanged states and minimizes compositor churn.
-- Use `./scripts/retrofx perf` and `./scripts/retrofx sanity-perf` for quick checks.
-
-## 9) GPU Compatibility Notes
-
-- Best results on systems where picom GLX backend works reliably.
-- Use `./scripts/retrofx compatibility-check` before daily use.
-- If shader runtime checks fail, use degraded/safe mode and report logs.

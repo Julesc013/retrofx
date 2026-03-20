@@ -1,6 +1,7 @@
 # RetroFX Architecture
 
 RetroFX is a profile-driven renderer that generates deterministic session-local artifacts under this repository and never touches system-wide configuration by default.
+This document describes implemented 1.x behavior, not future plans.
 
 ## Design Principles
 
@@ -19,7 +20,7 @@ RetroFX is a profile-driven renderer that generates deterministic session-local 
 - `profiles/user/`: user-generated profiles from the wizard.
 - `profiles/user_assets/`: copied support assets for user-owned profiles installed from packs.
 - `active/`: currently active generated config set.
-- `active/meta`: explicit resolved runtime intent for the active tree (`session_type`, `compositor_required`, `degraded`, scope flags).
+- `active/meta`: explicit resolved runtime intent for the active tree (`session_type`, `x11_runtime_enabled`, `compositor_required`, `shader_required`, `degraded`, scope flags).
 - `state/manifests/current.manifest`: artifact contract for the current active state.
 - `state/manifests/last_good.manifest`: artifact contract for the rollback snapshot.
 - `state/backups/`: timestamped active snapshots (pruned to last N, default 10).
@@ -160,10 +161,10 @@ RetroFX is a profile-driven renderer that generates deterministic session-local 
 
 ## Backend Status
 
-- `x11-picom`: functional profile-scoped backend.
-- `tty`: functional profile-scoped backend with safe mock/apply/off behavior and rollback backups.
-- `tuigreet`: functional profile-scoped snippet generation (`active/tuigreet.conf`).
-- Wayland: degraded support implemented with honest capability reporting (no global post-process shader pipeline).
+- X11 + picom: Supported.
+- TTY backend: Supported for ANSI palette apply/off, with best-effort tty font apply.
+- tuigreet: Supported for snippet generation (`active/tuigreet.conf`).
+- Wayland: Degraded. No global post-process shader pipeline is claimed.
 
 ## Typography Scope
 

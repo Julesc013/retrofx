@@ -1,5 +1,7 @@
 # RetroFX Profile Spec v1
 
+This document describes the accepted 1.x profile schema only. It does not describe future inheritance, token, or 2.0 compiler concepts.
+
 Profiles are TOML files under:
 
 - `profiles/*.toml` (base)
@@ -101,6 +103,7 @@ Scope behavior:
   - compositor runtime metadata stays false
   - session wrappers do not auto-start picom for that applied state
   - explicit export commands remain separate and may still write requested export files without changing active runtime state
+  - this is a hard runtime rule in 1.x, not a hint
 - `tty=true` applies TTY ANSI16 palette backend (or mock mode when console write is unavailable).
 - `tuigreet=true` generates `active/tuigreet.conf` snippet.
 
@@ -111,3 +114,4 @@ Scope behavior:
 - Duplicate keys are rejected.
 - Mode-specific constraints are enforced.
 - Version must be `1`.
+- No inheritance/include mechanism is implemented in 1.x.

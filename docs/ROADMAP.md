@@ -1,24 +1,35 @@
 # RetroFX Roadmap
 
-## Phase 1 (Implemented)
+This file is intentionally conservative. It distinguishes current 1.x scope from possible future work.
 
-- Profile-driven renderer (`passthrough`, `monochrome`, `palette`).
-- Shader features: ordered dithering, scanlines, flicker, vignette, hotcore, phosphor tint, tone transform.
-- Structured palettes: `vga16`, `cube256`.
-- Atomic apply with validation, backup, and rollback-safe behavior.
-- CLI commands: `list`, `apply`, `off`, `doctor`, `preview`, `new`.
-- X11 + picom backend support.
+## Current 1.x Scope (Implemented)
 
-## Phase 1 Scaffolds (Present)
+- Profile-driven renderer with `passthrough`, `monochrome`, and `palette` modes.
+- X11 + picom + GLX full runtime path.
+- Wayland degraded apply path.
+- Scoped TTY backend and tuigreet snippet generation.
+- Repo-local mode and user-local install mode.
+- Manifest-based integrity model:
+  - `self-check`
+  - `repair`
+  - `state/last_good/`
+- Pack install relocation for profile-local assets.
+- Base16 JSON import/export as a deterministic lossy bridge.
+- Regression suite and local CI wrapper.
 
-- TTY backend apply hook placeholder.
-- tuigreet backend apply hook placeholder.
-- Wayland degraded mode documented (not enabled yet).
+## Remaining 1.x Work Before 1.0 Stable
 
-## Phase 2 (Planned)
+- Continue stabilization only:
+  - bug fixes
+  - docs truth remediation
+  - host validation on the supported X11 path
+  - release packaging and release process cleanup
+- No new rendering features are planned for the 1.x stabilization branch.
 
-- TTY palette application with reversible session helpers.
-- tuigreet theme materialization hooks.
-- Wayland degraded backend (no custom shader assumptions).
-- Session-local font hook execution chain with AA mode toggles.
-- Expanded integration tests for profile matrix and failure injection.
+## Future / 2.x Direction (Not Part Of This Branch)
+
+- Broader appearance-compiler or orchestration-platform work.
+- Deeper desktop-environment theming automation.
+- Any redesign that would require broader Wayland or DE integration assumptions.
+
+These items are future direction only, not a commitment for 1.x.

@@ -2,6 +2,16 @@
 
 RetroFX interop is intentionally minimal and offline-first.
 
+Status summary:
+
+- Supported:
+  - `xresources` export
+  - `alacritty` export
+  - Base16 JSON import/export as a deterministic lossy bridge
+- Unsupported:
+  - YAML Base16 import
+  - networked gallery/pack behavior
+
 ## Supported
 
 - Import Base16-style **JSON** schemes:

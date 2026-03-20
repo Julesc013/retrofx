@@ -1,116 +1,53 @@
 # RetroFX
 
-RetroFX is a profile-driven retro rendering toolkit with deterministic generation, atomic apply/off, rollback safety, and honest backend capability reporting.
+RetroFX is a profile-driven retro rendering and theming tool for Linux sessions. RetroFX 1.x is centered on a supported X11 + picom + GLX path, plus deterministic terminal/theme exports, scoped TTY and tuigreet outputs, user-local install mode, and explicit recovery tooling. Current repository version: `0.1.0-beta.1`.
 
-Current release: `0.1.0-beta`
+## Current Support
 
-## What It Does
+| Target / Environment | Status | Notes |
+| --- | --- | --- |
+| X11 + picom + GLX | Supported | Full shader/runtime path. Best-supported session flow is i3 + the RetroFX wrapper. |
+| Other X11 sessions | Degraded | Core apply/export logic works, but session integration is more manual and less documented. |
+| Wayland sessions | Degraded | No global shader/compositor path. Palette and session-local outputs only. |
+| TTY palette backend | Supported | Optional 16-color backend. Real apply requires a compatible console. |
+| tuigreet snippet generation | Supported | Generates `active/tuigreet.conf`; global greetd edits stay manual. |
+| Base16 import/export | Supported | Deterministic, lossy ANSI16 bridge. |
+| Broad DE orchestration / global Wayland shaders | Unsupported | Out of scope for 1.x. |
 
-- Applies profile-defined visual pipelines for X11 + picom (full path).
-- Supports degraded Wayland mode (palette/export/session-safe outputs only).
-- Generates terminal/theming artifacts (`alacritty`, `Xresources`, semantic ANSI mapping).
-- Supports scoped backends: X11, TTY palette, and tuigreet theme snippets.
-- Provides Base16 JSON import/export as a deterministic best-effort ANSI16 bridge.
-- Maintains rollback snapshots and audit logs under `state/`.
-
-## Core Guarantees
-
-- Atomic apply: stage -> validate -> swap.
-- Safe rollback to `state/last_good` on failure.
-- Deterministic template/profile rendering.
-- No destructive system-wide changes by default.
-- Bounded shader complexity and predictable performance.
-
-## Quick Start (Repo-Local)
+## Quick Start
 
 ```bash
-# List profiles (core pack + user)
-./scripts/retrofx list
-
-# Preview current/target profile in terminal
-./scripts/retrofx preview
-./scripts/retrofx preview crt-green-p1-4band
-
-# Apply / disable
-./scripts/retrofx apply crt-green-p1-4band
-./scripts/retrofx off
-
-# Diagnose environment
 ./scripts/retrofx doctor
-./scripts/retrofx doctor --json
-
-# Run full local CI checks
-./scripts/ci.sh
-```
-
-## Main Commands
-
-```bash
-./scripts/retrofx --version
-./scripts/retrofx status
 ./scripts/retrofx list
-./scripts/retrofx search <keyword>
-./scripts/retrofx info <profile>
-./scripts/retrofx apply <profile> [--safe]
-./scripts/retrofx off [--tty|--all]
-./scripts/retrofx doctor [--json]
-./scripts/retrofx compatibility-check
-./scripts/retrofx self-check
-./scripts/retrofx repair
-./scripts/retrofx sanity-perf
-./scripts/retrofx perf [profile]
-./scripts/retrofx preview [profile]
-./scripts/retrofx new
-
-# profile packs / interop
-./scripts/retrofx gallery
-./scripts/retrofx install-pack <packname>
-./scripts/retrofx import base16 <scheme.json> --name <profile-name>
-./scripts/retrofx export <alacritty|xresources|base16> <profile> <output_path>
-
-# install mode
-./scripts/retrofx install [--yes] [--path <dir>]
-./scripts/retrofx uninstall [--yes] [--keep-profiles]
+./scripts/retrofx apply crt-green-p1-4band
+./scripts/retrofx status
+./scripts/retrofx off
 ```
 
-## Backend Capability Summary
+## Safety And Recovery
 
-- X11 + picom + GLX: full shader pipeline.
-- Wayland: degraded outputs only, no global post-process compositor shader path.
-- TTY: optional palette/font backend with safe/mock behavior.
-- Tuigreet: generated config snippet in `active/tuigreet.conf`.
+- `apply` is atomic and keeps `state/last_good/` as the rollback snapshot.
+- `self-check` validates the active state against the artifact contract in `state/manifests/`.
+- `repair` restores a manifest-valid `last_good` snapshot or falls back conservatively.
+- User-local install mode lives under `~/.config/retrofx`; RetroFX does not edit `/etc` by default.
 
-Use `./scripts/retrofx doctor` for exact host/session capability checks.
+## Current Limits
 
-## Performance & Power Notes
+- `0.1.0-beta.1` is still beta, not a 1.0 stable release.
+- Wayland support is degraded by design in 1.x.
+- Wrapper/Xsession integration is explicit for i3; other WM/DE setups are more manual.
+- Base16 import/export is intentionally lossy.
+- Passing `./scripts/test.sh` is necessary but not sufficient for final release confidence.
 
-- Apply path skips work when input signature is unchanged.
-- Picom reload/restart path is minimized and gated by compositor-relevant config changes.
-- Passthrough / blur-free profiles avoid compositor backend apply path (`Compositor not required.`).
-- Run `./scripts/retrofx perf` for stage timing breakdown in milliseconds.
+## Documentation
 
-## Install Mode (User-Local)
-
-RetroFX supports a user-local install mode under `~/.config/retrofx` with launcher at `~/.local/bin/retrofx`.
-
-```bash
-./scripts/retrofx install --yes
-retrofx status
-retrofx list
-```
-
-No root required. No `/etc` modifications.
-
-## Documentation Index
-
+- [1.x Product Truth](docs/1x_PRODUCT.md)
+- [Capabilities](docs/CAPABILITIES.md)
 - [Quickstart](docs/QUICKSTART.md)
 - [Install](docs/INSTALL.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Profile Spec](docs/PROFILE_SPEC.md)
-- [Capabilities](docs/CAPABILITIES.md)
 - [Integration](docs/INTEGRATION.md)
-- [Fonts](docs/FONTS.md)
-- [Palettes](docs/PALETTES.md)
 - [Interop](docs/INTEROP.md)
 - [Testing](docs/TESTING.md)
 - [Troubleshooting](docs/TROUBLESHOOTING.md)

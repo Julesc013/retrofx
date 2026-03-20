@@ -1,5 +1,10 @@
 # RetroFX Troubleshooting
 
+For current support boundaries, start with:
+
+- `docs/1x_PRODUCT.md`
+- `docs/CAPABILITIES.md`
+
 ## Quick Recovery
 
 If state looks broken:

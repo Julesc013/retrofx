@@ -1,16 +1,26 @@
 # RetroFX Install Guide
 
-RetroFX supports two usage modes:
+RetroFX 1.x supports two normal usage modes:
 
 - Repo-local mode: run directly from a cloned repository.
 - User-local install mode: install under `~/.config/retrofx` with launcher at `~/.local/bin/retrofx`.
 
 No root privileges are required. RetroFX does not modify `/etc`.
 
+## Mode Summary
+
+| Mode | Status | Notes |
+| --- | --- | --- |
+| Repo-local | Supported | Primary workflow for development and testing. |
+| User-local install | Supported | Managed copy under `~/.config/retrofx`; launcher at `~/.local/bin/retrofx`. |
+| User-local i3 Xsession helper | Supported | Generates managed user Xsession entries only. |
+| greetd / other display managers | Degraded | Manual integration only. No automatic global config edits. |
+
 ## Repo-Local Mode
 
 ```bash
 cd /path/to/retrofx
+./scripts/retrofx doctor
 ./scripts/retrofx list
 ./scripts/retrofx apply crt-green-p1-4band
 ./scripts/retrofx off
@@ -18,7 +28,7 @@ cd /path/to/retrofx
 
 ## User-Local Install Mode
 
-Install into default location:
+Install into the default location:
 
 ```bash
 ./scripts/retrofx install --yes
@@ -34,23 +44,23 @@ After install:
 
 - launcher: `~/.local/bin/retrofx`
 - home: `~/.config/retrofx`
-- runtime dirs: `active/`, `state/`, `profiles/`, `templates/`, etc.
+- managed assets: `scripts/`, `templates/`, `backends/`, `profiles/`, `docs/`, `VERSION`, and related runtime files
+- runtime state: `active/`, `state/`
 - user-owned pack assets: `profiles/user_assets/`
-- `retrofx status` reports runtime state separately from install-asset health
 
-Check mode and active profile:
+`retrofx status` reports runtime health separately from install-asset health so an incomplete install is not mistaken for a broken applied profile.
+
+## Pack Installs In User Space
 
 ```bash
-retrofx status
+retrofx install-pack core
 ```
 
-Installed mode keeps managed scripts/templates/backend assets under the install home. These are validated separately from `active/` runtime artifacts so an incomplete install does not get mistaken for a broken applied profile.
-
-`install-pack <packname>` copies pack profiles into `profiles/user/`. If a pack profile references local support files such as a custom palette, RetroFX also copies those assets into `profiles/user_assets/<profile-id>/` and rewrites the installed profile to use the copied asset path.
+`install-pack <packname>` copies pack profiles into `profiles/user/`. If a pack profile references a local support file such as a custom palette, RetroFX copies that asset into `profiles/user_assets/<profile-id>/` and rewrites the installed profile to use the copied asset path.
 
 ## Uninstall
 
-Remove user-local install and managed launcher:
+Remove the user-local install and managed launcher:
 
 ```bash
 retrofx uninstall --yes
@@ -64,13 +74,9 @@ retrofx uninstall --yes --keep-profiles
 
 `--keep-profiles` stores preserved profiles in a timestamped backup directory next to the install home.
 
-For recovery and diagnostics see:
+## Optional X11 i3 Integration
 
-- `docs/TROUBLESHOOTING.md`
-
-## X11 i3 Xsession Entry (User-Local)
-
-Create a managed Xsession entry:
+Create a managed user-local Xsession entry:
 
 ```bash
 ~/.config/retrofx/scripts/integrate/install-xsession.sh --profile crt-green-p1-4band
@@ -82,21 +88,17 @@ Remove managed Xsession entries:
 ~/.config/retrofx/scripts/integrate/remove-xsession.sh --all-managed --yes
 ```
 
-The generated desktop file includes a RetroFX marker key so uninstall/removal only touches managed entries.
+These helpers only touch user-local `.desktop` entries that carry the RetroFX marker key.
 
-## greetd/tuigreet Integration (Manual)
+## Manual greetd / Other DM Integration
 
-RetroFX does not edit greetd configuration automatically.
+RetroFX does not edit greetd or system display-manager configuration automatically.
 
 Suggested flow:
 
 1. Install RetroFX user-local.
-2. Create the user-local Xsession entry with `install-xsession.sh`.
-3. In tuigreet, select that session entry (or your existing `Default.desktop` flow that launches the RetroFX wrapper).
-4. Keep `active/tuigreet.conf` as a generated snippet reference only; merge manually into your greetd setup if desired.
+2. Create the user-local Xsession entry with `install-xsession.sh` if you want the i3 wrapper path.
+3. Select that session entry in tuigreet or wire your own session launcher manually.
+4. Treat `active/tuigreet.conf` as a generated snippet, not a global config writer.
 
-## Other Display Managers (High Level)
-
-- SDDM/LightDM/other DMs: use user-local `.desktop` session entries when supported.
-- Keep system-wide DM configs unchanged unless you explicitly choose to integrate them.
-- Prefer session wrappers and env hooks to limit RetroFX impact to chosen sessions.
+For recovery and diagnostics see `docs/TROUBLESHOOTING.md`.

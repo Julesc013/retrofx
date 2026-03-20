@@ -1,44 +1,53 @@
-# RetroFX Beta Notes (`0.1.0-beta`)
+# RetroFX Beta Notes (`0.1.0-beta.1`)
 
-## Supported Environments
+RetroFX is still in beta. The supported 1.x core path is X11 + picom + GLX. Everything else should be judged against that support boundary, not against a future 2.0 vision.
 
-- X11 sessions with picom + GLX: full RetroFX shader pipeline.
-- Wayland sessions: degraded mode only (palette/export/session-local outputs).
-- TTY backend: optional ANSI16 palette path.
-- Tuigreet backend: generated snippet integration only.
+## Support Summary
 
-Use `./scripts/retrofx compatibility-check` and `./scripts/retrofx doctor` before daily use.
+- Supported:
+  - X11 + picom + GLX
+  - repo-local mode
+  - user-local install mode
+  - `apply`, `off`, `status`, `doctor`, `self-check`, `repair`
+  - TTY palette backend
+  - tuigreet snippet generation
+- Degraded:
+  - Wayland sessions
+  - manual WM/DE integration outside the documented i3 path
+  - Base16 round-trip fidelity
+  - TTY font apply
+- Unsupported:
+  - global Wayland shader compositing
+  - automatic full desktop-environment theming/orchestration
 
-## Known Limitations
+See:
 
-- No global Wayland post-process shader pipeline.
-- No curvature/warp effects.
-- No temporal persistence/frame-history effects.
-- TTY output is limited to 16-color semantics.
-- Custom palettes above 32 colors are not supported.
+- `docs/1x_PRODUCT.md`
+- `docs/CAPABILITIES.md`
 
 ## Safety / Recovery
 
-- Verify state integrity:
+- Verify integrity:
   - `./scripts/retrofx self-check`
-- Repair from corruption or bad state:
+- Repair from bad state:
   - `./scripts/retrofx repair`
-- Disable effects quickly:
+- Disable effects:
   - `./scripts/retrofx off`
-- Apply low-risk profile transforms:
+- Apply a lower-risk profile transform:
   - `./scripts/retrofx apply <profile> --safe`
 
-## Full Revert
+## Before Daily Use
 
-Repo-local:
-- `./scripts/retrofx off --all`
-
-Installed mode:
-- `retrofx uninstall --yes`
+```bash
+./scripts/retrofx --version
+./scripts/retrofx doctor
+./scripts/retrofx compatibility-check
+```
 
 ## Reporting Issues
 
-When filing a bug report, include:
+Include:
+
 - `./scripts/retrofx --version`
 - `./scripts/retrofx doctor --json`
 - `./scripts/retrofx compatibility-check`

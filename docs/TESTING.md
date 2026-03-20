@@ -2,6 +2,11 @@
 
 Run tests from repository root.
 
+For product scope and support boundaries, see:
+
+- `docs/1x_PRODUCT.md`
+- `docs/CAPABILITIES.md`
+
 ## Full Regression
 
 ```bash

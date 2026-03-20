@@ -1,8 +1,14 @@
 # Integration Guide
 
-## X11 i3 Session Wrapper (Optional)
+Use the support classes from `docs/CAPABILITIES.md` literally:
 
-RetroFX now ships optional wrappers in `scripts/integrate/`:
+- Supported: documented and maintained for 1.x
+- Degraded: useful, but more limited or more manual
+- Unsupported: not part of 1.x
+
+## Supported: X11 i3 Session Wrapper
+
+RetroFX ships these optional helpers in `scripts/integrate/`:
 
 - `i3-retro-session.sh`
 - `install-xsession.sh`
@@ -39,7 +45,7 @@ If you launch i3 manually and still want RetroFX font overrides in that shell/se
 eval "$(./scripts/integrate/retrofx-env.sh)"
 ```
 
-## User-Local Xsession Entry (No Root)
+## Supported: User-Local Xsession Entry
 
 Generate an Xsession desktop entry under `~/.local/share/xsessions/`:
 
@@ -60,7 +66,7 @@ Remove managed xsession entries:
 ./scripts/integrate/remove-xsession.sh --all-managed --yes
 ```
 
-## greetd + tuigreet Selection
+## Degraded: greetd + tuigreet Selection
 
 If your tuigreet setup chooses entries from `.desktop` sessions, select:
 
@@ -69,7 +75,7 @@ If your tuigreet setup chooses entries from `.desktop` sessions, select:
 
 RetroFX does not modify global greetd configuration. `active/tuigreet.conf` is only a generated snippet.
 
-## Wayland Degraded Integration (Honest Mode)
+## Degraded: Wayland Integration
 
 When Wayland is detected (`WAYLAND_DISPLAY` set), `retrofx apply` uses degraded mode:
 
@@ -84,7 +90,7 @@ Expected message:
 
 `Wayland session detected: shader pipeline disabled; applied degraded outputs only.`
 
-## Optional Toolkit Env Hooks (Print Only)
+## Supported: Optional Toolkit Env Hooks (Print Only)
 
 These scripts print suggested env vars and do not apply system changes:
 
@@ -98,7 +104,7 @@ Example:
 eval "$(./scripts/integrate/wayland-env.sh)"
 ```
 
-## Rollback / Disable
+## Supported: Rollback / Disable
 
 Default rollback to passthrough profile:
 
