@@ -19,6 +19,7 @@ Notes:
 - Full shader capability depends on runtime (`picom`, GLX support, compositor constraints).
 - If requirements are missing, RetroFX remains fail-safe and keeps prior good state.
 - Session wrappers only auto-start picom when active runtime metadata says `compositor_required=true`.
+- Profiles with `scope.x11 = false` do not stage active `picom.conf`/`shader.glsl` runtime targets during `apply`.
 
 ## Wayland
 

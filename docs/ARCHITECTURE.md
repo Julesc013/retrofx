@@ -33,7 +33,8 @@ RetroFX is a profile-driven renderer that generates deterministic session-local 
 1. Parse and validate profile.
 2. Detect session type (`x11`, `wayland`, `unknown`) and WM/DE (best-effort).
 3. Render stage artifacts into `state/stage.*`:
-   - X11/unknown: shader + picom + palette artifacts
+   - X11/unknown with `scope.x11 = true`: shader + picom + palette artifacts
+   - X11/unknown with `scope.x11 = false`: palette/export artifacts only (no active shader/picom targets)
    - Wayland: degraded palette artifacts only (no shader/picom targets)
    - Optional fonts/AA: session-local `fontconfig.conf` when profile requests it
    - Runtime intent metadata: `meta` with explicit compositor/degraded state
@@ -88,9 +89,14 @@ RetroFX is a profile-driven renderer that generates deterministic session-local 
 ## Runtime Intent
 
 - RetroFX writes explicit runtime intent into `active/meta` during `apply`.
+- `scope.x11 = false` is treated strictly for 1.x:
+  - no active `picom.conf`
+  - no active `shader.glsl`
+  - `x11_runtime_enabled=false`
+  - `compositor_required=false`
 - Session wrappers use that metadata to decide whether picom should start.
 - File presence alone is not treated as compositor intent:
-  - `active/picom.conf` may exist as a generated artifact
+  - for `scope.x11 = true`, `active/picom.conf` may exist as a generated artifact even when the compositor is not required
   - the wrapper still skips picom unless `active/meta` says `compositor_required=true`
 - Safe fallback:
   - if `active/meta` is missing or invalid, wrappers skip picom and continue the session without compositor effects

@@ -11,6 +11,7 @@ retrofx_runtime_reset() {
   RETROFX_RUNTIME_META_FILE=""
   RETROFX_RUNTIME_PROFILE_REF=""
   RETROFX_RUNTIME_SESSION_TYPE=""
+  RETROFX_RUNTIME_X11_RUNTIME_ENABLED=""
   RETROFX_RUNTIME_COMPOSITOR_REQUIRED=""
   RETROFX_RUNTIME_SHADER_REQUIRED=""
   RETROFX_RUNTIME_DEGRADED=""
@@ -82,6 +83,13 @@ retrofx_runtime_load_metadata() {
         esac
         RETROFX_RUNTIME_SESSION_TYPE="$value"
         saw_session=1
+        ;;
+      x11_runtime_enabled)
+        retrofx_runtime_bool_valid "$value" || {
+          RETROFX_RUNTIME_METADATA_ERROR="runtime metadata field 'x11_runtime_enabled' is invalid: $value"
+          return 1
+        }
+        RETROFX_RUNTIME_X11_RUNTIME_ENABLED="$value"
         ;;
       compositor_required)
         retrofx_runtime_bool_valid "$value" || {
@@ -165,8 +173,24 @@ retrofx_runtime_load_metadata() {
     RETROFX_RUNTIME_DEGRADED="false"
   fi
 
+  if [[ -z "$RETROFX_RUNTIME_X11_RUNTIME_ENABLED" ]]; then
+    if [[ "$RETROFX_RUNTIME_SESSION_TYPE" != "wayland" ]] &&
+      ([[ "${RETROFX_RUNTIME_SCOPE_X11:-false}" == "true" ]] ||
+        [[ "${RETROFX_RUNTIME_COMPOSITOR_REQUIRED:-false}" == "true" ]] ||
+        [[ "${RETROFX_RUNTIME_SHADER_REQUIRED:-false}" == "true" ]]); then
+      RETROFX_RUNTIME_X11_RUNTIME_ENABLED="true"
+    else
+      RETROFX_RUNTIME_X11_RUNTIME_ENABLED="false"
+    fi
+  fi
+
   if [[ "$RETROFX_RUNTIME_SESSION_TYPE" == "wayland" && "$RETROFX_RUNTIME_COMPOSITOR_REQUIRED" == "true" ]]; then
     RETROFX_RUNTIME_METADATA_ERROR="runtime metadata cannot require a compositor for wayland active state"
+    return 1
+  fi
+
+  if [[ "$RETROFX_RUNTIME_COMPOSITOR_REQUIRED" == "true" && "$RETROFX_RUNTIME_X11_RUNTIME_ENABLED" != "true" ]]; then
+    RETROFX_RUNTIME_METADATA_ERROR="runtime metadata cannot require a compositor when x11_runtime_enabled=false"
     return 1
   fi
 
@@ -191,6 +215,16 @@ retrofx_runtime_current_requires_compositor() {
   fi
 
   [[ "${RETROFX_RUNTIME_COMPOSITOR_REQUIRED:-false}" == "true" ]]
+}
+
+retrofx_runtime_current_enables_x11_runtime() {
+  local root_dir="${1:-}"
+
+  if [[ -n "$root_dir" ]]; then
+    retrofx_runtime_load_active_metadata "$root_dir" || return 1
+  fi
+
+  [[ "${RETROFX_RUNTIME_X11_RUNTIME_ENABLED:-false}" == "true" ]]
 }
 
 retrofx_runtime_active_is_degraded() {

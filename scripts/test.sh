@@ -126,9 +126,9 @@ validate_active_files() {
   require_file "$MANIFESTS_DIR/current.manifest"
   require_file "$MANIFESTS_DIR/last_good.manifest"
 
-  if [[ "$mode" == "wayland" ]]; then
-    [[ ! -f "$ACTIVE_DIR/picom.conf" ]] || die "wayland active should not contain picom.conf"
-    [[ ! -f "$ACTIVE_DIR/shader.glsl" ]] || die "wayland active should not contain shader.glsl"
+  if [[ "$mode" == "wayland" || "$mode" == "no-x11-runtime" ]]; then
+    [[ ! -f "$ACTIVE_DIR/picom.conf" ]] || die "$mode active should not contain picom.conf"
+    [[ ! -f "$ACTIVE_DIR/shader.glsl" ]] || die "$mode active should not contain shader.glsl"
   else
     require_file "$ACTIVE_DIR/picom.conf"
     require_file "$ACTIVE_DIR/shader.glsl"
@@ -139,6 +139,14 @@ assert_active_runtime_metadata_valid() {
   if ! retrofx_runtime_load_active_metadata "$ROOT_DIR"; then
     die "active runtime metadata is invalid: $RETROFX_RUNTIME_METADATA_ERROR"
   fi
+}
+
+assert_active_x11_runtime_enabled() {
+  local expected="$1"
+
+  assert_active_runtime_metadata_valid
+  [[ "${RETROFX_RUNTIME_X11_RUNTIME_ENABLED:-false}" == "$expected" ]] ||
+    die "expected x11_runtime_enabled=$expected, got ${RETROFX_RUNTIME_X11_RUNTIME_ENABLED:-unset}"
 }
 
 assert_active_compositor_required() {
@@ -529,6 +537,90 @@ assert_active_compositor_required "true"
 [[ -f "$wrapper_picom_log" ]] || die "wrapper should launch picom for compositor-required runtime intent"
 require_file "$wrapper_i3_log"
 assert_contains "$wrapper_crt_output" "applied profile 'crt-green-p1-4band'"
+
+scope_x11_false_profile="$TEST_TMP_DIR/scope-x11-false.toml"
+cat >"$scope_x11_false_profile" <<'PROFILE'
+name = "Scope X11 False Check"
+version = 1
+
+[mode]
+type = "palette"
+
+[palette]
+kind = "vga16"
+size = 16
+
+[effects]
+blur_strength = 3
+scanlines = true
+flicker = true
+dither = "ordered"
+vignette = true
+
+[scope]
+x11 = false
+tty = false
+tuigreet = false
+PROFILE
+
+log "scope.x11=false apply suppresses X11 runtime artifacts"
+run_retrofx_x11 apply "$scope_x11_false_profile"
+validate_active_files no-x11-runtime
+assert_active_x11_runtime_enabled "false"
+assert_active_compositor_required "false"
+assert_manifest_lacks_entry "$MANIFESTS_DIR/current.manifest" "REQUIRED_RUNTIME" "picom.conf"
+assert_manifest_lacks_entry "$MANIFESTS_DIR/current.manifest" "REQUIRED_RUNTIME" "shader.glsl"
+assert_manifest_lacks_entry "$MANIFESTS_DIR/current.manifest" "OPTIONAL_RUNTIME" "picom.conf"
+assert_manifest_lacks_entry "$MANIFESTS_DIR/current.manifest" "OPTIONAL_RUNTIME" "shader.glsl"
+scope_x11_false_status_output="$(run_retrofx_x11 status 2>&1)"
+assert_contains "$scope_x11_false_status_output" "X11 runtime active: no"
+assert_contains "$scope_x11_false_status_output" "Compositor required: no"
+run_retrofx_x11 self-check
+printf 'stale-picom\n' >"$ACTIVE_DIR/picom.conf"
+printf 'stale-shader\n' >"$ACTIVE_DIR/shader.glsl"
+scope_x11_false_selfcheck_output="$(run_retrofx_x11 self-check 2>&1 || true)"
+assert_contains "$scope_x11_false_selfcheck_output" "should not exist when scope.x11=false"
+run_retrofx_x11 repair
+assert_active_x11_runtime_enabled "false"
+assert_active_compositor_required "false"
+
+log "transition from X11-active profile to scope.x11=false cleans stale X11 artifacts"
+run_retrofx_x11 apply crt-green-p1-4band
+require_file "$ACTIVE_DIR/picom.conf"
+require_file "$ACTIVE_DIR/shader.glsl"
+run_retrofx_x11 apply "$scope_x11_false_profile"
+validate_active_files no-x11-runtime
+assert_active_x11_runtime_enabled "false"
+assert_active_compositor_required "false"
+if [[ -f "$ACTIVE_DIR/picom.conf" || -f "$ACTIVE_DIR/shader.glsl" ]]; then
+  die "scope.x11=false apply left stale X11 runtime artifacts in active/"
+fi
+run_retrofx_x11 self-check
+
+log "session wrapper skips picom when scope.x11=false disables X11 runtime"
+rm -f "$wrapper_picom_log" "$wrapper_i3_log"
+wrapper_scope_x11_false_output="$(
+  RETROFX_TEST_PICOM_LOG="$wrapper_picom_log" \
+    RETROFX_TEST_I3_LOG="$wrapper_i3_log" \
+    PATH="$wrapper_stub_dir:$PATH" \
+    DISPLAY=':99' WAYLAND_DISPLAY='' XDG_SESSION_TYPE='x11' \
+    "$ROOT_DIR/scripts/integrate/i3-retro-session.sh" "$scope_x11_false_profile" 2>&1
+)"
+sleep 0.2
+assert_active_x11_runtime_enabled "false"
+assert_active_compositor_required "false"
+assert_contains "$wrapper_scope_x11_false_output" "active runtime metadata says X11 runtime is disabled; skipping compositor launch"
+[[ ! -f "$wrapper_picom_log" ]] || die "wrapper should not launch picom when scope.x11=false disables X11 runtime"
+require_file "$wrapper_i3_log"
+
+log "explicit export stays separate from scope.x11=false active runtime"
+before_scope_export_meta_hash="$(hash_file "$ACTIVE_DIR/meta")"
+scope_x11_export_output="$TEST_TMP_DIR/scope-x11-false.Xresources"
+run_retrofx_x11 export xresources "$scope_x11_false_profile" "$scope_x11_export_output"
+require_file "$scope_x11_export_output"
+after_scope_export_meta_hash="$(hash_file "$ACTIVE_DIR/meta")"
+[[ "$before_scope_export_meta_hash" == "$after_scope_export_meta_hash" ]] || die "export xresources should not mutate active runtime metadata"
+assert_active_x11_runtime_enabled "false"
 
 log "runtime metadata missing or corrupt disables compositor intent safely"
 run_retrofx_x11 apply crt-green-p1-4band
@@ -982,7 +1074,9 @@ tty = true
 tuigreet = false
 PROFILE
 RETROFX_TTY_MODE=mock run_retrofx_x11 apply "$tty_mono_profile"
-validate_active_files
+validate_active_files no-x11-runtime
+assert_active_x11_runtime_enabled "false"
+assert_active_compositor_required "false"
 validate_ansi_palette_env "$ACTIVE_DIR/tty-palette.env"
 validate_monochrome_semantics "$ACTIVE_DIR/tty-palette.env"
 require_file "$STATE_DIR/tty-current.env"
@@ -1013,6 +1107,9 @@ tty = true
 tuigreet = false
 PROFILE
 RETROFX_TTY_MODE=mock run_retrofx_x11 apply "$tty_vga_profile"
+validate_active_files no-x11-runtime
+assert_active_x11_runtime_enabled "false"
+assert_active_compositor_required "false"
 # shellcheck source=/dev/null
 source "$ACTIVE_DIR/tty-palette.env"
 [[ "$ANSI_1" == '#aa0000' ]] || die "vga16 semantic mapping mismatch for ANSI_1"
@@ -1045,6 +1142,9 @@ tty = true
 tuigreet = false
 PROFILE
 RETROFX_TTY_MODE=mock run_retrofx_x11 apply "$tty_cube_profile"
+validate_active_files no-x11-runtime
+assert_active_x11_runtime_enabled "false"
+assert_active_compositor_required "false"
 validate_ansi_palette_env "$ACTIVE_DIR/tty-palette.env"
 # shellcheck source=/dev/null
 source "$ACTIVE_DIR/tty-palette.env"
@@ -1078,6 +1178,9 @@ tty = false
 tuigreet = true
 PROFILE
 run_retrofx_x11 apply "$tuigreet_profile"
+validate_active_files no-x11-runtime
+assert_active_x11_runtime_enabled "false"
+assert_active_compositor_required "false"
 require_file "$ACTIVE_DIR/tuigreet.conf"
 grep -q '^background = "#' "$ACTIVE_DIR/tuigreet.conf" || die "tuigreet config missing background color"
 
@@ -1117,6 +1220,7 @@ doctor_json_output="$(run_retrofx_x11 doctor --json)"
 assert_contains "$doctor_json_output" "\"mode\":"
 assert_contains "$doctor_json_output" "\"session\":"
 assert_contains "$doctor_json_output" "\"picom_present\":"
+assert_contains "$doctor_json_output" "\"x11_runtime_active_for_current_profile\":"
 assert_contains "$doctor_json_output" "\"compositor_required_for_current_profile\":"
 assert_contains "$doctor_json_output" "\"warnings\":"
 assert_contains "$doctor_json_output" "\"errors\":"
@@ -1138,6 +1242,7 @@ required = [
     "runtime_contract_healthy",
     "generated_artifacts_complete",
     "install_assets_healthy",
+    "x11_runtime_active_for_current_profile",
     "compositor_required_for_current_profile",
     "warnings",
     "errors",

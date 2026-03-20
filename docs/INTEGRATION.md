@@ -25,6 +25,7 @@ RetroFX now ships optional wrappers in `scripts/integrate/`:
 
 If `retrofx apply` fails, it logs a warning and still starts plain i3.
 If `active/meta` is missing or invalid, the wrapper logs a warning and starts i3 without auto-starting picom.
+If the applied profile has `scope.x11 = false`, `active/meta` reports `x11_runtime_enabled=false`, so the wrapper does not treat the session as X11-render-active and does not start picom.
 
 Run directly from repo:
 

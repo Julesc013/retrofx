@@ -58,6 +58,7 @@ To return to passthrough:
   - `active/shader.glsl` or `active/picom.conf` for an X11 apply
 - `self-check` now reports these as missing required artifacts instead of treating the whole tree generically.
 - `repair` restores the last known-good snapshot when its contract still validates.
+- For `scope.x11 = false`, `self-check` expects `active/shader.glsl` and `active/picom.conf` to be absent; stale copies are treated as invalid active state.
 
 ## Missing Installed Profile Assets
 
@@ -93,6 +94,10 @@ To return to passthrough:
 - On Wayland, global post-process shaders are intentionally not available.
 - Wayland mode applies degraded outputs only (palette artifacts, optional tty/tuigreet).
 - In degraded Wayland active state, `active/meta` records `compositor_required=false`, so session wrappers do not auto-start picom.
+- `scope.x11 = false` is different from Wayland degraded mode:
+  - the profile explicitly disables the active X11 runtime path
+  - RetroFX applies export/support artifacts only
+  - wrappers and `self-check` treat X11 shader/compositor artifacts as absent-by-design
 
 ## TTY Palette Not Applying
 

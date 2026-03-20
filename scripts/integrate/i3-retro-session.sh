@@ -88,6 +88,11 @@ start_picom_if_possible() {
     return 0
   fi
 
+  if [[ "${RETROFX_RUNTIME_X11_RUNTIME_ENABLED:-false}" != "true" ]]; then
+    log "active runtime metadata says X11 runtime is disabled; skipping compositor launch"
+    return 0
+  fi
+
   if [[ "$RETROFX_RUNTIME_COMPOSITOR_REQUIRED" != "true" ]]; then
     log "active runtime metadata says compositor is not required; skipping compositor launch"
     return 0

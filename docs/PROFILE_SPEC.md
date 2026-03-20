@@ -95,7 +95,12 @@ Behavior:
 
 Scope behavior:
 
-- `x11=true` applies picom/X11 backend helpers.
+- `x11=true` enables the active X11 runtime path for `apply` when the session can use it.
+- `x11=false` disables the active X11 runtime path:
+  - RetroFX does not keep `active/picom.conf` or `active/shader.glsl` as active runtime outputs
+  - compositor runtime metadata stays false
+  - session wrappers do not auto-start picom for that applied state
+  - explicit export commands remain separate and may still write requested export files without changing active runtime state
 - `tty=true` applies TTY ANSI16 palette backend (or mock mode when console write is unavailable).
 - `tuigreet=true` generates `active/tuigreet.conf` snippet.
 

@@ -372,7 +372,6 @@ resolve_runtime_artifact_entries_for_current_profile() {
   local session_type="$1"
   local artifact_root="$2"
   local -n out_ref="$3"
-  local compositor_required="false"
   local rel
 
   out_ref=()
@@ -393,9 +392,8 @@ resolve_runtime_artifact_entries_for_current_profile() {
     artifact_contract_add_entry out_ref "$ARTIFACT_CLASS_REQUIRED_RUNTIME" "fontconfig.conf"
   fi
 
-  if [[ "$session_type" != "wayland" ]]; then
+  if x11_runtime_artifacts_enabled_for_session "$session_type"; then
     if compositor_required_current_profile; then
-      compositor_required="true"
       artifact_contract_add_entry out_ref "$ARTIFACT_CLASS_REQUIRED_RUNTIME" "picom.conf"
       artifact_contract_add_entry out_ref "$ARTIFACT_CLASS_REQUIRED_RUNTIME" "shader.glsl"
     else
@@ -454,7 +452,9 @@ normalize_legacy_loaded_artifacts() {
         class="$ARTIFACT_CLASS_EXPORT_ONLY"
         ;;
       picom.conf | shader.glsl)
-        if [[ "$MANIFEST_SESSION_TYPE" == "wayland" ]]; then
+        if [[ "$MANIFEST_SCOPE_X11" != "true" ]]; then
+          continue
+        elif [[ "$MANIFEST_SESSION_TYPE" == "wayland" ]]; then
           class="$ARTIFACT_CLASS_OPTIONAL_RUNTIME"
         elif [[ "$MANIFEST_COMPOSITOR_REQUIRED" == "true" ]]; then
           class="$ARTIFACT_CLASS_REQUIRED_RUNTIME"
@@ -471,6 +471,11 @@ normalize_legacy_loaded_artifacts() {
     case "$rel" in
       xresources | Xresources | alacritty.toml | semantic.env | tty-palette.env | tty-palette.txt | tuigreet.conf)
         class="$ARTIFACT_CLASS_EXPORT_ONLY"
+        ;;
+      picom.conf | shader.glsl)
+        if [[ "$MANIFEST_SCOPE_X11" != "true" ]]; then
+          continue
+        fi
         ;;
     esac
     manifest_record_loaded_artifact "$class" "$rel"
@@ -2460,10 +2465,16 @@ blur_enabled_current_profile() {
   ((blur > 0))
 }
 
+x11_runtime_artifacts_enabled_for_session() {
+  local session_type="${1:-x11}"
+  [[ "${CFG_scope_x11:-false}" == "true" ]] || return 1
+  [[ "$session_type" != "wayland" ]]
+}
+
 shader_required_for_session() {
   local session_type="${1:-x11}"
 
-  [[ "$session_type" != "wayland" ]] || return 1
+  x11_runtime_artifacts_enabled_for_session "$session_type" || return 1
   compositor_required_current_profile
 }
 
@@ -2479,6 +2490,7 @@ write_runtime_meta() {
   local input_sig="${4:-}"
   local profile_name=""
   local profile_id=""
+  local x11_runtime_enabled="false"
   local compositor_required="false"
   local shader_required="false"
   local degraded="false"
@@ -2486,6 +2498,10 @@ write_runtime_meta() {
 
   profile_name="$(basename "$profile_path")"
   profile_id="${profile_name%.toml}"
+
+  if x11_runtime_artifacts_enabled_for_session "$session_type"; then
+    x11_runtime_enabled="true"
+  fi
 
   if shader_required_for_session "$session_type"; then
     compositor_required="true"
@@ -2507,6 +2523,7 @@ write_runtime_meta() {
     printf 'scope_x11=%s\n' "$CFG_scope_x11"
     printf 'scope_tty=%s\n' "$CFG_scope_tty"
     printf 'scope_tuigreet=%s\n' "$CFG_scope_tuigreet"
+    printf 'x11_runtime_enabled=%s\n' "$x11_runtime_enabled"
     printf 'blur_enabled=%s\n' "$blur_enabled"
     printf 'compositor_required=%s\n' "$compositor_required"
     printf 'shader_required=%s\n' "$shader_required"
@@ -3242,7 +3259,7 @@ render_templates() {
     write_apply_signature_file "$stage_dir/$APPLY_SIG_FILE_NAME" "$input_sig"
   fi
 
-  if [[ "$session_type" == "wayland" ]]; then
+  if ! x11_runtime_artifacts_enabled_for_session "$session_type"; then
     rm -f "$stage_dir/shader.glsl" "$stage_dir/picom.conf"
   else
     render_shader "$stage_dir/shader.glsl"
@@ -3587,12 +3604,20 @@ validate_artifact_tree_with_manifest() {
     fi
   fi
 
-  if [[ "$MANIFEST_SESSION_TYPE" == "wayland" ]]; then
+  if [[ "$MANIFEST_SESSION_TYPE" == "wayland" || "$MANIFEST_SCOPE_X11" != "true" ]]; then
     if [[ -f "$base_dir/picom.conf" ]]; then
-      ARTIFACT_CHECK_INVALID+=("$label/picom.conf should not exist for wayland contract")
+      if [[ "$MANIFEST_SESSION_TYPE" == "wayland" ]]; then
+        ARTIFACT_CHECK_INVALID+=("$label/picom.conf should not exist for wayland contract")
+      else
+        ARTIFACT_CHECK_INVALID+=("$label/picom.conf should not exist when scope.x11=false")
+      fi
     fi
     if [[ -f "$base_dir/shader.glsl" ]]; then
-      ARTIFACT_CHECK_INVALID+=("$label/shader.glsl should not exist for wayland contract")
+      if [[ "$MANIFEST_SESSION_TYPE" == "wayland" ]]; then
+        ARTIFACT_CHECK_INVALID+=("$label/shader.glsl should not exist for wayland contract")
+      else
+        ARTIFACT_CHECK_INVALID+=("$label/shader.glsl should not exist when scope.x11=false")
+      fi
     fi
   fi
 
@@ -4633,6 +4658,8 @@ cmd_doctor() {
   local last_good_present=0
   local tty_backend_available=0
   local tuigreet_backend_available=0
+  local x11_runtime_known=0
+  local x11_runtime_value=0
   local compositor_required_known=0
   local compositor_required_value=0
   local active_profile_id="-"
@@ -4739,6 +4766,10 @@ cmd_doctor() {
   elif resolve_runtime_manifest_for_tree "$ACTIVE_DIR" "$CURRENT_ARTIFACT_MANIFEST" "current" manifest_path manifest_tmp warnings; then
     if [[ "$RUNTIME_STATE_HELPER_AVAILABLE" -eq 1 ]]; then
       if retrofx_runtime_load_active_metadata "$ROOT_DIR"; then
+        x11_runtime_known=1
+        if [[ "${RETROFX_RUNTIME_X11_RUNTIME_ENABLED:-false}" == "true" ]]; then
+          x11_runtime_value=1
+        fi
         compositor_required_known=1
         if [[ "$RETROFX_RUNTIME_COMPOSITOR_REQUIRED" == "true" ]]; then
           compositor_required_value=1
@@ -4750,6 +4781,12 @@ cmd_doctor() {
 
     if load_artifact_manifest "$manifest_path"; then
       active_profile_id="${MANIFEST_PROFILE_ID:-$active_profile_id}"
+      if [[ "$x11_runtime_known" -eq 0 ]]; then
+        x11_runtime_known=1
+        if [[ "$MANIFEST_SCOPE_X11" == "true" && "$MANIFEST_SESSION_TYPE" != "wayland" ]]; then
+          x11_runtime_value=1
+        fi
+      fi
       if [[ "$compositor_required_known" -eq 0 ]]; then
         compositor_required_known=1
         if [[ "$MANIFEST_COMPOSITOR_REQUIRED" == "true" ]]; then
@@ -4796,6 +4833,11 @@ cmd_doctor() {
     printf '  "generated_artifacts_complete": %s,\n' "$(json_bool "$generated_artifacts_complete")"
     printf '  "install_assets_healthy": %s,\n' "$(json_bool "$install_assets_healthy")"
     printf '  "current_profile": "%s",\n' "$(json_escape_string "$active_profile_id")"
+    if [[ "$x11_runtime_known" -eq 1 ]]; then
+      printf '  "x11_runtime_active_for_current_profile": %s,\n' "$(json_bool "$x11_runtime_value")"
+    else
+      printf '  "x11_runtime_active_for_current_profile": null,\n'
+    fi
     if [[ "$compositor_required_known" -eq 1 ]]; then
       printf '  "compositor_required_for_current_profile": %s,\n' "$(json_bool "$compositor_required_value")"
     else
@@ -4815,6 +4857,15 @@ cmd_doctor() {
   printf 'Session type: %s\n' "$session_type"
   printf 'WM/DE: %s\n' "$wm_de"
   printf 'Current profile: %s\n' "$active_profile_id"
+  if [[ "$x11_runtime_known" -eq 1 ]]; then
+    if [[ "$x11_runtime_value" -eq 1 ]]; then
+      status_ok "X11 runtime active for current profile: yes"
+    else
+      status_ok "X11 runtime active for current profile: no"
+    fi
+  else
+    status_warn "X11 runtime active for current profile: unknown"
+  fi
   if [[ "$compositor_required_known" -eq 1 ]]; then
     if [[ "$compositor_required_value" -eq 1 ]]; then
       status_ok "Compositor required for current profile: yes"
@@ -5707,9 +5758,13 @@ cmd_apply() {
 
   TXN_STAGE_DIR=""
 
-  if [[ "$session_type" == "wayland" ]]; then
+  if ! x11_runtime_artifacts_enabled_for_session "$session_type"; then
     if [[ -f "$ACTIVE_DIR/shader.glsl" || -f "$ACTIVE_DIR/picom.conf" ]]; then
-      LAST_ERROR="wayland active state must not contain x11 shader targets"
+      if [[ "$session_type" == "wayland" ]]; then
+        LAST_ERROR="wayland active state must not contain x11 shader targets"
+      else
+        LAST_ERROR="scope.x11=false active state must not contain x11 shader targets"
+      fi
       restore_last_good || true
       TXN_ACTIVE=0
       return 1
@@ -5743,7 +5798,7 @@ cmd_apply() {
     return 1
   fi
 
-  if [[ "$session_type" != "wayland" ]] && compositor_required_current_profile; then
+  if x11_runtime_artifacts_enabled_for_session "$session_type" && compositor_required_current_profile; then
     if file_content_differs "$LAST_BACKUP_PATH/picom.conf" "$ACTIVE_DIR/picom.conf"; then
       picom_changed=1
     fi
@@ -5758,8 +5813,10 @@ cmd_apply() {
   restart_picom_if_running "$restart_required" || true
 
   TXN_ACTIVE=0
-  if [[ "$session_type" == "wayland" && "$CFG_scope_x11" == "true" ]]; then
+  if runtime_degraded_for_session "$session_type"; then
     log "Wayland session detected: shader pipeline disabled; applied degraded outputs only."
+  elif [[ "$CFG_scope_x11" != "true" ]]; then
+    log "X11 scope disabled: skipped X11 runtime artifacts and compositor backend."
   fi
   log "applied profile '$profile_id'"
 }
@@ -6126,6 +6183,7 @@ cmd_uninstall() {
 cmd_status() {
   local mode active_profile="-"
   local active_session="-"
+  local x11_runtime_active="unknown"
   local compositor_required="unknown"
   local runtime_status="inactive"
   local generated_status="n/a"
@@ -6145,6 +6203,11 @@ cmd_status() {
       if retrofx_runtime_load_active_metadata "$ROOT_DIR"; then
         active_profile="${RETROFX_RUNTIME_PROFILE_REF%.toml}"
         active_session="${RETROFX_RUNTIME_SESSION_TYPE:--}"
+        if [[ "${RETROFX_RUNTIME_X11_RUNTIME_ENABLED:-false}" == "true" ]]; then
+          x11_runtime_active="yes"
+        else
+          x11_runtime_active="no"
+        fi
         if [[ "$RETROFX_RUNTIME_COMPOSITOR_REQUIRED" == "true" ]]; then
           compositor_required="yes"
         else
@@ -6159,6 +6222,13 @@ cmd_status() {
       if load_artifact_manifest "$manifest_path"; then
         active_profile="${MANIFEST_PROFILE_ID:--}"
         active_session="${MANIFEST_SESSION_TYPE:--}"
+        if [[ "$x11_runtime_active" == "unknown" ]]; then
+          if [[ "$MANIFEST_SCOPE_X11" == "true" && "$MANIFEST_SESSION_TYPE" != "wayland" ]]; then
+            x11_runtime_active="yes"
+          else
+            x11_runtime_active="no"
+          fi
+        fi
         if [[ "$compositor_required" == "unknown" ]]; then
           if [[ "$MANIFEST_COMPOSITOR_REQUIRED" == "true" ]]; then
             compositor_required="yes"
@@ -6219,6 +6289,7 @@ cmd_status() {
   fi
   printf 'Active profile: %s\n' "$active_profile"
   printf 'Active session: %s\n' "$active_session"
+  printf 'X11 runtime active: %s\n' "$x11_runtime_active"
   printf 'Compositor required: %s\n' "$compositor_required"
   printf 'Runtime contract: %s\n' "$runtime_status"
   printf 'Generated exports/support artifacts: %s\n' "$generated_status"
