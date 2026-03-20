@@ -2,6 +2,14 @@
 
 Use this checklist before creating a release tag. Current target: `1.0.0-beta.1`.
 
+## Validation Outcome
+
+Latest local validation for `1.0.0-beta.1` was completed on `2026-03-21`.
+
+- Automated checks passed: `./scripts/ci.sh`, `./scripts/test.sh`, `./scripts/retrofx --version`, `./scripts/retrofx list`, `./scripts/retrofx doctor`, `./scripts/retrofx status`, `./scripts/retrofx self-check`.
+- Practical smoke checks passed: `./scripts/retrofx compatibility-check`, `./scripts/retrofx apply crt-green-p1-4band`, `./scripts/retrofx off`, `./scripts/retrofx repair`, and temp-HOME `install --yes` / `uninstall --yes`.
+- Remaining human judgment: final publish approval still depends on the operator reviewing release notes, local archives, and any host-specific desktop smoke results they care about beyond the supported X11 path.
+
 ## 1. Automated Validation
 
 Run from repository root:
@@ -10,7 +18,10 @@ Run from repository root:
 ./scripts/ci.sh
 ./scripts/test.sh
 ./scripts/retrofx --version
+./scripts/retrofx list
+./scripts/retrofx doctor
 ./scripts/retrofx status
+./scripts/retrofx self-check
 ```
 
 All commands must exit successfully.
