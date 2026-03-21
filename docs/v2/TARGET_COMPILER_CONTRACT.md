@@ -9,6 +9,24 @@ The central rule is non-negotiable:
 
 If a compiler reads raw authored profile text, it is bypassing the 2.x engine.
 
+## Current Implementation Status
+
+TWO-09 implements the first narrow subset of this contract under `v2/targets/terminal/`.
+
+Current truth:
+
+- implemented compilers consume the resolved profile only
+- they emit deterministic terminal or TUI artifacts into an explicit dev output root
+- they run only in explicit dev export mode
+
+Still not implemented:
+
+- capability-filtered target plan consumption
+- artifact-plan consumption
+- session apply or install ownership
+
+That means the current implementation proves the resolved-model-to-artifact path without pretending the full target contract already exists.
+
 ## What A Target Compiler Is
 
 A target compiler or adapter is the module responsible for turning resolved semantic intent into target-specific artifacts for one target family or one concrete target.
@@ -176,4 +194,3 @@ Given the same resolved profile, target plan, artifact plan, and execution mode,
 
 But 2.x target compilers are not required to preserve 1.x directory layout or backend script style.
 They carry forward concepts, not implementation debt.
-

@@ -3,6 +3,32 @@
 Terminal and TUI targets are a first-class family in RetroFX 2.x.
 They are a major reason the platform exists at all: they provide broad value without requiring global compositor ownership.
 
+## Current Implementation Status
+
+TWO-09 implements the first real terminal/TUI compilers under `v2/targets/terminal/`.
+
+Implemented now:
+
+- `xresources`
+- `alacritty`
+- `kitty`
+- `tmux`
+- `vim`
+
+These compilers are currently:
+
+- experimental and dev-only
+- export-oriented only
+- driven from the resolved profile, not raw profile TOML
+- written to `v2/out/<profile-id>/<target>/`
+
+Not implemented yet:
+
+- session-managed apply
+- install ownership
+- TTY or `tuigreet` runtime integration
+- `btop` or `htop`-style targets
+
 ## Family Contract
 
 These targets primarily consume:
@@ -41,6 +67,10 @@ Emits:
 
 - `Xresources`-style resource file or fragment
 
+Implemented now:
+
+- deterministic `Xresources` file export from resolved terminal colors
+
 Mode:
 
 - export-first
@@ -64,6 +94,10 @@ Consumes:
 Emits:
 
 - Alacritty config fragment or file
+
+Implemented now:
+
+- deterministic Alacritty TOML theme artifact from resolved terminal colors and primary font family
 
 Mode:
 
@@ -89,6 +123,10 @@ Emits:
 
 - Kitty config fragment or file
 
+Implemented now:
+
+- deterministic Kitty config artifact from resolved terminal colors and primary font family
+
 Mode:
 
 - export-capable
@@ -112,6 +150,10 @@ Emits:
 
 - tmux theme fragment
 
+Implemented now:
+
+- deterministic tmux theme snippet from resolved semantic and terminal colors
+
 Mode:
 
 - export-capable
@@ -134,6 +176,10 @@ Consumes:
 Emits:
 
 - theme file or colorscheme fragment
+
+Implemented now:
+
+- deterministic Vim colorscheme snippet from resolved terminal and semantic colors
 
 Mode:
 
@@ -183,4 +229,3 @@ Cannot represent:
 - ANSI-centric palette bridging
 
 2.x carries those ideas forward, but makes them resolved-model target compilers rather than ad hoc export branches.
-

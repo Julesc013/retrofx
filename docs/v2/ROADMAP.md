@@ -3,6 +3,14 @@
 This roadmap is phased on purpose.
 Each phase should narrow uncertainty before more implementation surface is added.
 
+## Current Progress
+
+Status after TWO-09:
+
+- 2.0-C has an experimental implementation foothold for load, validate, normalize, and resolve in `v2/core/`
+- 2.0-D has started with the first terminal/TUI compiler family under `v2/targets/terminal/`
+- session orchestration and broader target families remain future phases
+
 ## 2.0-A Product And Spec Design
 
 Purpose:
@@ -73,6 +81,11 @@ Explicitly does not do:
 - universal Wayland effect paths
 - every secondary adapter in the matrix
 
+Current implementation note:
+
+- TWO-09 starts this phase narrowly with export-oriented terminal/TUI compilers only
+- X11, WM, TTY, and `tuigreet` implementations are still future work
+
 ## 2.0-E Session Orchestration Layer
 
 Purpose:
@@ -127,4 +140,3 @@ Explicitly does not do:
 
 Later phases should not quietly pull foundational work forward.
 If a prompt requires rethinking product truth, capability semantics, or architecture boundaries, it belongs back in an earlier phase rather than being smuggled into implementation work.
-

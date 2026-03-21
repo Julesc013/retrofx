@@ -75,9 +75,19 @@ What it compiles:
 - TUI app theme exports
 - ANSI-derived palette outputs
 
+Current implementation status:
+
+- this is the first real implemented 2.x target family as of TWO-09
+- implemented dev-only compilers currently cover `xresources`, `alacritty`, `kitty`, `tmux`, and `vim`
+- outputs are written under `v2/out/<profile-id>/<target>/`
+
 Typical mode:
 
 - both apply-like and export-like depending on the target
+
+Current TWO-09 mode:
+
+- export-only dev compilation
 
 Typical artifacts:
 
@@ -94,6 +104,7 @@ Common limitations:
 
 - limited ability to represent chrome or session semantics
 - no global post-processing
+- current implementation does not yet include session-managed apply or install behavior
 
 ## 4. X11 Render/Compositor Family
 
@@ -216,4 +227,3 @@ Families remain separate because:
 - toolkit exports may be useful even when apply is not truthful
 
 The adapter layer should respect those differences instead of hiding them behind one generic emitter.
-

@@ -9,7 +9,9 @@ Status after TWO-08:
 
 - Stage 1 now has an experimental implementation foothold in `v2/core/validation/`, `v2/core/load.py`, and `v2/tests/`
 - the pre-capability-filtering part of Stage 2 now has an experimental implementation foothold in `v2/core/normalization/` and `v2/core/resolution/`
-- capability filtering, target planning, target adapters, and session orchestration remain unimplemented
+- Stage 3 now has a first lightweight implemented adapter interface under `v2/targets/interfaces/`
+- Stage 4 has started narrowly with terminal/TUI target compilers under `v2/targets/terminal/`
+- capability filtering, artifact planning, and session orchestration remain unimplemented
 
 ## Stage 1: Schema And Validation Primitives
 

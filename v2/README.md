@@ -12,7 +12,9 @@ As of TWO-08:
 
 - `v2/core/` contains an experimental stdlib-only Python scaffold for loading, validating, normalizing, and resolving 2.x profile documents
 - `v2/tests/` contains isolated fixtures and tests for that scaffold
-- no target compilers, session orchestration, or production command delegation exist yet
+- `v2/targets/terminal/` now contains the first real 2.x compiler family for terminal/TUI exports
+- `v2/core/dev/compile-targets` writes deterministic dev-only artifacts under `v2/out/<profile-id>/`
+- session orchestration and production command delegation still do not exist
 
 Python is used only for the early 2.x internal scaffold because `tomllib` gives deterministic TOML parsing with no extra dependency burden.
 This choice does not change the 1.x runtime or make Python the default user-facing path.

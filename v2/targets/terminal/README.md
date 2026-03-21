@@ -2,7 +2,13 @@
 
 Purpose:
 
-- future home of terminal and TUI family target adapters
+- home of terminal and TUI family target adapters
+
+Implemented now:
+
+- real deterministic compilers for `xresources`, `alacritty`, `kitty`, `tmux`, and `vim`
+- shared terminal-theme context helpers built from the resolved profile
+- a registry used by the dev-only 2.x compile entrypoint
 
 What belongs here:
 
@@ -27,3 +33,7 @@ Later prompts should implement:
 
 - deterministic terminal and TUI artifact emitters that consume resolved ANSI, semantic theme, and typography data
 
+Current rule:
+
+- the TWO-09 terminal compilers are export-oriented and dev-only
+- they prove resolved-profile-driven emission without claiming session apply or install ownership yet

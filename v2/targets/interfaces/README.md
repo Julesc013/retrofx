@@ -4,6 +4,11 @@ Purpose:
 
 - future home of target-layer interface contracts shared across adapter families
 
+Implemented now:
+
+- lightweight artifact and compile-result dataclasses in `compiler.py`
+- a minimal protocol used by the first terminal/TUI compilers
+
 What belongs here:
 
 - adapter input and output contracts
@@ -27,3 +32,7 @@ Later prompts should implement:
 
 - stable adapter contracts that all target families can consume consistently
 
+Current rule:
+
+- the TWO-09 interface is intentionally small and export-oriented
+- it proves target separation and resolved-profile-only compilation without pretending full capability or session planning already exists

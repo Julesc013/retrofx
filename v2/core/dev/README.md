@@ -8,6 +8,8 @@ Implemented now:
 
 - `resolve_profile.py`: load, validate, normalize, and resolve a 2.x profile fixture or file
 - `resolve-profile`: thin shell wrapper around the Python module
+- `compile_targets.py`: compile the implemented terminal/TUI target family into `v2/out/<profile-id>/...`
+- `compile-targets`: thin shell wrapper around the compiler entrypoint
 
 What belongs here:
 
@@ -30,3 +32,4 @@ Governing docs:
 Current rule:
 
 - these entrypoints are experimental and must not be presented as the real RetroFX user workflow
+- emitted artifacts land under `v2/out/`, which is intentionally separate from 1.x `active/` and `state/`

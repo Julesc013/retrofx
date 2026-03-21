@@ -29,9 +29,11 @@ It is broader than RetroFX 1.x, but it is still bounded by explicit capability d
 
 ## Current Implementation State
 
-As of TWO-08:
+As of TWO-09:
 
 - `v2/core/` contains an experimental dev-only scaffold for loading, validating, normalizing, and resolving 2.x profiles
 - `v2/tests/` contains isolated 2.x fixtures and tests for that scaffold
-- target compilers, capability filtering, artifact planning, and session orchestration are still future work
+- `v2/targets/terminal/` contains the first real 2.x compiler family: `xresources`, `alacritty`, `kitty`, `tmux`, and `vim`
+- `v2/core/dev/compile-targets <profile>` compiles those targets into `v2/out/<profile-id>/...`
+- capability-filtered target planning, artifact planning, and session orchestration are still future work
 - the working product line remains 1.x; no default CLI migration has happened

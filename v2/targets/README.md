@@ -5,6 +5,11 @@ Purpose:
 - future home of target adapters and backend-specific emission
 - future home of the 2.x adapter layer that consumes resolved planning and produces target-specific artifacts
 
+Implemented now:
+
+- the first real terminal/TUI compiler family under `terminal/`
+- a lightweight shared adapter interface under `interfaces/`
+
 Do implement here later:
 
 - compiler interfaces for concrete targets
@@ -40,3 +45,7 @@ Core rule:
 - target adapters consume the resolved profile, the capability-filtered target plan, and artifact-planning context
 - they do not consume raw profile TOML directly
 
+Current implementation note:
+
+- TWO-09 compilers consume the resolved profile only
+- capability-filtered target plans and artifact-plan inputs remain future work, so current compilers run only in explicit dev export mode

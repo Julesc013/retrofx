@@ -1,9 +1,12 @@
 # RetroFX runtime/output directories (generated, machine-local)
 active/
 state/
+v2/out/
 
 # Temporary/editor noise
 *~
 *.swp
 *.swo
 .DS_Store
+__pycache__/
+*.pyc

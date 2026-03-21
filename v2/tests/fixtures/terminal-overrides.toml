@@ -1,0 +1,32 @@
+schema = "retrofx.profile/v2alpha1"
+
+[identity]
+id = "terminal-overrides"
+name = "Terminal Overrides"
+family = "terminal"
+strictness = "modernized-retro"
+
+[color.semantic]
+bg0 = "#10131a"
+fg0 = "#d9e2f2"
+accent_primary = "#79a6ff"
+selection_bg = "#2e4b6a"
+selection_fg = "#f5f9ff"
+cursor = "#a8c6ff"
+cursor_text = "#10131a"
+
+[color.terminal.ansi]
+"1" = "#ff3355"
+"2" = "#4dff88"
+"13" = "#c792ea"
+
+[typography]
+terminal_primary = "JetBrains Mono"
+
+[render]
+mode = "passthrough"
+
+[session]
+targets = ["terminal", "tui"]
+apply_mode = "export-only"
+persistence = "export-only"
