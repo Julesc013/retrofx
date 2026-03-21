@@ -19,6 +19,7 @@ These are rules, not suggestions.
 12. 1.x shell code is not treated as a utility library for 2.x core planning.
 13. Target compilers consume the resolved profile, capability-filtered target plan, and artifact-planning context; they never consume raw profile TOML directly.
 14. Theme owns semantic appearance policy; render owns transform and effect behavior. Neither subsystem should absorb the other's responsibilities.
+15. Environment detection provides facts to capability filtering and session orchestration; it does not reinterpret profile semantics or bypass target planning.
 
 ## Module Ownership
 
