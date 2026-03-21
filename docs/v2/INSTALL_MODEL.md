@@ -16,12 +16,13 @@ It does not mean:
 
 ## Current Implementation Status
 
-As of TWO-16:
+As of TWO-19:
 
 - repo-local dev mode is real and runs directly from the repository
 - repo-local bundle generation is real under `v2/bundles/<bundle-id>/`
 - experimental user-local install is real under isolated `retrofx-v2-dev` XDG roots
 - uninstall and status are real for that experimental user-local footprint
+- the bounded TWO-19 apply slice now reuses that same isolated footprint for `active/current`, manifests, last-good, preview-artifact roots, and event logs
 - standalone copied toolchain installs, distro packages, and public release channels are still future work
 
 ## Concrete Modes
@@ -42,6 +43,8 @@ Current entrypoints:
 - `v2/core/dev/plan-session`
 - `scripts/dev/retrofx-v2-bundle`
 - `scripts/dev/retrofx-v2-install`
+- `scripts/dev/retrofx-v2-apply`
+- `scripts/dev/retrofx-v2-off`
 - `scripts/dev/retrofx-v2-status`
 - `scripts/dev/retrofx-v2-uninstall`
 
@@ -66,8 +69,14 @@ Current roots:
 Current managed subpaths:
 
 - `~/.local/share/retrofx-v2-dev/bundles/<bundle-id>/`
+- `~/.local/share/retrofx-v2-dev/active/current/`
+- `~/.local/share/retrofx-v2-dev/preview-artifacts/`
 - `~/.local/state/retrofx-v2-dev/installations/<bundle-id>.json`
 - `~/.local/state/retrofx-v2-dev/install-state.json`
+- `~/.local/state/retrofx-v2-dev/current-state.json`
+- `~/.local/state/retrofx-v2-dev/manifests/`
+- `~/.local/state/retrofx-v2-dev/last-good/`
+- `~/.local/state/retrofx-v2-dev/logs/`
 
 Reserved but not yet actively managed:
 
@@ -117,7 +126,7 @@ It allows 2.x to become installable without quietly turning every export into ma
 
 ## Install Versus Apply
 
-Install in TWO-16 is still non-live:
+Install in TWO-19 is still non-live:
 
 - it does not reload a terminal
 - it does not touch a live WM session
@@ -125,6 +134,12 @@ Install in TWO-16 is still non-live:
 - it does not execute session orchestration
 
 It prepares a managed footprint only.
+
+The new bounded apply slice is separate:
+
+- it consumes compiled and installed bundle content
+- it stages a current activation inside the same isolated footprint
+- it still does not claim system-wide or 1.x ownership
 
 ## Ownership And Reversibility
 

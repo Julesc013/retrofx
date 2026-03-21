@@ -8,11 +8,12 @@ The session layer decides which mode is truthful in the current context.
 
 ## Current Implementation Status
 
-As of TWO-17:
+As of TWO-19:
 
 - `compile-only` and `export-only` now exist as real preview concepts in the dev planner
-- `apply-now` exists only as an explicit preview category for selected targets such as `i3`, `sway`, or `xresources` when the environment matches
+- `apply-now` now exists as a bounded dev-only activation mode that stages a 2.x-owned active bundle, writes current-state manifests, and can optionally run the explicit X11 live probe
 - the bounded TWO-17 X11 slice now adds one explicit exception: a dev-only short-lived `picom` probe can validate generated X11 render artifacts in the current X11 session
+- `install-for-session` remains a separate user-local managed bundle path
 - no mode claims broad production session ownership yet
 
 ## Summary
@@ -55,7 +56,7 @@ Meaningful participants:
 
 - every target family, because planning exists even when no emission will occur
 
-Current TWO-17 implementation note:
+Current TWO-19 implementation note:
 
 - `v2/core/dev/plan-session` can inspect a profile, detect the environment, and build a compile-oriented preview plan without emitting target artifacts unless preview output is explicitly requested
 
@@ -136,6 +137,7 @@ Current TWO-17 implementation note:
 
 - the session planner can mark `i3`, `sway`, or `xresources` as apply-preview candidates when the environment matches and the profile requests `current-session`
 - the planner can now also mark the bounded X11 render preview targets as explicit apply-preview candidates in X11 + `picom`
+- the experimental TWO-19 apply path stages all compileable targets into a 2.x-owned active area, but only records a small live-applied subset when the explicit X11 probe succeeds
 - those candidates remain experimental and opt-in; no default session takeover happens
 
 ## 4. `install-for-session`

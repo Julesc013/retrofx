@@ -2,7 +2,8 @@
 
 RetroFX 2.x must treat state and recovery as planned lifecycle concepts, not as whatever files happen to exist after apply.
 
-This document defines the conceptual records and recovery boundaries that future prompts should implement.
+This document defines the conceptual records and recovery boundaries for 2.x.
+The first bounded current-state implementation now exists, but recovery is still intentionally narrow.
 
 ## Why State Exists
 
@@ -101,14 +102,16 @@ Future implementation prompts should plan at least these logical records:
 - install manifest
 - recovery or explain logs
 
-Exact filenames are deferred.
-The important rule is that current-session state and install-owned state remain distinct.
+Exact filenames were originally deferred.
+The important rule is still that current-session state and install-owned state remain distinct.
 
-Current TWO-17 implementation note:
+Current TWO-19 implementation note:
 
 - the dev-only X11 preview path now writes isolated preview metadata under `v2/out/<profile-id>/x11-render-runtime/preview-state.json`
-- that record is intentionally separate from any future real active-state or install-state records
-- it exists only to prove the shape of bounded runtime metadata and cleanup hints without touching 1.x state
+- the bounded apply slice now also writes real current-state and activation-manifest records under the isolated `retrofx-v2-dev` state tree
+- current state now includes profile identity, active targets, live-applied targets, cleanup ownership, and manifest references
+- last-good state and last-good manifest are now written when a current activation is replaced
+- event logs now record `apply` and `off` actions under the same 2.x-owned state root
 
 ## What Different Operations Act On
 
@@ -137,6 +140,12 @@ Does not act on:
 
 - export-only artifacts outside active ownership
 - install-owned assets unless the operation explicitly includes uninstall or install-reset semantics
+
+Current TWO-19 implementation note:
+
+- `off` now clears only the bounded 2.x active area and any recorded preview-artifact roots
+- installed bundles remain in the managed bundle store until explicit uninstall
+- 1.x state and config trees remain untouched
 
 ### `repair`
 

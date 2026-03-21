@@ -7,12 +7,14 @@ import json
 from pathlib import Path
 import shutil
 from tempfile import TemporaryDirectory
-from typing import Any, Mapping
+from typing import Any, Callable, Mapping
 
 from v2.core.dev.profile_input import run_selected_profile_pipeline
+from v2.render import build_display_policy_summary, build_x11_render_summary
 from v2.session.environment import detect_environment
 from v2.session.planning import build_session_plan
 from v2.targets import compile_resolved_profile_targets, list_target_families, list_targets
+from v2.targets.toolkit.common import build_toolkit_style_summary
 
 from .layout import INSTALL_NAME, bundle_root_path, install_root_relative_bundle_dir, install_root_relative_record_path
 
@@ -43,6 +45,7 @@ def build_dev_bundle(
     env: Mapping[str, str] | None = None,
     cwd: str | Path | None = None,
     stdin_isatty: bool | None = None,
+    path_lookup: Callable[[str], str | None] | None = None,
 ) -> dict[str, Any]:
     pipeline_result = run_selected_profile_pipeline(
         profile=str(profile_path) if profile_path is not None else None,
@@ -63,8 +66,11 @@ def build_dev_bundle(
 
     resolved_profile = pipeline_result.resolved_profile
     assert resolved_profile is not None
-    environment = detect_environment(env=env, cwd=cwd, stdin_isatty=stdin_isatty)
+    environment = detect_environment(env=env, cwd=cwd, stdin_isatty=stdin_isatty, path_lookup=path_lookup)
     plan = build_session_plan(resolved_profile, environment)
+    display_policy = build_display_policy_summary(resolved_profile, environment)
+    x11_render = build_x11_render_summary(resolved_profile, environment)
+    toolkit_style = build_toolkit_style_summary(resolved_profile, environment)
 
     with TemporaryDirectory() as tmpdir:
         staging_root = Path(tmpdir) / "compiled"
@@ -72,7 +78,12 @@ def build_dev_bundle(
             resolved_profile,
             staging_root,
             target_names,
-            compile_context={"environment": environment, "display_policy": plan["display_policy"]},
+            compile_context={
+                "environment": environment,
+                "display_policy": display_policy,
+                "x11_render": x11_render,
+                "toolkit_style": toolkit_style,
+            },
         )
         bundle = _materialize_bundle(
             resolved_profile=resolved_profile,

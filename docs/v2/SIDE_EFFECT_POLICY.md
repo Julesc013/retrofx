@@ -14,6 +14,16 @@ This document defines that policy.
 | `install-state` | managed install-footprint mutation | install assets, default records, install manifests |
 | `login-or-session-integration` | managed startup or login hook mutation | Xsession entries, login snippets, launch helpers, managed integration records |
 
+## Current Implementation Status
+
+As of TWO-19:
+
+- validation, normalization, resolution, and planning remain strict `none` side-effect stages
+- target compilation remains `artifact-emission-only`
+- experimental bundle install remains a separate `install-state` surface
+- the new bounded apply slice now exercises a narrow `session-local` surface under the isolated `retrofx-v2-dev` footprint
+- no implemented path writes global DE settings or touches 1.x ownership trees
+
 ## Hard Rules
 
 1. No side effects are allowed during raw loading, validation, normalization, semantic resolution, capability filtering, or artifact planning.
@@ -64,6 +74,11 @@ Only the session subsystem may:
 - update last-good or recovery records
 - write install manifests
 - create managed integration hooks
+
+Current TWO-19 implementation note:
+
+- `v2/session/apply/` now stages a generated bundle into a 2.x-owned active area, writes current-state plus activation-manifest records, and logs `apply` / `off` events
+- optional X11 live behavior is still limited to the explicit short-lived probe path and is never the default
 
 ## Logging And Manifest Expectations
 

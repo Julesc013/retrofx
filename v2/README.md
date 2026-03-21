@@ -8,14 +8,14 @@ This tree exists so later prompts implement 2.x in the right places instead of e
 
 ## Current State
 
-As of TWO-16:
+As of TWO-19:
 
 - `v2/core/` contains an experimental stdlib-only Python scaffold for loading, validating, normalizing, and resolving 2.x profile documents
 - `v2/tests/` contains isolated fixtures and tests for that scaffold
 - `v2/targets/terminal/` contains the first real 2.x compiler family for terminal/TUI exports
 - `v2/targets/wm/` now contains the second real 2.x compiler family for WM/theme-adjacent exports: `i3`, `sway`, and `waybar`
-- `v2/targets/toolkit/` now contains the first real typography-policy export target: a session-local `fontconfig` fragment
-- `v2/targets/x11/` now contains the first advisory X11/render-adjacent display-policy target
+- `v2/targets/toolkit/` now contains session-local `fontconfig` output plus advisory GTK, Qt, icon-cursor, and desktop-style exports
+- `v2/targets/x11/` now contains the first bounded X11 render family with shader, picom, runtime metadata, and display-policy outputs
 - `v2/core/dev/compile-targets` writes deterministic dev-only artifacts under `v2/out/<profile-id>/`
 - `v2/session/` now contains the first real session-planning slice: environment detection and capability-aware non-destructive planning
 - `v2/core/dev/plan-session` previews what would be exported, degraded, skipped, or eventually applyable in the detected environment
@@ -28,8 +28,10 @@ As of TWO-16:
 - `v2/compat/dev/inspect-1x-profile` inspects supported 1.x profiles and can emit generated 2.x drafts under `v2/out/migrations/`
 - `v2/session/install/` now contains the first real experimental bundle/install slice for 2.x
 - `scripts/dev/retrofx-v2-bundle` now stages deterministic repo-local bundles under `v2/bundles/`
-- `scripts/dev/retrofx-v2-install`, `retrofx-v2-status`, and `retrofx-v2-uninstall` now manage an isolated `retrofx-v2-dev` user-local footprint
-- live session orchestration, public packaging, and production command delegation still do not exist
+- `scripts/dev/retrofx-v2-install` and `retrofx-v2-uninstall` now manage that separate experimental install footprint
+- `v2/session/apply/` now contains the first bounded experimental apply/off slice with current-state manifests, last-good state, and event logs
+- `scripts/dev/retrofx-v2-apply`, `retrofx-v2-off`, and `retrofx-v2-status` now manage a bounded current activation inside the isolated `retrofx-v2-dev` footprint
+- public packaging, broad live session orchestration, and production command delegation still do not exist
 
 Python is used only for the early 2.x internal scaffold because `tomllib` gives deterministic TOML parsing with no extra dependency burden.
 This choice does not change the 1.x runtime or make Python the default user-facing path.
@@ -40,7 +42,7 @@ This choice does not change the 1.x runtime or make Python the default user-faci
 - `schema/`: schema contracts, validation helpers, and migration maps
 - `theme/`: semantic theme and typography policy helpers
 - `render/`: render policy and transform planning
-- `session/`: planning, install-state ownership, and future apply/off/repair orchestration
+- `session/`: planning, bounded apply/off state ownership, install-state ownership, and future repair orchestration
 - `targets/`: target adapters and backend-specific emission
 - `packs/`: pack metadata, family definitions, and pack-local assets
 - `compat/`: legacy profile intake, migration helpers, and future dispatcher shims

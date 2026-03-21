@@ -9,8 +9,10 @@ Implemented now:
 
 - environment detection under `environment/`
 - capability-aware non-destructive planning under `planning/`
+- bounded experimental apply, off, and status orchestration under `apply/`
 - explicit dev-only X11 preview staging under `dev/`
-- no stable live apply, install, off, or recovery execution yet
+- user-local install ownership under `install/`
+- no stable production live apply, install-default switching, or recovery execution yet
 
 Do implement here later:
 

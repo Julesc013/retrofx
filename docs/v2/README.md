@@ -29,7 +29,7 @@ It is broader than RetroFX 1.x, but it is still bounded by explicit capability d
 
 ## Current Implementation State
 
-As of TWO-18:
+As of TWO-19:
 
 - `v2/core/` contains an experimental dev-only scaffold for loading, validating, normalizing, and resolving 2.x profiles
 - `v2/tests/` contains isolated 2.x fixtures and tests for that scaffold
@@ -52,7 +52,9 @@ As of TWO-18:
 - `v2/compat/dev/inspect-1x-profile <path>` analyzes a 1.x profile, reports clean/degraded/manual mappings, and can emit a generated 2.x draft under `v2/out/migrations/<profile-id>/`
 - `v2/session/install/` now contains the first real experimental bundle/install slice for 2.x
 - `scripts/dev/retrofx-v2-bundle` now builds deterministic repo-local bundles under `v2/bundles/<bundle-id>/`
-- `scripts/dev/retrofx-v2-install`, `retrofx-v2-status`, and `retrofx-v2-uninstall` now manage an isolated user-local `retrofx-v2-dev` footprint
+- `v2/session/apply/` now contains the first bounded experimental apply/off slice with current-state manifests, last-good tracking, and event logs under the isolated `retrofx-v2-dev` footprint
+- `scripts/dev/retrofx-v2-apply`, `retrofx-v2-off`, and `retrofx-v2-status` now stage, inspect, and clear a bounded 2.x current activation without touching 1.x
+- `scripts/dev/retrofx-v2-install`, `retrofx-v2-status`, and `retrofx-v2-uninstall` still manage the separate user-local install footprint used by the apply layer
 - that install flow is still dev-only, user-local, and non-destructive to 1.x
-- stable live apply, session-default switching, public packaging, Wayland render, and full session orchestration are still future work
+- stable live apply across broad targets, session-default switching, public packaging, Wayland render, and full session orchestration are still future work
 - the working product line remains 1.x; no default CLI migration has happened

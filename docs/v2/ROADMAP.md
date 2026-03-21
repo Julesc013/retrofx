@@ -5,7 +5,7 @@ Each phase should narrow uncertainty before more implementation surface is added
 
 ## Current Progress
 
-Status after TWO-18:
+Status after TWO-19:
 
 - 2.0-C has an experimental implementation foothold for load, validate, normalize, and resolve in `v2/core/`
 - 2.0-D has started with the first terminal/TUI compiler family under `v2/targets/terminal/`
@@ -18,7 +18,8 @@ Status after TWO-18:
 - 2.0-G has now started narrowly with a local pack manifest format, curated built-in packs, and pack-aware dev resolution under `v2/packs/`
 - 2.0-G now also includes the first 1.x compatibility inspection and draft migration slice under `v2/compat/`
 - 2.0-G now also includes deterministic dev bundles plus experimental user-local install, uninstall, and status helpers under `v2/session/install/` and `scripts/dev/`
-- live session orchestration, Wayland render, and broader target families remain future phases
+- 2.0-E now also includes the first bounded experimental apply/off workflow with current-state manifests and reversible staging under `v2/session/apply/`
+- broad live session orchestration, Wayland render, and broader target families remain future phases
 
 ## 2.0-A Product And Spec Design
 
@@ -121,7 +122,8 @@ Current implementation note:
 - TWO-11 starts this phase with environment detection and preview planning only
 - TWO-13 extends that preview layer with structured display-policy interpretation
 - TWO-17 adds the first explicit dev-only X11 live probe surface without claiming full session orchestration ownership
-- live apply, install, off, repair, and integration hooks are still future work
+- TWO-19 adds the first bounded experimental apply/off workflow with current-state manifests, last-good records, and reversible 2.x-owned active staging
+- broad live apply, repair, and integration hooks are still future work
 
 ## 2.0-F Richer Theming And Display Policy
 

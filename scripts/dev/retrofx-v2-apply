@@ -10,4 +10,4 @@ else
   export PYTHONPATH="${repo_root}:${PYTHONPATH}"
 fi
 
-exec python3 -m v2.session.apply.cli status "$@"
+exec python3 -m v2.session.apply.cli apply "$@"
