@@ -43,7 +43,9 @@ PACKAGE_DOCS = (
     "BROADER_ALPHA_MATRIX.md",
     "BROADER_ALPHA_READINESS.md",
     "PRE_BETA_BLOCKERS.md",
+    "PRE_BETA_CANDIDATE_NOTES.md",
     "PRE_BETA_READINESS.md",
+    "PRE_BETA_RELEASE_CHECKLIST.md",
     "PRE_BETA_GATES.md",
     "NEXT_STAGE_VERDICT.md",
     "INTERNAL_ALPHA_RUNBOOK.md",
@@ -185,6 +187,7 @@ def build_internal_alpha_package(
             "Toolkit exports remain advisory and live desktop integration is not implemented.",
             "Live Wayland render is not implemented.",
             "Broader non-public alpha is not approved yet; this package remains internal-alpha only.",
+            "No non-public pre-beta candidate exists for the current build; this package is validation material for continued internal hardening rather than a pre-beta candidate.",
             "Current internal-alpha packages are built from an untagged post-alpha hardening line unless the current version tag explicitly points at HEAD.",
             "1.x remains the production line.",
         ],
@@ -220,7 +223,7 @@ def build_internal_alpha_package(
         },
         "note": (
             "This creates a reproducible internal-alpha package around one deterministic 2.x bundle. "
-            "It remains non-public and does not provide a standalone production toolchain."
+            "It remains non-public, is not a pre-beta candidate artifact, and does not provide a standalone production toolchain."
         ),
     }
 
@@ -228,7 +231,7 @@ def build_internal_alpha_package(
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="retrofx-v2 package-alpha",
-        description="Build one deterministic RetroFX 2.x internal-alpha package for non-public internal testing.",
+        description="Build one deterministic RetroFX 2.x internal-alpha validation package for non-public internal testing. This does not create a pre-beta candidate.",
     )
     add_profile_selection_args(parser)
     parser.add_argument(

@@ -9,10 +9,12 @@ RetroFX 2.x now has an explicit non-public experimental version policy for inter
 
 - current 2.x experimental version: `2.0.0-alpha.internal.2`
 - current status label: `internal-alpha`
-- current packaging prompt milestone: `TWO-29`
+- current packaging prompt milestone: `TWO-30`
 - current version tag name: `v2.0.0-alpha.internal.2`
 - latest local/internal alpha candidate tag: `v2.0.0-alpha.internal.1`
 - current build kind: untagged post-alpha hardening
+- reserved non-public pre-beta candidate version: `2.0.0-prebeta.internal.1`
+- reserved non-public pre-beta candidate tag: `v2.0.0-prebeta.internal.1`
 - code-side source of truth: `v2/dev/release.py`
 
 ## Format
@@ -53,6 +55,7 @@ It does not mean:
 Use this rule set for now:
 
 - increment the trailing internal alpha number when the branch meaningfully changes its internal testing contract
+- reserve the first matching `2.0.0-prebeta.internal.<n>` only when the pre-beta gates are actually satisfied
 - do not invent multiple competing 2.x version formats
 - keep the version static within a given committed internal-alpha state
 - keep status labels separate from readiness decisions
@@ -70,4 +73,4 @@ Example:
 
 That means the branch can be circulated internally without promoting the status label to anything public-facing.
 
-For TWO-29, the version is intentionally incremented to separate the current post-alpha hardening build from the historical local alpha candidate tagged at `v2.0.0-alpha.internal.1`.
+For TWO-29 and TWO-30, the version remains on the internal-alpha line intentionally so the current hardening build is not mistaken for either the historical local alpha candidate tagged at `v2.0.0-alpha.internal.1` or the still-blocked reserved pre-beta candidate `v2.0.0-prebeta.internal.1`.

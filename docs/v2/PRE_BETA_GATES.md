@@ -51,11 +51,14 @@ Pre-beta remains blocked if any of these remain true:
 
 ## Current Status
 
-For TWO-29:
+For TWO-30:
 
 - broader alpha: not ready
 - non-public pre-beta: not ready
+- local pre-beta tag candidate: not ready
+- pre-beta candidate ready: no
 - pre-beta: not ready
 - current branch version: `2.0.0-alpha.internal.2`
+- proposed pre-beta candidate version: `2.0.0-prebeta.internal.1`
 - latest historical local alpha candidate: `v2.0.0-alpha.internal.1`
 - current next step: continue internal alpha hardening rather than pre-beta staging

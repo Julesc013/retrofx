@@ -26,9 +26,11 @@ STATUS_LADDER = (
 
 CURRENT_EXPERIMENTAL_VERSION = "2.0.0-alpha.internal.2"
 CURRENT_STATUS_LABEL = "internal-alpha"
-CURRENT_PROMPT = "TWO-29"
+CURRENT_PROMPT = "TWO-30"
 CURRENT_DISTRIBUTION_SCOPE = "internal-non-public"
 CURRENT_COHORT = "controlled-internal"
+PROPOSED_PRE_BETA_VERSION = "2.0.0-prebeta.internal.1"
+PROPOSED_PRE_BETA_STATUS_LABEL = "pre-beta"
 
 
 def build_experimental_release_metadata(
@@ -46,6 +48,8 @@ def build_experimental_release_metadata(
     local_tag_name = local_tag_name_for_version(chosen_version)
     tag_state = describe_local_tag_state(local_tag_name)
     latest_existing_local_alpha_tag = latest_matching_tag("v2.0.0-alpha.internal.*")
+    proposed_pre_beta_tag_name = local_tag_name_for_version(PROPOSED_PRE_BETA_VERSION)
+    latest_existing_local_pre_beta_tag = latest_matching_tag("v2.0.0-prebeta.internal.*")
 
     return {
         "schema": EXPERIMENTAL_STATUS_SCHEMA,
@@ -68,6 +72,8 @@ def build_experimental_release_metadata(
         "ready_for_continued_broader_alpha": False,
         "ready_for_controlled_external_alpha": False,
         "ready_for_non_public_pre_beta": False,
+        "ready_for_local_pre_beta_tag_candidate": False,
+        "pre_beta_candidate_ready": False,
         "ready_for_pre_beta_stabilization": False,
         "ready_for_broader_testing": False,
         "needs_more_stabilization": True,
@@ -82,12 +88,16 @@ def build_experimental_release_metadata(
             "current package and diagnostics surfaces remain internal-only and repo-checkout dependent",
             "migration validation remains representative rather than broad",
         ],
+        "proposed_pre_beta_version": PROPOSED_PRE_BETA_VERSION,
+        "proposed_pre_beta_status_label": PROPOSED_PRE_BETA_STATUS_LABEL,
+        "proposed_pre_beta_tag_name": proposed_pre_beta_tag_name,
         "local_tag_name": local_tag_name,
         "local_tag_exists": tag_state["exists"],
         "local_tag_points_at_head": tag_state["points_at_head"],
         "local_tag_state": tag_state["state"],
         "local_tag_revision": tag_state["revision"],
         "latest_existing_local_alpha_tag": latest_existing_local_alpha_tag,
+        "latest_existing_local_pre_beta_tag": latest_existing_local_pre_beta_tag,
         "current_build_kind": (
             "tagged-local-alpha-candidate"
             if tag_state["points_at_head"]

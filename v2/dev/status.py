@@ -89,7 +89,7 @@ COMMAND_SUMMARY = [
         "command": "package-alpha",
         "category": "release",
         "implemented": True,
-        "description": "Build a reproducible non-public internal-alpha package around one deterministic 2.x bundle plus runbook docs. Dirty trees are blocked by default. This is not a broader-alpha, pre-beta, or public package surface.",
+        "description": "Build a reproducible non-public internal-alpha validation package around one deterministic 2.x bundle plus runbook docs. Dirty trees are blocked by default. This is not a broader-alpha, pre-beta-candidate, or public package surface.",
     },
     {
         "command": "diagnostics",
@@ -241,7 +241,7 @@ IMPLEMENTED_STATUS_MATRIX = [
 
 PLATFORM_IMPLEMENTATION_INFO = {
     "status": "experimental-dev-only",
-    "prompt": "TWO-29",
+    "prompt": "TWO-30",
     "surface": "unified-dev-platform-internal-alpha",
     "entrypoint": str(UNIFIED_ENTRYPOINT),
     "implemented_targets": list_targets(),
@@ -277,6 +277,7 @@ def build_platform_status(
         "Controlled internal alpha readiness is narrow; real-world validation is strongest on one X11 plus i3 host and simulated elsewhere.",
         "Internal-alpha packages remain repo-checkout dependent and are not standalone copied toolchains.",
         "Broader non-public alpha is still not approved; non-sway Wayland desktops remain export-oriented validation environments only.",
+        "No non-public pre-beta candidate exists for the current build; the reserved pre-beta candidate version remains blocked by the current gates.",
     ]
     if release_status["local_tag_state"] != "current-head":
         limitations.append(
@@ -339,12 +340,12 @@ def build_platform_status(
         "implemented_status_matrix": IMPLEMENTED_STATUS_MATRIX,
         "limitations": limitations,
         "next_focus": {
-            "phase": "pre-beta-hardening-still-required",
+            "phase": "blocked-pre-beta-candidate-continue-internal-hardening",
             "doc": str(REPO_ROOT / "docs" / "v2" / "STABILIZATION_PLAN.md"),
             "checklist": str(REPO_ROOT / "docs" / "v2" / "STABILIZATION_CHECKLIST.md"),
             "goals": [
                 "expand validation beyond one real X11 plus i3 host and simulated Wayland or tty environments",
-                "keep broader-alpha and pre-beta claims fenced off until at least one real Wayland host and another real environment are validated",
+                "keep broader-alpha and pre-beta-candidate claims fenced off until at least one real Wayland host and another real environment are validated",
                 "continue regression hunting inside the already implemented surface instead of new feature sprawl",
                 "keep manifest, cleanup, ownership metadata, and release-state truth aligned with what internal testers actually use",
             ],

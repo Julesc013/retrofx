@@ -7,6 +7,7 @@ Current branch identity:
 - current experimental version: `2.0.0-alpha.internal.2`
 - current build kind: untagged post-alpha hardening
 - latest local alpha candidate tag: `v2.0.0-alpha.internal.1`
+- proposed non-public pre-beta candidate version: `2.0.0-prebeta.internal.1`
 
 This is not a future wish list.
 It is the current blocker set derived from [BROADER_ALPHA_MATRIX.md](BROADER_ALPHA_MATRIX.md), [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md), the current unified status surface, and the green automated suite.
@@ -16,11 +17,12 @@ It is the current blocker set derived from [BROADER_ALPHA_MATRIX.md](BROADER_ALP
 There are current `pre-beta-blocker` items.
 The branch is not ready for a non-public pre-beta candidate.
 
-Resolved in TWO-29:
+Resolved in TWO-29 and TWO-30:
 
 - release-status metadata now separates the current `.2` build from the historical `.1` local alpha candidate instead of conflating them
 - `package-alpha` now blocks dirty working trees by default unless `--allow-dirty` is used for explicit internal triage
 - the unified status and package surfaces now report the current build as an untagged post-alpha hardening build rather than a current tagged candidate
+- the blocked pre-beta-candidate state is now explicit in release metadata, package contents, and dedicated operator docs instead of being implied only by the broader readiness prose
 
 ## Pre-Beta-Blocker
 

@@ -118,9 +118,11 @@ class AlphaSupportTests(unittest.TestCase):
             "docs/v2/POST_ALPHA_DECISION_RULES.md": ["Continue Alpha As-Is", "Enter Alpha Remediation", "Expand The Tester Set"],
             "docs/v2/ALPHA_CANDIDATE_SUMMARY.md": ["ALPHA_CANDIDATE_READY=yes", "v2.0.0-alpha.internal.1", "package-alpha"],
             "docs/v2/BROADER_ALPHA_READINESS.md": ["READY_FOR_BROADER_ALPHA=no", "READY_FOR_PRE_BETA_STABILIZATION=no", "internal alpha only"],
+            "docs/v2/PRE_BETA_CANDIDATE_NOTES.md": ["PRE_BETA_CANDIDATE_READY=no", "2.0.0-prebeta.internal.1", "internal-alpha"],
             "docs/v2/PRE_BETA_GATES.md": ["broader alpha", "pre-beta", "deterministic"],
             "docs/v2/PRE_BETA_BLOCKERS.md": ["pre-beta-blocker", "Wayland-host", "internal-only"],
             "docs/v2/PRE_BETA_READINESS.md": ["READY_FOR_NON_PUBLIC_PRE_BETA=no", "READY_FOR_CONTINUED_BROADER_ALPHA=no", "READY_FOR_MORE_INTERNAL_HARDENING=yes"],
+            "docs/v2/PRE_BETA_RELEASE_CHECKLIST.md": ["do not create a pre-beta candidate", "package-alpha", "status"],
             "docs/v2/NEXT_STAGE_VERDICT.md": ["READY_FOR_INTERNAL_ALPHA_CONTINUATION", "READY_FOR_BROADER_ALPHA", "READY_FOR_PRE_BETA_STABILIZATION"],
         }
         for relative_path, expected_strings in doc_expectations.items():

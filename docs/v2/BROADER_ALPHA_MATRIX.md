@@ -1,6 +1,6 @@
 # RetroFX 2.x Broader Alpha Matrix
 
-This matrix records the broader-alpha-oriented validation pass for TWO-29.
+This matrix records the broader-alpha-oriented validation pass carried forward through TWO-30.
 
 It does not replace [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md).
 It extends the branch evidence with broader environment and surface classification.
@@ -12,7 +12,7 @@ Evidence sources:
 - [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md)
 - `scripts/dev/retrofx-v2 status`
 - `./v2/tests/test.sh`
-- TWO-28 and TWO-29 scenario reruns under `/tmp/retrofx-v2-two28-*` and `/tmp/retrofx-v2-two29-*`
+- TWO-28, TWO-29, and TWO-30 scenario reruns under `/tmp/retrofx-v2-two28-*`, `/tmp/retrofx-v2-two29-*`, and `/tmp/retrofx-v2-two30-*`
 - latest tagged internal candidate `v2.0.0-alpha.internal.1`
 - current internal-alpha hardening version `2.0.0-alpha.internal.2`
 
@@ -55,8 +55,8 @@ Current summary:
 | TTY or headless planning | forced TTY | `RETROFX_V2_FORCE_SESSION_TYPE=tty scripts/dev/retrofx-v2 plan --pack crt-core --profile-id green-crt --write-preview --out-root <temp>` | no fake live apply path | `apply_preview_targets=[]` and GUI-facing targets degrade honestly | degraded-pass | Conservative behavior remains correct. |
 | bounded apply or off | temp HOME, safe contexts only | `scripts/dev/retrofx-v2 apply`, `status`, `off` | 2.x-owned state only, deterministic cleanup | `apply` on `warm-night-theme-only.toml` staged activation with `live_applied_targets=[]`; `status` reported the activation; `off` removed only `active/current` and `current-state.json` while preserving manifests and install roots | pass | Trust remains bounded to internal-safe contexts. |
 | install, diagnostics, and uninstall | temp HOME install mode | `package-alpha`, `install`, `diagnostics`, `uninstall` | isolated install-state and reproducible diagnostics | install succeeded under `retrofx-v2-dev`, diagnostics captured release-status plus installed-bundle evidence, and uninstall removed only the bundle and installation record while preserving user config roots | pass | This is the strongest packaging/distribution surface currently available. |
-| broader-alpha package shape | repo-local dev | `scripts/dev/retrofx-v2 package-alpha ...` | if broader-alpha ready, package metadata would say so | current package manifest still says `status_label=internal-alpha`, `version=2.0.0-alpha.internal.2`, `current_build_kind=untagged-post-alpha-hardening`, and `ready_for_broader_alpha=false` | pass | Honest narrowing remains the intended result in TWO-29. |
-| full 2.x suite after TWO-28 hardening | repo-local dev | `./v2/tests/test.sh` | suite remains green after surface narrowing | `Ran 135 tests in 1.970s` and `OK` | pass | Final suite pass confirms the narrowed surface and new broader-alpha fences did not regress the implemented branch. |
+| broader-alpha package shape | repo-local dev | `scripts/dev/retrofx-v2 package-alpha ...` | if broader-alpha ready, package metadata would say so | current package manifest still says `status_label=internal-alpha`, `version=2.0.0-alpha.internal.2`, `current_build_kind=untagged-post-alpha-hardening`, `ready_for_broader_alpha=false`, and `pre_beta_candidate_ready=false` | pass | Honest narrowing remains the intended result in TWO-29 and TWO-30. |
+| full 2.x suite after TWO-30 gating | repo-local dev | `./v2/tests/test.sh` | suite remains green after surface narrowing | `Ran 136 tests in 1.993s` and `OK` | pass | Final suite pass confirms the narrowed surface and new pre-beta fences did not regress the implemented branch. |
 
 ## Interpretation
 
@@ -68,5 +68,5 @@ The branch is still not ready for broader alpha because:
 - non-sway Wayland desktops are now explicitly fenced as export-oriented validation paths
 - migration validation breadth remains limited
 
-The immediate value of TWO-29 is not new capability.
+The immediate value of TWO-30 is not new capability.
 It is stricter classification of what should remain internal-only and what still blocks broader alpha or pre-beta positioning.

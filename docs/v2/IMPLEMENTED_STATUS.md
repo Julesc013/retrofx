@@ -1,6 +1,6 @@
 # RetroFX 2.x Implemented Status
 
-This document is the current truth pass for the 2.x branch as of TWO-29.
+This document is the current truth pass for the 2.x branch as of TWO-30.
 It is intentionally blunt.
 
 1.x remains the production line.
@@ -56,6 +56,7 @@ Still intentionally bounded:
 - release-ish package generation now blocks dirty trees by default unless explicit internal triage mode is requested
 - controlled internal alpha now has a real operational layer, and diagnostics now capture source-control state plus installed bundle or package evidence for the selected profile
 - release-status metadata now distinguishes the current build from the historical local alpha candidate and makes broader-alpha or pre-beta no explicit in machine-readable form
+- release-status metadata now also carries the blocked pre-beta-candidate identity explicitly so the current internal-alpha line is not mistaken for a non-public pre-beta candidate
 - the default repo-local release output path is now `v2/releases/internal-alpha/`, which is treated as generated machine-local output rather than committed source
 
 Not implemented:
@@ -80,6 +81,9 @@ Related truth docs:
 - current local alpha tag candidate: no
 - alpha candidate ready for the current branch build: no
 - latest historical local alpha candidate: `v2.0.0-alpha.internal.1`
+- proposed pre-beta candidate version: `2.0.0-prebeta.internal.1`
+- local pre-beta tag candidate: no
+- pre-beta candidate ready: no
 - broader alpha: no
 - controlled external alpha: no
 - non-public pre-beta: no
