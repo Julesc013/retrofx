@@ -29,12 +29,14 @@ It is broader than RetroFX 1.x, but it is still bounded by explicit capability d
 
 ## Current Implementation State
 
-As of TWO-10:
+As of TWO-11:
 
 - `v2/core/` contains an experimental dev-only scaffold for loading, validating, normalizing, and resolving 2.x profiles
 - `v2/tests/` contains isolated 2.x fixtures and tests for that scaffold
 - `v2/targets/terminal/` contains the first real 2.x compiler family: `xresources`, `alacritty`, `kitty`, `tmux`, and `vim`
 - `v2/targets/wm/` now contains the second real 2.x compiler family: `i3`, `sway`, and `waybar`
 - `v2/core/dev/compile-targets <profile>` compiles those implemented targets into `v2/out/<profile-id>/...`
-- capability-filtered target planning, artifact planning, and session orchestration are still future work
+- `v2/session/` now contains real environment detection and capability-aware session planning preview code
+- `v2/core/dev/plan-session <profile>` detects the environment, builds a preview plan, and can write a non-destructive preview bundle under `v2/out/<profile-id>/plan/`
+- live apply, install, off, artifact planning, and full session orchestration are still future work
 - the working product line remains 1.x; no default CLI migration has happened

@@ -5,6 +5,12 @@ Purpose:
 - future home of apply, export, install, off, repair, environment detection, and session integration orchestration
 - future home of side-effect ownership and lifecycle state management
 
+Implemented now:
+
+- environment detection under `environment/`
+- capability-aware non-destructive planning under `planning/`
+- no live apply, install, off, or recovery execution yet
+
 Do implement here later:
 
 - environment-scoped lifecycle logic
@@ -17,6 +23,7 @@ Planned sub-areas:
 
 - `apply/`: execution-mode sequencing and side-effect orchestration
 - `environment/`: environment model and detection helpers
+- `planning/`: capability-aware target/apply planning and preview reports
 - `install/`: user-local install ownership and uninstall planning
 - `recovery/`: state descriptors, manifests, rollback, repair, and self-check helpers
 - `integrations/`: login/session hook planning for TTY, tuigreet, Xsession, WM, and DE entry points

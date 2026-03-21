@@ -10,6 +10,8 @@ Implemented now:
 - `resolve-profile`: thin shell wrapper around the Python module
 - `compile_targets.py`: compile the implemented terminal/TUI and WM target families into `v2/out/<profile-id>/...`
 - `compile-targets`: thin shell wrapper around the compiler entrypoint
+- `plan_session.py`: detect the environment, build a capability-aware session plan, and optionally write a preview bundle
+- `plan-session`: thin shell wrapper around the session planner
 
 What belongs here:
 

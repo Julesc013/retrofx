@@ -6,6 +6,14 @@ This document defines those modes from the session-orchestration point of view.
 The target layer defines what a given family can support.
 The session layer decides which mode is truthful in the current context.
 
+## Current Implementation Status
+
+As of TWO-11:
+
+- `compile-only` and `export-only` now exist as real preview concepts in the dev planner
+- `apply-now` exists only as an explicit preview category for selected targets such as `i3`, `sway`, or `xresources` when the environment matches
+- no live mode mutates the user session yet
+
 ## Summary
 
 | Mode | Intended Use | Allowed Side Effects | Expected Outputs | Must Never Do |
@@ -46,6 +54,10 @@ Meaningful participants:
 
 - every target family, because planning exists even when no emission will occur
 
+Current TWO-11 implementation note:
+
+- `v2/core/dev/plan-session` can inspect a profile, detect the environment, and build a compile-oriented preview plan without emitting target artifacts unless preview output is explicitly requested
+
 ## 2. `export-only`
 
 Intended use:
@@ -77,6 +89,10 @@ Meaningful participants:
 - WM config targets
 - toolkit and desktop export targets
 - X11 artifacts intended for inspection rather than activation
+
+Current TWO-11 implementation note:
+
+- the implemented dev compiler families and the session planner both remain export-oriented by default
 
 ## 3. `apply-now`
 
@@ -114,6 +130,11 @@ Important reminder:
 
 - `apply-now` is capability- and environment-dependent
 - a target may support `export-only` and `install-for-session` but not truthful current-session apply
+
+Current TWO-11 implementation note:
+
+- the session planner can mark `i3`, `sway`, or `xresources` as apply-preview candidates when the environment matches and the profile requests `current-session`
+- those candidates remain preview-only; no side effects happen yet
 
 ## 4. `install-for-session`
 

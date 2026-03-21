@@ -4,6 +4,15 @@ RetroFX 2.x needs an explicit environment abstraction so capability filtering an
 
 The environment model is a fact record, not a second planner.
 
+## Current Implementation Status
+
+As of TWO-11:
+
+- `v2/session/environment/detect.py` implements a real best-effort environment detector for the dev scaffold
+- the implemented detector classifies `tty`, `x11`, `wayland`, `remote-ssh`, and `unknown-headless`
+- it also detects `i3`, `sway`, `gnome`, `plasma`, or `unknown` as best-effort WM or DE identities
+- it is intentionally conservative and surfaces detection notes instead of silently upgrading support claims
+
 ## Purpose
 
 The environment model exists to answer questions such as:
@@ -155,6 +164,11 @@ Later implementation prompts should follow these rules:
 - uncertainty must be represented explicitly
 - missing facts should reduce claims, not increase them
 - session wrappers must prefer explicit recorded state over guessed environment conclusions
+
+Current TWO-11 implementation note:
+
+- the dev detector also supports explicit override environment variables for tests and preview simulations
+- those overrides exist only to stabilize planning and tests; they must not become hidden production behavior
 
 ## Relation To 1.x
 

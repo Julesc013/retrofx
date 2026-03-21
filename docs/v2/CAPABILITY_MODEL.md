@@ -12,6 +12,15 @@ RetroFX does not infer support from optimism, from partial config generation, or
 
 Nothing may silently skip this model.
 
+## Current Implementation Status
+
+As of TWO-11:
+
+- `v2/session/planning/plan.py` implements the first real capability-aware planning slice
+- it intersects the resolved profile, detected environment, and currently implemented target families
+- the current planner is still narrow: it reasons only about implemented targets and remains preview-only
+- artifact-plan-driven lifecycle execution is still future work
+
 ## Capability Categories
 
 RetroFX 2.x capability declarations are grouped by domain.
@@ -86,6 +95,11 @@ The planner then produces:
 - capabilities that are unavailable
 - whether the result is `apply`, `export-only`, or `unsupported`
 
+Current TWO-11 implementation note:
+
+- the implemented planner currently emits `compile-and-export`, `compile-and-apply-preview`, `compile-but-degraded`, and `skipped-unsupported` decisions
+- that output is meant to prove the architecture, not to claim production lifecycle ownership yet
+
 ## Logging And Truthfulness
 
 Every apply or export decision should be explainable in plain language.
@@ -117,4 +131,3 @@ If the selected environment is `sway`, RetroFX should be able to say:
 - resulting status is `partial`, not `full`
 
 That is the intended 2.x behavior: useful, explicit, and honest.
-

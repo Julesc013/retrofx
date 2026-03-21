@@ -11,6 +11,15 @@ Its defining principle is:
 Session orchestration is not "whatever happens after compile."
 It is a first-class subsystem with explicit ownership and safety rules.
 
+## Current Implementation Status
+
+As of TWO-11:
+
+- `v2/session/environment/` implements best-effort environment detection for the dev scaffold
+- `v2/session/planning/` implements non-destructive capability-aware planning against the resolved profile and implemented target families
+- `v2/core/dev/plan-session` exposes that planning layer as a dev-only preview surface
+- live apply, install, rollback, repair, and integration execution are still not implemented
+
 ## What The Session System Is Responsible For
 
 The session subsystem is responsible for:
@@ -74,6 +83,11 @@ The session subsystem should eventually produce:
 - recovery baselines
 - integration-hook records
 - warnings about skipped, degraded, or partial lifecycle outcomes
+
+Current TWO-11 truth:
+
+- the implemented planner produces environment records, per-target preview decisions, degradation warnings, and optional preview bundles
+- it does not yet produce active-state, install-state, or recovery records
 
 ## Relation To Target Compilation
 

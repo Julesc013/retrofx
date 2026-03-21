@@ -5,12 +5,13 @@ Each phase should narrow uncertainty before more implementation surface is added
 
 ## Current Progress
 
-Status after TWO-10:
+Status after TWO-11:
 
 - 2.0-C has an experimental implementation foothold for load, validate, normalize, and resolve in `v2/core/`
 - 2.0-D has started with the first terminal/TUI compiler family under `v2/targets/terminal/`
 - 2.0-D now also has the first WM theme/config compiler family under `v2/targets/wm/`
-- session orchestration and broader target families remain future phases
+- 2.0-E has begun narrowly with non-destructive environment detection and capability-aware planning preview under `v2/session/`
+- live session orchestration and broader target families remain future phases
 
 ## 2.0-A Product And Spec Design
 
@@ -104,6 +105,11 @@ Explicitly does not do:
 - deep GNOME or Plasma ownership
 - global config mutation by default
 - speculative installer breadth
+
+Current implementation note:
+
+- TWO-11 starts this phase with environment detection and preview planning only
+- live apply, install, off, repair, and integration hooks are still future work
 
 ## 2.0-F Richer Theming And Display Policy
 
