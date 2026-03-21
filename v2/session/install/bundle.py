@@ -10,6 +10,7 @@ from tempfile import TemporaryDirectory
 from typing import Any, Callable, Mapping
 
 from v2.core.dev.profile_input import run_selected_profile_pipeline
+from v2.dev.release import build_experimental_release_metadata
 from v2.render import build_display_policy_summary, build_x11_render_summary
 from v2.session.environment import detect_environment
 from v2.session.planning import build_session_plan
@@ -66,6 +67,7 @@ def build_dev_bundle(
 
     resolved_profile = pipeline_result.resolved_profile
     assert resolved_profile is not None
+    release_status = build_experimental_release_metadata()
     environment = detect_environment(env=env, cwd=cwd, stdin_isatty=stdin_isatty, path_lookup=path_lookup)
     plan = build_session_plan(resolved_profile, environment)
     display_policy = build_display_policy_summary(resolved_profile, environment)
@@ -88,6 +90,7 @@ def build_dev_bundle(
         bundle = _materialize_bundle(
             resolved_profile=resolved_profile,
             source=pipeline_result.source,
+            release_status=release_status,
             environment=environment,
             plan=plan,
             compiled=compiled,
@@ -99,6 +102,7 @@ def build_dev_bundle(
         "stage": "bundle",
         "implementation": IMPLEMENTATION_INFO,
         "source": pipeline_result.source,
+        "release_status": release_status,
         "warnings": [warning.to_dict() for warning in pipeline_result.warnings],
         "errors": [],
         "profile": {
@@ -141,6 +145,7 @@ def _materialize_bundle(
     *,
     resolved_profile: Mapping[str, Any],
     source: Mapping[str, Any],
+    release_status: Mapping[str, Any],
     environment: Mapping[str, Any],
     plan: Mapping[str, Any],
     compiled: Mapping[str, Any],
@@ -193,6 +198,7 @@ def _materialize_bundle(
         "schema": BUNDLE_SCHEMA,
         "bundle_id": bundle_id,
         "install_name": INSTALL_NAME,
+        "experimental_release": release_status,
         "profile": {
             "id": profile["id"],
             "name": profile["name"],

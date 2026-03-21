@@ -6,13 +6,16 @@ It is a controlled, local-first shape for packaging resolved-profile outputs int
 
 ## Current Implementation Status
 
-As of TWO-21:
+As of TWO-24:
 
 - repo-local bundles are real under `v2/bundles/<bundle-id>/`
+- reproducible internal-alpha packages are real under `v2/releases/internal-alpha/<package-id>/`
 - the bundle manifest schema is `retrofx.bundle/v2alpha1`
+- the internal-alpha package manifest schema is `retrofx.internal-alpha-package/v2alpha1`
 - bundles can be installed into an isolated user-local `retrofx-v2-dev` footprint
 - uninstall and status are driven from install-state metadata
 - the unified dev surface now exposes bundle, install, uninstall, and status through `scripts/dev/retrofx-v2`
+- the unified dev surface now also exposes `package-alpha`
 - public archives, remote registries, and distro packaging are still future work
 
 ## Distribution Units
@@ -48,6 +51,24 @@ At that point the distribution story adds:
 Those files are not part of the source bundle itself.
 They are lifecycle metadata owned by the install layer.
 
+### Internal-Alpha Package
+
+The current non-public release-like unit is the internal-alpha package directory.
+
+Shape:
+
+- `package-manifest.json`
+- `bundle/`
+- `docs/`
+- `metadata/`
+
+It is designed to be:
+
+- reproducible
+- self-describing
+- non-public
+- repo-checkout dependent on purpose
+
 ## What Bundles Contain
 
 Bundles may contain:
@@ -57,6 +78,7 @@ Bundles may contain:
 - source origin metadata
 - session-plan preview metadata
 - install hints
+- experimental release metadata
 
 Bundles currently do not contain:
 

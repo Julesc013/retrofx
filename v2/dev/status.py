@@ -10,7 +10,10 @@ from v2.core.pipeline import IMPLEMENTATION_INFO as CORE_IMPLEMENTATION_INFO
 from v2.packs import discover_packs
 from v2.session.apply import describe_current_activation
 from v2.session.environment import detect_environment
+from v2.session.install import describe_install_state
 from v2.targets import list_target_families, list_targets
+
+from .release import build_experimental_release_metadata
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 UNIFIED_ENTRYPOINT = REPO_ROOT / "scripts" / "dev" / "retrofx-v2"
@@ -81,6 +84,12 @@ COMMAND_SUMMARY = [
         "category": "install",
         "implemented": True,
         "description": "Build a deterministic experimental 2.x bundle.",
+    },
+    {
+        "command": "package-alpha",
+        "category": "release",
+        "implemented": True,
+        "description": "Build a reproducible non-public internal-alpha package around one deterministic 2.x bundle plus runbook docs.",
     },
     {
         "command": "install",
@@ -226,8 +235,8 @@ IMPLEMENTED_STATUS_MATRIX = [
 
 PLATFORM_IMPLEMENTATION_INFO = {
     "status": "experimental-dev-only",
-    "prompt": "TWO-23",
-    "surface": "unified-dev-platform-remediated",
+    "prompt": "TWO-24",
+    "surface": "unified-dev-platform-internal-alpha",
     "entrypoint": str(UNIFIED_ENTRYPOINT),
     "implemented_targets": list_targets(),
     "families": list_target_families(),
@@ -250,18 +259,21 @@ def build_platform_status(
 ) -> dict[str, Any]:
     environment = detect_environment(env=env, cwd=cwd, stdin_isatty=stdin_isatty, path_lookup=path_lookup)
     activation_status = describe_current_activation(env=env, cwd=cwd)
+    install_state = describe_install_state(env=env, cwd=cwd)
     packs = discover_packs()
 
     return {
         "ok": True,
         "stage": "platform-status",
         "implementation": PLATFORM_IMPLEMENTATION_INFO,
+        "release_status": build_experimental_release_metadata(),
         "developer_start_here": {
             "entrypoint": str(UNIFIED_ENTRYPOINT),
             "first_commands": [
                 "scripts/dev/retrofx-v2 status",
                 "scripts/dev/retrofx-v2 smoke v2/tests/fixtures/strict-green-crt.toml",
                 "scripts/dev/retrofx-v2 smoke --pack modern-minimal --profile-id warm-night",
+                "scripts/dev/retrofx-v2 package-alpha --pack modern-minimal --profile-id warm-night",
             ],
         },
         "environment": environment,
@@ -274,6 +286,7 @@ def build_platform_status(
                 "scripts/dev/retrofx-v2-bundle",
                 "scripts/dev/retrofx-v2-install",
                 "scripts/dev/retrofx-v2-off",
+                "scripts/dev/retrofx-v2-package-alpha",
                 "scripts/dev/retrofx-v2-preview-x11",
                 "scripts/dev/retrofx-v2-status",
                 "scripts/dev/retrofx-v2-uninstall",
@@ -296,6 +309,7 @@ def build_platform_status(
                 "profile_count": sum(len(pack["profiles"]) for pack in packs),
                 "pack_ids": [pack["id"] for pack in packs],
             },
+            "install_state": install_state,
             "current_activation": activation_status,
         },
         "implemented_status_matrix": IMPLEMENTED_STATUS_MATRIX,
@@ -308,14 +322,14 @@ def build_platform_status(
             "Controlled internal alpha readiness is narrow; real-world validation is strongest on one X11 plus i3 host and simulated elsewhere.",
         ],
         "next_focus": {
-            "phase": "controlled-internal-alpha-validation",
+            "phase": "controlled-internal-alpha-circulation",
             "doc": str(REPO_ROOT / "docs" / "v2" / "STABILIZATION_PLAN.md"),
             "checklist": str(REPO_ROOT / "docs" / "v2" / "STABILIZATION_CHECKLIST.md"),
             "goals": [
-                "multi-host validation across at least one real Wayland environment and additional X11 hosts",
-                "regression hunting inside the already implemented surface instead of new feature sprawl",
-                "continued manifest, cleanup, and bundle ownership hardening where validation exposes weakness",
-                "documentation truth updates as the internal alpha cohort exercises the branch",
+                "exercise the internal-alpha package and runbook across a narrow controlled cohort",
+                "expand validation beyond one real X11 plus i3 host and simulated Wayland or tty environments",
+                "continue regression hunting inside the already implemented surface instead of new feature sprawl",
+                "keep manifest, cleanup, and ownership metadata aligned with what internal testers actually use",
             ],
         },
         "note": "This report describes the implemented 2.x experimental platform as it exists now. It is not a production readiness claim.",

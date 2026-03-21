@@ -41,6 +41,7 @@ class PackagingInstallTests(unittest.TestCase):
             self.assertEqual(manifest["schema"], "retrofx.bundle/v2alpha1")
             self.assertEqual(manifest["bundle_id"], "modern-minimal--warm-night")
             self.assertEqual(manifest["install_name"], "retrofx-v2-dev")
+            self.assertEqual(manifest["experimental_release"]["status_label"], "internal-alpha")
             self.assertEqual([target["target_name"] for target in manifest["compiled_targets"]], ["alacritty", "fontconfig"])
 
     def test_experimental_install_into_temp_home(self) -> None:
@@ -74,6 +75,7 @@ class PackagingInstallTests(unittest.TestCase):
             self.assertEqual(status["toolchain_mode"], "repo-local-dev")
             self.assertEqual(len(status["installed_bundles"]), 1)
             self.assertEqual(status["installed_bundles"][0]["bundle_id"], "crt-core--green-crt")
+            self.assertEqual(status["installed_bundles"][0]["release_status"], "internal-alpha")
 
     def test_uninstall_cleanup_in_temp_home(self) -> None:
         with TemporaryDirectory() as tmpbundle, TemporaryDirectory() as tmphome:

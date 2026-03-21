@@ -16,10 +16,11 @@ It does not mean:
 
 ## Current Implementation Status
 
-As of TWO-21:
+As of TWO-24:
 
 - repo-local dev mode is real and runs directly from the repository
 - repo-local bundle generation is real under `v2/bundles/<bundle-id>/`
+- reproducible internal-alpha package generation is real under `v2/releases/internal-alpha/<package-id>/`
 - experimental user-local install is real under isolated `retrofx-v2-dev` XDG roots
 - uninstall and status are real for that experimental user-local footprint
 - the bounded TWO-19 apply slice now reuses that same isolated footprint for `active/current`, manifests, last-good, preview-artifact roots, and event logs
@@ -104,6 +105,7 @@ Current install-owned assets:
 - copied dev bundle contents under the managed data root
 - per-bundle install records
 - the install index file
+- internal-alpha release/status metadata copied from the installed bundle manifest
 
 Current install does not claim ownership of:
 
@@ -159,6 +161,7 @@ This keeps the 2.x install slice aligned with the same safety philosophy that ma
 The first install slice is intentionally narrow:
 
 - it installs bundles, not live sessions
+- it can consume a bundle copied out of an internal-alpha package, but the package itself is not a standalone toolchain
 - it does not yet install a standalone 2.x toolchain
 - it does not yet own desktop integration hooks
 - it does not yet perform repair or upgrade orchestration

@@ -77,11 +77,14 @@ def _record_summary(record: Mapping[str, Any]) -> dict[str, Any]:
     pack = record.get("pack")
     install_targets = dict(record.get("install_targets", {}))
     launcher = dict(record.get("launcher", {}))
+    release = record.get("experimental_release") if isinstance(record.get("experimental_release"), Mapping) else {}
     return {
         "bundle_id": record["bundle_id"],
         "profile_id": profile.get("id"),
         "profile_name": profile.get("name"),
         "pack_id": pack.get("id") if isinstance(pack, Mapping) else None,
+        "release_version": release.get("version"),
+        "release_status": release.get("status_label"),
         "installed_at": record.get("installed_at"),
         "bundle_dir": install_targets.get("bundle_dir"),
         "launcher_installed": bool(launcher.get("installed")),

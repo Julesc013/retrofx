@@ -20,6 +20,7 @@ class UnifiedDevSurfaceTests(unittest.TestCase):
         self.assertEqual(process.returncode, 0, msg=process.stderr)
         self.assertIn("status", process.stdout)
         self.assertIn("resolve", process.stdout)
+        self.assertIn("package-alpha", process.stdout)
         self.assertIn("smoke", process.stdout)
 
     def test_delegated_help_uses_unified_prog_names(self) -> None:
@@ -41,8 +42,10 @@ class UnifiedDevSurfaceTests(unittest.TestCase):
             payload = json.loads(process.stdout)
             self.assertTrue(payload["ok"])
             self.assertEqual(payload["stage"], "platform-status")
+            self.assertIn("release_status", payload)
             self.assertIn("implemented_status_matrix", payload)
             self.assertIn("implemented_interfaces", payload)
+            self.assertIn("install_state", payload["implemented_surface"])
             self.assertIn("current_activation", payload["implemented_surface"])
             self.assertGreaterEqual(payload["implemented_interfaces"]["count"], 6)
 
@@ -98,6 +101,7 @@ class UnifiedDevSurfaceTests(unittest.TestCase):
         command_names = [item["command"] for item in payload["dev_surface"]["commands"]]
         self.assertIn("status", command_names)
         self.assertIn("apply", command_names)
+        self.assertIn("package-alpha", command_names)
         self.assertIn("migrate inspect-1x", command_names)
         areas = [item["area"] for item in payload["implemented_status_matrix"]]
         self.assertIn("X11 render or compiler", areas)

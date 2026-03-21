@@ -1,6 +1,6 @@
 # RetroFX 2.x Alpha Readiness
 
-This document records the TWO-23 readiness decision for the current 2.x branch.
+This document records the TWO-24 readiness decision for the current 2.x branch.
 
 Decision date: 2026-03-21
 
@@ -26,6 +26,8 @@ The branch is ready for internal experimental use and for a narrow controlled in
 - the explicit live X11 `picom` probe has now been manually exercised on one real X11 plus `i3` host as a bounded timeout-based success case
 - the full 2.x test suite is green
 - delegated help now reports the unified `retrofx-v2` surface coherently rather than leaking `cli.py`
+- internal-alpha package generation, metadata, runbook, and notes now make controlled non-public circulation reproducible instead of ad hoc
+- the internal-alpha package flow has now been exercised end to end through package generation, isolated install, unified status inspection, and uninstall cleanup
 
 The branch is not yet ready for broader testing because:
 
@@ -40,7 +42,8 @@ The correct next phase is:
 1. Start a narrow controlled internal alpha on known-good internal hosts, with explicit emphasis on X11 plus `i3` validation first.
 2. Re-run [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md) on at least one more real environment, especially a real Wayland session.
 3. Expand the migration validation corpus before making compatibility claims beyond the current representative set.
-4. Reassess broader testing only after the multi-host evidence improves.
+4. Use [INTERNAL_ALPHA_RUNBOOK.md](INTERNAL_ALPHA_RUNBOOK.md) plus the `package-alpha` flow as the standard internal circulation path.
+5. Reassess broader testing only after the multi-host evidence improves.
 
 ## What This Is Not
 

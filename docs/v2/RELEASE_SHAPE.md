@@ -1,10 +1,14 @@
 # RetroFX 2.x Release Shape
 
-RetroFX 2.x is not publicly released yet, but the shape of a future release should already be constrained.
+RetroFX 2.x is not publicly released yet, but the shape of internal and future release artifacts should already be constrained.
 
 ## Current Implementation Status
 
-As of TWO-16, the only real release-like unit is the local dev bundle.
+As of TWO-24, there are now two real non-public release-like units:
+
+- the local dev bundle
+- the internal-alpha package
+
 That means release shape work is now grounded in real artifacts instead of speculation.
 
 ## Current Real Units
@@ -28,6 +32,22 @@ It contains:
 - compiled target artifacts
 - install hints
 
+### Internal-Alpha Package
+
+`retrofx.internal-alpha-package/v2alpha1` is now the first coherent non-public circulation unit.
+It contains:
+
+- internal-alpha package manifest
+- bundled runbook and notes docs
+- one deterministic bundle
+- release-status and platform snapshot metadata
+
+It still does not provide:
+
+- public release automation
+- a standalone copied toolchain
+- distro-native packages
+
 ### User-Local Install Footprint
 
 The experimental `retrofx-v2-dev` XDG footprint is now the first installable target shape for those bundles.
@@ -39,6 +59,7 @@ Future public releases should likely separate:
 - source archives
 - curated pack content
 - dev or preview bundles
+- internal-alpha package artifacts
 - standalone toolchain packages
 - release notes and migration notes
 

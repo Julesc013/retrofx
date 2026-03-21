@@ -24,7 +24,7 @@ Status legend:
 
 Current summary:
 
-- `pass`: 21
+- `pass`: 22
 - `degraded-pass`: 2
 - `partial`: 0
 - `fail`: 0
@@ -54,16 +54,17 @@ Current summary:
 | X11 render preview for passthrough profile | simulated X11 | `scripts/dev/retrofx-v2 preview-x11 v2/tests/fixtures/passthrough-minimal.toml --out-root <temp>` | minimal passthrough artifacts emitted | `ok=true`, `implemented_mode=passthrough`, `probe.status=not-requested` | pass | Confirms minimal render path is stable. |
 | explicit live X11 `picom` probe in real session | active X11 plus `i3` session | `scripts/dev/retrofx-v2 preview-x11 v2/tests/fixtures/passthrough-minimal.toml --probe-picom --probe-seconds 1.0 --out-root /tmp/retrofx-v2-two23-probe` | short-lived explicit live probe | `ok=true`, `probe.status=timed-out`, bounded probe launched against the generated config and wrote preview-state metadata | pass | This is the first manual real-session validation of the explicit TWO-17 probe path. The timeout is an expected bounded-success outcome for this probe design. |
 | bundle generation | repo-local dev | `scripts/dev/retrofx-v2 bundle --pack modern-minimal --profile-id warm-night --bundle-root <temp>` | deterministic bundle emitted | `ok=true`, bundle emitted under `<temp>/bundles/modern-minimal--warm-night` | pass | Pack-aware bundle generation now works through the unified surface. |
+| internal-alpha package generation | repo-local dev plus isolated temp roots | `scripts/dev/retrofx-v2 package-alpha --pack modern-minimal --profile-id warm-night --package-root <temp>` then `scripts/dev/retrofx-v2 install <package-dir>/bundle` | reproducible non-public package emitted, then packaged bundle installs into isolated `retrofx-v2-dev` roots with release metadata | `ok=true`, package emitted under `<temp>/retrofx-v2--2.0.0-alpha.internal.1--modern-minimal--warm-night`; install record and unified status both expose `release_version=2.0.0-alpha.internal.1` and `release_status=internal-alpha` | pass | TWO-24 validates the new repo-checkout-dependent internal-alpha circulation path end to end. |
 | temp HOME install | isolated temp HOME | `scripts/dev/retrofx-v2 install <bundle-path>` | bundle copied into isolated `retrofx-v2-dev` footprint with install record | `ok=true`, bundle dir under `~/.local/share/retrofx-v2-dev/bundles/modern-minimal--warm-night` | pass | Install remains user-local and isolated from 1.x. |
 | temp HOME uninstall or cleanup | isolated temp HOME | `scripts/dev/retrofx-v2 uninstall modern-minimal--warm-night` | installed bundle removed, user config roots preserved | removed bundle and installation record; preserved `profiles/` and `packs/` config roots | pass | Uninstall ownership remains explicit and reversible. |
 | delegated help clarity through unified surface | repo-local dev | `scripts/dev/retrofx-v2 resolve --help` and `scripts/dev/retrofx-v2 bundle --help` | help should clearly present the `retrofx-v2` surface | usage headers now begin with `retrofx-v2 resolve` and `retrofx-v2 bundle` rather than `cli.py` | pass | TWO-23 sets explicit `prog` names on the delegated CLI modules. |
-| full 2.x test suite | repo-local dev | `./v2/tests/test.sh` | full suite passes | `Ran 122 tests in 1.425s` and `OK` | pass | Automated coverage still matches the current branch state after the TWO-23 remediation changes. |
+| full 2.x test suite | repo-local dev | `./v2/tests/test.sh` | full suite passes | `Ran 129 tests in 1.597s` and `OK` | pass | Automated coverage still matches the current branch state after the TWO-24 internal-alpha packaging additions. |
 
 ## Interpretation
 
 The implemented 2.x surface now validates well enough for controlled internal alpha use:
 
-- core pipeline, packs, migration, compile, install, and bounded apply or off flows all passed
+- core pipeline, packs, migration, compile, package, install, and bounded apply or off flows all passed
 - environment planning degraded honestly in non-X11 contexts
 - X11 render compilation preview is real across monochrome, palette, and passthrough modes
 

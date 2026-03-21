@@ -18,6 +18,7 @@ It is a trust checklist for the experimental platform.
 - [x] The unified surface exposes only implemented commands.
 - [x] `status` reports implemented targets, current activation, environment, and limitations.
 - [x] The branch has a documented smoke path in [DEV_WORKFLOW.md](DEV_WORKFLOW.md).
+- [x] The branch has an internal-alpha runbook and non-public notes in [INTERNAL_ALPHA_RUNBOOK.md](INTERNAL_ALPHA_RUNBOOK.md) and [INTERNAL_ALPHA_NOTES.md](INTERNAL_ALPHA_NOTES.md).
 - [x] Help output across delegated subcommands is polished enough that developers do not need to guess which surface to use.
   TWO-23 truth: delegated help now uses explicit `retrofx-v2 ...` usage headers.
 
@@ -33,6 +34,7 @@ It is a trust checklist for the experimental platform.
 
 - [x] Implemented target outputs are deterministic.
 - [x] Bundled and installed artifacts remain under a 2.x-owned user-local footprint.
+- [x] The internal-alpha package shape is reproducible and self-describing under `v2/releases/internal-alpha/`.
 - [x] Bounded apply or off writes explicit manifests and current-state records.
 - [x] `off` clears only 2.x-owned active state and recorded preview roots.
 - [x] The bounded X11 live probe has enough initial real-world validation to trust it for a narrow internal alpha cohort.
@@ -51,6 +53,7 @@ It is a trust checklist for the experimental platform.
 - [x] Representative resolve, compile, plan, install, and apply or off flows have been run under temp or isolated homes.
 - [x] The branch now has an explicit readiness verdict in [ALPHA_READINESS.md](ALPHA_READINESS.md).
 - [x] Controlled-alpha readiness has been approved for a narrow internal cohort.
+- [x] Internal-alpha versioning and status labels are now explicit in docs and machine-readable metadata.
 
 ## Before The Next Maturity Step
 

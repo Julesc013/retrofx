@@ -1,6 +1,6 @@
 # RetroFX 2.x Implemented Status
 
-This document is the current truth pass for the 2.x branch as of TWO-23.
+This document is the current truth pass for the 2.x branch as of TWO-24.
 It is intentionally blunt.
 
 1.x remains the production line.
@@ -20,7 +20,7 @@ It is intentionally blunt.
 | display policy outputs | yes | yes | no | Display policy is concrete, planned, exportable, and consumed by the bounded X11 render slice. |
 | pack system | yes | yes | no | Local pack manifests and curated built-in packs are real. Remote/community distribution is not. |
 | migration tooling | yes | yes | no | 1.x profile inspection and draft migration are real. Runtime compatibility is not. |
-| install or bundle flow | yes | yes | no | Repo-local bundles and isolated user-local experimental installs are real, and uninstall now rejects paths outside the managed 2.x bundle store. |
+| install or bundle flow | yes | yes | no | Repo-local bundles, internal-alpha packages, and isolated user-local experimental installs are real. Uninstall rejects paths outside the managed 2.x bundle store. |
 | X11 render or compiler | yes | yes | no | Shader, picom, runtime metadata, and explicit bounded preview exist for X11 only. The explicit probe now has one real X11 plus `i3` validation run. |
 | session planning | yes | yes | no | Environment detection and capability-aware planning are real and non-destructive. |
 | bounded apply or off | yes | yes | no | TWO-19 current activation, manifests, last-good, and `off` are real but intentionally narrow, and cleanup now stays inside managed 2.x roots. |
@@ -39,6 +39,7 @@ Implemented and coherent now:
 - `scripts/dev/retrofx-v2 packs list` and `packs show`
 - `scripts/dev/retrofx-v2 migrate inspect-1x`
 - `scripts/dev/retrofx-v2 bundle`, `install`, and `uninstall`
+- `scripts/dev/retrofx-v2 package-alpha`
 - `scripts/dev/retrofx-v2 apply`, `off`, and `preview-x11`
 - `scripts/dev/retrofx-v2 smoke`
 
@@ -46,8 +47,9 @@ Still intentionally bounded:
 
 - live apply only exists as a narrow 2.x-owned activation path plus the explicit short-lived X11 probe
 - toolkit outputs are advisory exports, not live DE ownership
-- install and current activation remain separated
+- install and current activation remain separated, but unified `status` now reports both surfaces together
 - controlled alpha readiness is narrow and currently grounded most strongly in one real X11 plus `i3` validation host
+- internal-alpha packages are reproducible and self-describing, but they still assume a repo checkout rather than a standalone copied toolchain
 
 Not implemented:
 

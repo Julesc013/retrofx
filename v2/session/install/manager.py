@@ -78,6 +78,7 @@ def install_dev_bundle(
             "source_path": str(source_bundle_dir),
             "manifest_path": str(source_bundle_dir / "manifest.json"),
         },
+        "release_status": manifest.get("experimental_release"),
         "install": {
             "replaced_existing": replaced_existing,
             "bundle_dir": str(destination_dir),
@@ -202,6 +203,7 @@ def _build_install_record(
             "name": manifest["profile"]["name"],
             "family": manifest["profile"].get("family"),
         },
+        "experimental_release": manifest.get("experimental_release"),
         "pack": manifest.get("pack"),
         "source_bundle": {
             "source_path": str(source_bundle_dir),

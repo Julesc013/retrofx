@@ -7,6 +7,7 @@ Purpose:
 Implemented now:
 
 - deterministic dev bundle generation under `v2/bundles/`
+- bundle manifests now carry explicit experimental release metadata for internal-alpha discipline
 - isolated user-local install layout resolution for `retrofx-v2-dev`
 - install-state record and index writers
 - safe uninstall of owned experimental bundles
