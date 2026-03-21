@@ -21,6 +21,7 @@ class UnifiedDevSurfaceTests(unittest.TestCase):
         self.assertIn("status", process.stdout)
         self.assertIn("resolve", process.stdout)
         self.assertIn("package-alpha", process.stdout)
+        self.assertIn("diagnostics", process.stdout)
         self.assertIn("smoke", process.stdout)
 
     def test_delegated_help_uses_unified_prog_names(self) -> None:
@@ -102,6 +103,7 @@ class UnifiedDevSurfaceTests(unittest.TestCase):
         self.assertIn("status", command_names)
         self.assertIn("apply", command_names)
         self.assertIn("package-alpha", command_names)
+        self.assertIn("diagnostics", command_names)
         self.assertIn("migrate inspect-1x", command_names)
         areas = [item["area"] for item in payload["implemented_status_matrix"]]
         self.assertIn("X11 render or compiler", areas)

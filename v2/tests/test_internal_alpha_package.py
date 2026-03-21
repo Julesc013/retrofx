@@ -31,6 +31,8 @@ class InternalAlphaPackageTests(unittest.TestCase):
             self.assertTrue((package_dir / "bundle" / "manifest.json").is_file())
             self.assertTrue((package_dir / "docs" / "INTERNAL_ALPHA_RUNBOOK.md").is_file())
             self.assertTrue((package_dir / "docs" / "INTERNAL_ALPHA_NOTES.md").is_file())
+            self.assertTrue((package_dir / "docs" / "CONTROLLED_ALPHA_PLAN.md").is_file())
+            self.assertTrue((package_dir / "docs" / "ALPHA_TRIAGE.md").is_file())
 
     def test_package_manifest_contains_required_internal_alpha_fields(self) -> None:
         with TemporaryDirectory() as tmppackages:

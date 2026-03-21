@@ -92,6 +92,12 @@ COMMAND_SUMMARY = [
         "description": "Build a reproducible non-public internal-alpha package around one deterministic 2.x bundle plus runbook docs.",
     },
     {
+        "command": "diagnostics",
+        "category": "inspect",
+        "implemented": True,
+        "description": "Capture a local diagnostics directory with status, environment, state, and optional profile plan evidence for internal alpha triage.",
+    },
+    {
         "command": "install",
         "category": "install",
         "implemented": True,
@@ -235,7 +241,7 @@ IMPLEMENTED_STATUS_MATRIX = [
 
 PLATFORM_IMPLEMENTATION_INFO = {
     "status": "experimental-dev-only",
-    "prompt": "TWO-24",
+    "prompt": "TWO-25",
     "surface": "unified-dev-platform-internal-alpha",
     "entrypoint": str(UNIFIED_ENTRYPOINT),
     "implemented_targets": list_targets(),
@@ -274,6 +280,7 @@ def build_platform_status(
                 "scripts/dev/retrofx-v2 smoke v2/tests/fixtures/strict-green-crt.toml",
                 "scripts/dev/retrofx-v2 smoke --pack modern-minimal --profile-id warm-night",
                 "scripts/dev/retrofx-v2 package-alpha --pack modern-minimal --profile-id warm-night",
+                "scripts/dev/retrofx-v2 diagnostics --pack modern-minimal --profile-id warm-night --label first-pass",
             ],
         },
         "environment": environment,
@@ -287,6 +294,7 @@ def build_platform_status(
                 "scripts/dev/retrofx-v2-install",
                 "scripts/dev/retrofx-v2-off",
                 "scripts/dev/retrofx-v2-package-alpha",
+                "scripts/dev/retrofx-v2-capture-diagnostics",
                 "scripts/dev/retrofx-v2-preview-x11",
                 "scripts/dev/retrofx-v2-status",
                 "scripts/dev/retrofx-v2-uninstall",

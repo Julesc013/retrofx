@@ -6,9 +6,10 @@ Purpose:
 
 Implemented now:
 
-- `retrofx-v2`: unified experimental 2.x developer surface for status, resolve, plan, compile, packs, migration, install, apply, off, and smoke flows
+- `retrofx-v2`: unified experimental 2.x developer surface for status, resolve, plan, compile, packs, migration, install, package, diagnostics, apply, off, and smoke flows
 - `retrofx-v2-bundle`: build a deterministic 2.x dev bundle from a profile or pack profile
 - `retrofx-v2-package-alpha`: build a reproducible non-public internal-alpha package around one deterministic 2.x bundle plus bundled runbook docs
+- `retrofx-v2-capture-diagnostics`: collect a local diagnostics directory for controlled internal alpha evidence and triage
 - `retrofx-v2-install`: install one generated bundle into the isolated user-local `retrofx-v2-dev` footprint
 - `retrofx-v2-apply`: stage and activate a bounded 2.x experimental profile in the managed current-state area
 - `retrofx-v2-off`: clear the bounded 2.x experimental current activation without touching 1.x or uninstalling bundles

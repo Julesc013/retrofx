@@ -5,7 +5,7 @@ Each phase should narrow uncertainty before more implementation surface is added
 
 ## Current Progress
 
-Status after TWO-24:
+Status after TWO-25:
 
 - 2.0-C has an experimental implementation foothold for load, validate, normalize, and resolve in `v2/core/`
 - 2.0-D has started with the first terminal/TUI compiler family under `v2/targets/terminal/`
@@ -24,6 +24,7 @@ Status after TWO-24:
 - TWO-22 executes the first real validation matrix, classifies alpha blockers, and records the initial readiness verdict
 - TWO-23 remediates the recorded alpha blockers, validates the bounded explicit X11 probe on one real X11 plus `i3` host, hardens managed-root cleanup semantics, and moves the branch to controlled-internal-alpha yes but broader-testing no
 - TWO-24 adds explicit internal-alpha versioning, a reproducible internal-alpha package shape, bundled runbook or notes, and non-public release discipline on top of the existing bundle or install flow
+- TWO-25 adds the controlled internal alpha operations layer: test plan, diagnostics capture, triage templates, execution checklist, and post-alpha decision rules
 - broad live session orchestration, Wayland render, and broader target families remain future phases
 
 ## 2.0-A Product And Spec Design

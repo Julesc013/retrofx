@@ -6,10 +6,11 @@ Purpose:
 
 Implemented now:
 
-- `cli.py`: top-level `retrofx-v2` dispatcher for resolve, plan, compile, packs, migration, install, apply, off, preview, and smoke flows
+- `cli.py`: top-level `retrofx-v2` dispatcher for resolve, plan, compile, packs, migration, install, package, diagnostics, apply, off, preview, and smoke flows
 - `status.py`: machine-readable platform capability and current-state report
 - `smoke.py`: safe end-to-end developer smoke workflow over the existing 2.x pipeline
 - `package_alpha.py`: reproducible non-public internal-alpha package builder around the existing deterministic bundle primitive
+- `capture_diagnostics.py`: local diagnostics directory capture for controlled internal alpha evidence and triage
 
 What belongs here:
 

@@ -150,6 +150,12 @@ scripts/dev/retrofx-v2 install v2/releases/internal-alpha/<package-id>/bundle
 
 ## 10. Capture Validation Results
 
+Run:
+
+```bash
+scripts/dev/retrofx-v2 diagnostics --pack modern-minimal --profile-id warm-night --label alpha-pass
+```
+
 Record:
 
 - environment
@@ -162,6 +168,8 @@ Update or compare against:
 
 - `docs/v2/VALIDATION_MATRIX.md`
 - `docs/v2/ALPHA_BLOCKERS.md`
+- `docs/v2/CONTROLLED_ALPHA_PLAN.md`
+- `docs/v2/ALPHA_TRIAGE.md`
 
 ## 11. Report Blockers
 
@@ -172,5 +180,11 @@ When reporting a blocker, include:
 - relevant JSON output
 - whether temp HOME or repo-local mode was used
 - whether 1.x paths were touched unexpectedly
+
+Use:
+
+- `docs/v2/ALPHA_ENVIRONMENT_REPORT_TEMPLATE.md`
+- `docs/v2/ALPHA_FEEDBACK_TEMPLATE.md`
+- `docs/v2/ALPHA_ISSUE_TEMPLATE.md`
 
 If a behavior is merely missing and already documented as out of scope, report it as a limitation rather than a regression.

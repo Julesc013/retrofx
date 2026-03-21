@@ -1,6 +1,6 @@
 # RetroFX 2.x Implemented Status
 
-This document is the current truth pass for the 2.x branch as of TWO-24.
+This document is the current truth pass for the 2.x branch as of TWO-25.
 It is intentionally blunt.
 
 1.x remains the production line.
@@ -40,6 +40,7 @@ Implemented and coherent now:
 - `scripts/dev/retrofx-v2 migrate inspect-1x`
 - `scripts/dev/retrofx-v2 bundle`, `install`, and `uninstall`
 - `scripts/dev/retrofx-v2 package-alpha`
+- `scripts/dev/retrofx-v2 diagnostics`
 - `scripts/dev/retrofx-v2 apply`, `off`, and `preview-x11`
 - `scripts/dev/retrofx-v2 smoke`
 
@@ -50,6 +51,7 @@ Still intentionally bounded:
 - install and current activation remain separated, but unified `status` now reports both surfaces together
 - controlled alpha readiness is narrow and currently grounded most strongly in one real X11 plus `i3` validation host
 - internal-alpha packages are reproducible and self-describing, but they still assume a repo checkout rather than a standalone copied toolchain
+- controlled alpha now has a real operational layer, but evidence quality still depends on testers actually using the diagnostics and template docs
 
 Not implemented:
 

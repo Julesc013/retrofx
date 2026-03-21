@@ -14,6 +14,7 @@ This is the non-public branch note for internal 2.x testers.
 - bounded apply or off with explicit manifests
 - unified `scripts/dev/retrofx-v2` surface
 - reproducible internal-alpha package generation
+- local diagnostics capture for alpha evidence
 
 ## Experimental But Usable With Care
 
@@ -54,6 +55,7 @@ Best current fit:
 - bounded apply or off only manages 2.x-owned roots
 - toolkit outputs are advisory artifacts, not live DE ownership
 - internal-alpha packages are not standalone toolchains
+- diagnostics capture is local-file based and intentionally does not collect unrelated user files or network telemetry
 
 ## How 2.x Differs From 1.x
 
@@ -68,3 +70,4 @@ Best current fit:
 - validation remains strongest on one real X11 host plus simulated non-X11 environments
 - package generation is reproducible, but still repo-checkout dependent
 - bundle and install metadata are explicit, but not public-release contracts
+- internal alpha now depends on disciplined use of the diagnostics and feedback templates rather than ad hoc reports

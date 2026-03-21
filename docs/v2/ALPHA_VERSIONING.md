@@ -9,7 +9,7 @@ RetroFX 2.x now has an explicit non-public experimental version policy for inter
 
 - current 2.x experimental version: `2.0.0-alpha.internal.1`
 - current status label: `internal-alpha`
-- current packaging prompt milestone: `TWO-24`
+- current packaging prompt milestone: `TWO-25`
 
 ## Format
 

@@ -26,7 +26,7 @@ STATUS_LADDER = (
 
 CURRENT_EXPERIMENTAL_VERSION = "2.0.0-alpha.internal.1"
 CURRENT_STATUS_LABEL = "internal-alpha"
-CURRENT_PROMPT = "TWO-24"
+CURRENT_PROMPT = "TWO-25"
 CURRENT_DISTRIBUTION_SCOPE = "internal-non-public"
 CURRENT_COHORT = "controlled-internal"
 

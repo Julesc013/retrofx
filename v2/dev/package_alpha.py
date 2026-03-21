@@ -30,9 +30,16 @@ PACKAGE_DOCS = (
     "README.md",
     "ALPHA_VERSIONING.md",
     "EXPERIMENTAL_STATUS.md",
+    "CONTROLLED_ALPHA_PLAN.md",
+    "ALPHA_TRIAGE.md",
+    "ALPHA_EXECUTION_CHECKLIST.md",
+    "ALPHA_ENVIRONMENT_REPORT_TEMPLATE.md",
+    "ALPHA_FEEDBACK_TEMPLATE.md",
+    "ALPHA_ISSUE_TEMPLATE.md",
     "INTERNAL_ALPHA_RUNBOOK.md",
     "INTERNAL_ALPHA_NOTES.md",
     "ALPHA_READINESS.md",
+    "POST_ALPHA_DECISION_RULES.md",
 )
 
 IMPLEMENTATION_INFO = {
@@ -265,6 +272,7 @@ def _recommended_smoke_flow(bundle_manifest: Mapping[str, Any]) -> list[str]:
         [
             "scripts/dev/retrofx-v2 install <package-dir>/bundle",
             "scripts/dev/retrofx-v2 status",
+            f"scripts/dev/retrofx-v2 diagnostics {'--pack ' + pack['id'] + ' --profile-id ' + profile_id if isinstance(pack, Mapping) and pack.get('id') else '<profile-selector>'} --label alpha-pass",
             "scripts/dev/retrofx-v2 off",
             f"scripts/dev/retrofx-v2 uninstall {bundle_id}",
         ]
