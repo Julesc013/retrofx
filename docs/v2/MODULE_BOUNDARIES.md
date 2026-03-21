@@ -6,7 +6,7 @@ These are rules, not suggestions.
 ## Hard Rules
 
 1. No target compiler reads raw profile TOML directly.
-2. The normalized profile and resolved profile pipeline lives before target emission.
+2. The raw input, normalized profile, resolved semantic model, and resolved profile pipeline lives before target emission.
 3. Capability filtering occurs before target emission.
 4. The resolved profile is the only source of truth for target compilers.
 5. No render module decides session policy.

@@ -13,12 +13,12 @@ It is the design constitution for future `2.x` work, not a description of curren
 6. [EXAMPLES.md](EXAMPLES.md) and [MIGRATION.md](MIGRATION.md) for authoring and continuity.
 7. [TERMINOLOGY.md](TERMINOLOGY.md) for precise language.
 8. [ARCHITECTURE.md](ARCHITECTURE.md) and [PRINCIPLES.md](PRINCIPLES.md) for implementation guardrails.
-9. [REPO_LAYOUT.md](REPO_LAYOUT.md), [MODULE_BOUNDARIES.md](MODULE_BOUNDARIES.md), [COMPATIBILITY_SHELL.md](COMPATIBILITY_SHELL.md), and [IMPLEMENTATION_SEQUENCE.md](IMPLEMENTATION_SEQUENCE.md) for repository structure and execution discipline.
-10. [ROADMAP.md](ROADMAP.md) for phased delivery.
-11. [RELATION_TO_1X.md](RELATION_TO_1X.md) for branch and migration discipline.
+9. [CORE_PIPELINE.md](CORE_PIPELINE.md), [NORMALIZATION_RULES.md](NORMALIZATION_RULES.md), [CAPABILITY_FILTERING.md](CAPABILITY_FILTERING.md), [ARTIFACT_PLANNING.md](ARTIFACT_PLANNING.md), and [COMPILATION_FLOW.md](COMPILATION_FLOW.md) for the core engine design.
+10. [REPO_LAYOUT.md](REPO_LAYOUT.md), [MODULE_BOUNDARIES.md](MODULE_BOUNDARIES.md), [COMPATIBILITY_SHELL.md](COMPATIBILITY_SHELL.md), and [IMPLEMENTATION_SEQUENCE.md](IMPLEMENTATION_SEQUENCE.md) for repository structure and execution discipline.
+11. [ROADMAP.md](ROADMAP.md) for phased delivery.
+12. [RELATION_TO_1X.md](RELATION_TO_1X.md) for branch and migration discipline.
 
 ## Intent
 
 RetroFX 2.x is defined here as a profile-driven appearance compiler and session orchestration platform.
 It is broader than RetroFX 1.x, but it is still bounded by explicit capability declarations, support classes, and non-goals.
-
