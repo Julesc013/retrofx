@@ -26,7 +26,7 @@ STATUS_LADDER = (
 
 CURRENT_EXPERIMENTAL_VERSION = "2.0.0-alpha.internal.1"
 CURRENT_STATUS_LABEL = "internal-alpha"
-CURRENT_PROMPT = "TWO-26"
+CURRENT_PROMPT = "TWO-27"
 CURRENT_DISTRIBUTION_SCOPE = "internal-non-public"
 CURRENT_COHORT = "controlled-internal"
 
@@ -43,6 +43,7 @@ def build_experimental_release_metadata(
             f"Unsupported experimental status label `{chosen_status}`. Expected one of: {', '.join(STATUS_LADDER)}."
         )
     source_control = build_source_control_summary()
+    local_tag_name = local_tag_name_for_version(chosen_version)
 
     return {
         "schema": EXPERIMENTAL_STATUS_SCHEMA,
@@ -59,8 +60,11 @@ def build_experimental_release_metadata(
         "ready_for_internal_alpha_continuation": True,
         "ready_for_controlled_alpha": True,
         "ready_for_local_alpha_tag_candidate": True,
+        "alpha_candidate_ready": True,
         "ready_for_broader_testing": False,
         "needs_more_stabilization": True,
+        "local_tag_name": local_tag_name,
+        "local_tag_points_at_head": _git_tag_points_at_head(local_tag_name),
         "source_revision": _git_output(["rev-parse", "HEAD"]),
         "source_branch": _git_output(["rev-parse", "--abbrev-ref", "HEAD"]),
         "source_tree": str(REPO_ROOT),
@@ -74,6 +78,10 @@ def package_id_for_bundle(bundle_id: str, *, version: str | None = None) -> str:
     chosen_version = str(version or CURRENT_EXPERIMENTAL_VERSION)
     safe_version = chosen_version.replace("/", "-").replace(" ", "-")
     return f"retrofx-v2--{safe_version}--{bundle_id}"
+
+
+def local_tag_name_for_version(version: str) -> str:
+    return f"v{version}"
 
 
 def build_source_control_summary() -> dict[str, Any]:
@@ -139,3 +147,13 @@ def _git_output(args: list[str]) -> str | None:
         return None
     value = result.stdout.strip()
     return value or None
+
+
+def _git_tag_points_at_head(tag_name: str) -> bool | None:
+    head_revision = _git_output(["rev-parse", "HEAD"])
+    if head_revision is None:
+        return None
+    tag_revision = _git_output(["rev-list", "-n", "1", tag_name])
+    if tag_revision is None:
+        return False
+    return tag_revision == head_revision

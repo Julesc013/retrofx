@@ -1,6 +1,6 @@
 # RetroFX 2.x Alpha Readiness
 
-This document records the TWO-26 readiness decision for the current 2.x branch.
+This document records the TWO-27 readiness decision for the current 2.x branch.
 
 Decision date: 2026-03-21
 
@@ -13,6 +13,8 @@ READY_FOR_INTERNAL_ALPHA_CONTINUATION=yes
 READY_FOR_CONTROLLED_ALPHA=yes
 
 READY_FOR_LOCAL_ALPHA_TAG_CANDIDATE=yes
+
+ALPHA_CANDIDATE_READY=yes
 
 READY_FOR_BROADER_TESTING=no
 
@@ -34,6 +36,9 @@ The branch is ready for internal experimental use and for a narrow controlled in
 - the internal-alpha package flow has now been exercised end to end through package generation, isolated install, unified status inspection, and uninstall cleanup
 - the branch now has a controlled-alpha plan, diagnostics capture workflow, and triage templates for disciplined internal evidence gathering
 - TWO-26 diagnostics remediation now captures source-control state, installed bundle inventory, installed bundle manifest, and source package manifest evidence for a selected profile
+- TWO-27 now aligns the candidate version, candidate docs, status surface, and package manifests around the same local/internal alpha-candidate identity
+- TWO-27 now exposes the local candidate tag name directly in release-status metadata instead of leaving it implicit in prose
+- the TWO-27 final local validation subset now passes across full-suite tests, unified help or status, representative resolve or plan or compile, bounded apply or off, repo-local package generation, temp-HOME install or diagnostics or uninstall, and an explicit bounded X11 preview probe
 - there are no current `alpha-blocker` or `high` findings left open in the remediation backlog
 
 The branch is not yet ready for broader testing because:
@@ -46,12 +51,13 @@ The branch is not yet ready for broader testing because:
 
 The correct next phase is:
 
-1. Treat the current branch as acceptable for a local or internal alpha-candidate snapshot only after the working tree is clean and [ALPHA_RELEASE_CHECKLIST.md](ALPHA_RELEASE_CHECKLIST.md) passes.
+1. Treat the current branch as acceptable for a local or internal alpha-candidate snapshot only after the working tree is clean, [ALPHA_RELEASE_CHECKLIST.md](ALPHA_RELEASE_CHECKLIST.md) passes, and the candidate version remains `2.0.0-alpha.internal.1`.
 2. Continue the narrow controlled internal alpha on known-good internal hosts, with explicit emphasis on X11 plus `i3` validation first.
 3. Re-run [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md) on at least one more real environment, especially a real Wayland session.
 4. Expand the migration validation corpus before making compatibility claims beyond the current representative set.
 5. Use [INTERNAL_ALPHA_RUNBOOK.md](INTERNAL_ALPHA_RUNBOOK.md), [CONTROLLED_ALPHA_PLAN.md](CONTROLLED_ALPHA_PLAN.md), [ALPHA_CANDIDATE_NOTES.md](ALPHA_CANDIDATE_NOTES.md), and the `diagnostics` plus `package-alpha` flows as the standard internal circulation path.
-6. Reassess broader testing only after the multi-host evidence improves.
+6. Use the repo-local `v2/releases/internal-alpha/` package root and the local tag candidate name `v2.0.0-alpha.internal.1` only for non-public internal circulation.
+7. Reassess broader testing only after the multi-host evidence improves.
 
 ## What This Is Not
 

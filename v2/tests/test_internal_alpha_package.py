@@ -35,6 +35,7 @@ class InternalAlphaPackageTests(unittest.TestCase):
             self.assertTrue((package_dir / "docs" / "ALPHA_TRIAGE.md").is_file())
             self.assertTrue((package_dir / "docs" / "ALPHA_REMEDIATION_BACKLOG.md").is_file())
             self.assertTrue((package_dir / "docs" / "ALPHA_CANDIDATE_NOTES.md").is_file())
+            self.assertTrue((package_dir / "docs" / "ALPHA_CANDIDATE_SUMMARY.md").is_file())
             self.assertTrue((package_dir / "docs" / "ALPHA_RELEASE_CHECKLIST.md").is_file())
 
     def test_package_manifest_contains_required_internal_alpha_fields(self) -> None:
@@ -52,12 +53,16 @@ class InternalAlphaPackageTests(unittest.TestCase):
             self.assertIn("working_tree_clean", manifest["release_status"])
             self.assertIn("ready_for_internal_alpha_continuation", manifest["release_status"])
             self.assertIn("ready_for_local_alpha_tag_candidate", manifest["release_status"])
+            self.assertIn("alpha_candidate_ready", manifest["release_status"])
+            self.assertIn("local_tag_name", manifest["release_status"])
+            self.assertIn("local_tag_points_at_head", manifest["release_status"])
             self.assertEqual(manifest["distribution"]["scope"], "internal-non-public")
             self.assertEqual(manifest["bundle"]["relative_dir"], "bundle")
             self.assertIn("terminal-tui", manifest["supported_target_families"])
             self.assertIn("scripts/dev/retrofx-v2 status", manifest["recommended_smoke_flow"])
             self.assertIn("docs/INTERNAL_ALPHA_RUNBOOK.md", manifest["included_docs"])
             self.assertIn("docs/ALPHA_CANDIDATE_NOTES.md", manifest["included_docs"])
+            self.assertIn("docs/ALPHA_CANDIDATE_SUMMARY.md", manifest["included_docs"])
             self.assertTrue(manifest["metadata_artifacts"])
 
     def test_packaged_bundle_installs_into_temp_home(self) -> None:

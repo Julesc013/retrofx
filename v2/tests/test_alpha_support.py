@@ -115,6 +115,7 @@ class AlphaSupportTests(unittest.TestCase):
             "docs/v2/ALPHA_FEEDBACK_TEMPLATE.md": ["degraded-pass", "severity", "category"],
             "docs/v2/ALPHA_ISSUE_TEMPLATE.md": ["alpha-blocker", "Commands:", "diagnostics directory"],
             "docs/v2/POST_ALPHA_DECISION_RULES.md": ["Continue Alpha As-Is", "Enter Alpha Remediation", "Expand The Tester Set"],
+            "docs/v2/ALPHA_CANDIDATE_SUMMARY.md": ["ALPHA_CANDIDATE_READY=yes", "v2.0.0-alpha.internal.1", "package-alpha"],
         }
         for relative_path, expected_strings in doc_expectations.items():
             content = (REPO_ROOT / relative_path).read_text(encoding="utf-8")

@@ -5,7 +5,7 @@ Each phase should narrow uncertainty before more implementation surface is added
 
 ## Current Progress
 
-Status after TWO-26:
+Status after TWO-27:
 
 - 2.0-C has an experimental implementation foothold for load, validate, normalize, and resolve in `v2/core/`
 - 2.0-D has started with the first terminal/TUI compiler family under `v2/targets/terminal/`
@@ -26,6 +26,7 @@ Status after TWO-26:
 - TWO-24 adds explicit internal-alpha versioning, a reproducible internal-alpha package shape, bundled runbook or notes, and non-public release discipline on top of the existing bundle or install flow
 - TWO-25 adds the controlled internal alpha operations layer: test plan, diagnostics capture, triage templates, execution checklist, and post-alpha decision rules
 - TWO-26 runs the first post-alpha remediation cycle, tightens diagnostics truth and reproduction evidence, and records that a local internal alpha candidate is acceptable while broader testing is still not
+- TWO-27 aligns the internal-alpha version and candidate docs, wires local candidate metadata into status and packaging, and prepares the first disciplined local or internal alpha candidate snapshot without making any public-release claim
 - broad live session orchestration, Wayland render, and broader target families remain future phases
 
 ## 2.0-A Product And Spec Design

@@ -1,13 +1,13 @@
 # RetroFX 2.x Alpha Blockers
 
-This document lists the remaining blockers and residual risks for calling the current branch controlled-alpha ready and suitable for a local internal alpha candidate.
+This document lists the remaining blockers and residual risks for calling the current branch controlled-alpha ready and suitable for a disciplined local or internal alpha candidate.
 
 It is not a future wish list.
 It is a concrete blocker list derived from [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md).
 
 ## Current Alpha-Blocker Status
 
-There are no current `alpha-blocker` items after TWO-23 remediation.
+There are no current `alpha-blocker` items after the TWO-27 final local candidate validation pass.
 
 Resolved in TWO-23:
 
@@ -21,9 +21,16 @@ Resolved in TWO-26:
 - diagnostics capture now records repo source-control state for reproduction on repo-checkout-based internal alpha runs
 - diagnostics capture now records installed bundle inventory plus installed and packaged manifest evidence for the selected profile
 
+Resolved in TWO-27:
+
+- release-status metadata now carries the candidate-ready flag and local tag name consistently through `status`, `package-alpha`, and diagnostics capture
+- alpha-candidate notes, summary, and release checklist are now aligned around one local-only candidate version and tag name
+- the default repo-local package output root is now treated as generated output so the local candidate package flow can be exercised without contaminating branch state
+- the full local candidate subset now passes again on the current branch state, including repo-local package generation, temp-HOME install or diagnostics or uninstall, and the bounded X11 preview probe
+
 ## Current High-Severity Status
 
-There are no current open `high` items after TWO-26 remediation.
+There are no current open `high` items after TWO-27 preparation.
 
 ## Medium
 

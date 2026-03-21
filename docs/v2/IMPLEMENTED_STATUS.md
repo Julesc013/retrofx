@@ -1,6 +1,6 @@
 # RetroFX 2.x Implemented Status
 
-This document is the current truth pass for the 2.x branch as of TWO-26.
+This document is the current truth pass for the 2.x branch as of TWO-27.
 It is intentionally blunt.
 
 1.x remains the production line.
@@ -52,6 +52,8 @@ Still intentionally bounded:
 - controlled alpha readiness is narrow and currently grounded most strongly in one real X11 plus `i3` validation host
 - internal-alpha packages are reproducible and self-describing, but they still assume a repo checkout rather than a standalone copied toolchain
 - controlled alpha now has a real operational layer, and diagnostics now capture source-control state plus installed bundle or package evidence for the selected profile
+- release-status metadata now carries the local candidate tag name and candidate-ready boolean used by the final local/internal alpha gate
+- the default repo-local release output path is now `v2/releases/internal-alpha/`, which is treated as generated machine-local output rather than committed source
 
 Not implemented:
 
@@ -73,5 +75,6 @@ Related truth docs:
 - internal experimental use: yes
 - controlled alpha: yes, for a narrow internal cohort
 - local alpha tag candidate: yes, for local or internal-only use after a clean-tree checklist pass
+- alpha candidate ready: yes, for a local or internal-only snapshot after the TWO-27 validation subset passes on the candidate commit
 - broader testing: no
 - main reasons to avoid broader testing: real-host coverage is still narrow and migration validation breadth remains limited

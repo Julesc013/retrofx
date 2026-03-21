@@ -241,7 +241,7 @@ IMPLEMENTED_STATUS_MATRIX = [
 
 PLATFORM_IMPLEMENTATION_INFO = {
     "status": "experimental-dev-only",
-    "prompt": "TWO-26",
+    "prompt": "TWO-27",
     "surface": "unified-dev-platform-internal-alpha",
     "entrypoint": str(UNIFIED_ENTRYPOINT),
     "implemented_targets": list_targets(),
@@ -329,13 +329,14 @@ def build_platform_status(
             "Wayland render remains unsupported for live runtime ownership.",
             "Compatibility work is inspection and draft migration only, not runtime parity.",
             "Controlled internal alpha readiness is narrow; real-world validation is strongest on one X11 plus i3 host and simulated elsewhere.",
+            "The local alpha candidate remains repo-checkout dependent and is not a standalone copied toolchain.",
         ],
         "next_focus": {
-            "phase": "controlled-internal-alpha-circulation",
+            "phase": "local-internal-alpha-candidate-prepared",
             "doc": str(REPO_ROOT / "docs" / "v2" / "STABILIZATION_PLAN.md"),
             "checklist": str(REPO_ROOT / "docs" / "v2" / "STABILIZATION_CHECKLIST.md"),
             "goals": [
-                "exercise the internal-alpha package and runbook across a narrow controlled cohort",
+                "exercise the local internal alpha candidate package and runbook across a narrow controlled cohort",
                 "expand validation beyond one real X11 plus i3 host and simulated Wayland or tty environments",
                 "continue regression hunting inside the already implemented surface instead of new feature sprawl",
                 "keep manifest, cleanup, and ownership metadata aligned with what internal testers actually use",
