@@ -5,6 +5,11 @@ Purpose:
 - future home of profile loading orchestration, normalization, resolution, capability filtering, artifact planning, and high-level compile or apply planning
 - future center of gravity for the 2.x compiler heart
 
+Implemented now:
+
+- stdlib-only experimental load, validate, normalize, and resolve primitives
+- dev-only inspection entrypoint for printing resolved-profile scaffolding
+
 Do implement here later:
 
 - normalized profile pipeline
@@ -29,5 +34,5 @@ Do not implement here:
 
 Current rule:
 
-- this directory may hold interface and model scaffolding now, but it should not pretend the core engine is already implemented.
-
+- this directory now contains an initial dev-only core scaffold, but it must not pretend the full 2.x engine is implemented
+- capability filtering, target planning, artifact planning, and any live lifecycle behavior remain future work

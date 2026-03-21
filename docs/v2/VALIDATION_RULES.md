@@ -1,7 +1,11 @@
 # RetroFX 2.x Validation Rules
 
-This document defines the future parser and validator contract for the 2.x profile language.
+This document defines the parser and validator contract for the 2.x profile language.
 It covers hard errors, warning-only cases, and normalization defaults.
+
+TWO-08 implements an experimental subset of this contract in `v2/core/validation/`.
+The implemented subset focuses on structural validation, core enums and ranges, and a small set of documented incompatible combinations.
+Capability-aware warnings and broader schema coverage remain future work.
 
 ## Validation Stages
 
@@ -169,4 +173,3 @@ Capability-aware warnings belong to planning, but they follow this contract:
 - unsupported target-specific use of a valid semantic token should warn and degrade
 - structurally invalid token use for the chosen mode should fail
 - export-only outcomes should be explicit, not silent fallback
-

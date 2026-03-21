@@ -2,7 +2,7 @@
 
 Purpose:
 
-- future home of the core pipeline data shapes
+- home of the experimental 2.x core pipeline data shapes
 
 Primary model distinctions:
 
@@ -10,6 +10,10 @@ Primary model distinctions:
 - normalized profile: canonical target-agnostic profile shape
 - resolved semantic model: concrete semantic meaning before capability filtering
 - resolved profile: resolved semantic model plus target and artifact planning
+
+Implemented now:
+
+- dataclass-backed issue, raw-profile, normalized-profile, resolved-profile, and pipeline-result scaffolding in `types.py`
 
 Do implement here later:
 
@@ -23,3 +27,7 @@ Do not implement here:
 - live session state mutation logic
 - hidden fallback behavior that changes model meaning outside the core pipeline
 
+Current scope rule:
+
+- the TWO-08 implementation provides only model scaffolding for load/validate/normalize/resolve
+- capability filtering, target planning, artifact planning, and session ownership remain future work

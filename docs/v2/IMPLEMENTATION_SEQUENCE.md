@@ -3,6 +3,14 @@
 This document defines the recommended implementation order after the TWO-03 scaffold.
 It is meant to keep future prompts focused and prevent premature breadth.
 
+## Current Progress
+
+Status after TWO-08:
+
+- Stage 1 now has an experimental implementation foothold in `v2/core/validation/`, `v2/core/load.py`, and `v2/tests/`
+- the pre-capability-filtering part of Stage 2 now has an experimental implementation foothold in `v2/core/normalization/` and `v2/core/resolution/`
+- capability filtering, target planning, target adapters, and session orchestration remain unimplemented
+
 ## Stage 1: Schema And Validation Primitives
 
 Objective:
@@ -185,4 +193,3 @@ If a future prompt tries to jump ahead, use this test:
 - does the earlier stage contract already exist and stay stable enough for later work
 
 If the answer is no, the prompt should return to the earlier stage instead of expanding outward.
-

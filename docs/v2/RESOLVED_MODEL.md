@@ -5,6 +5,10 @@ It is not authored directly.
 
 This document defines the difference between raw input, normalized profile, resolved semantic model, and the final resolved profile handed to target compilers.
 
+TWO-08 implements the first experimental resolved-profile scaffold in `v2/core/resolution/`.
+That implementation produces the pre-capability-filtering semantic model plus explicit placeholder sections for capability context, target planning, and artifact planning.
+It is intentionally incomplete and dev-only.
+
 ## Layer Boundaries
 
 | Layer | Meaning | Still Missing At This Stage |
@@ -240,4 +244,3 @@ Future implementation prompts should be able to build:
 - target compilers against the target-plan and artifact-plan contract
 
 without reinterpreting authored input for every backend.
-

@@ -6,6 +6,10 @@ It describes what users write, not what adapters emit.
 RetroFX 2.x keeps TOML as the canonical authoring format for now because it is readable, familiar in the repository, and easy to validate deterministically.
 The authoring format may evolve later, but the semantic schema described here is the product contract.
 
+TWO-08 introduces the first experimental dev-only loader, validator, normalizer, and resolved-profile scaffold for this schema under `v2/core/`.
+That implementation only covers the early core pipeline.
+It does not yet provide target compilation, capability filtering, or session orchestration.
+
 ## Design Laws
 
 - Users author semantic intent, not backend-specific implementation whenever possible.

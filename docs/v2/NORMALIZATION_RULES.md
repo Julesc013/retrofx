@@ -3,6 +3,10 @@
 Normalization is the step that converts validated authored input into the canonical target-agnostic profile shape.
 It sits after schema validation and before semantic resolution or capability filtering.
 
+TWO-08 implements the first experimental normalization subset in `v2/core/normalization/`.
+That subset covers defaults, canonicalization, basic path normalization, semantic token derivation, and terminal or TTY palette construction.
+It does not yet perform capability-aware degradation, target emission, or lifecycle behavior.
+
 ## What Normalization Means
 
 Normalization means turning flexible author input into one deterministic internal representation.
@@ -152,4 +156,3 @@ From 1.x, 2.x keeps:
 - normalization becomes a first-class pipeline stage
 - semantic defaults and structural canonicalization happen before any adapter sees the profile
 - raw profile text stops being the operational source of truth once normalization succeeds
-

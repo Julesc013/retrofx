@@ -1,0 +1,20 @@
+schema = "retrofx.profile/v2alpha1"
+
+[identity]
+id = "malformed-profile"
+name = "Malformed Profile"
+family = "crt"
+
+[color.semantic]
+bg0 = "#0b1210"
+fg0 = "#ffffff"
+
+[render]
+mode = "palette"
+
+[render.palette]
+kind = "custom"
+
+[session]
+targets = []
+apply_mode = "current-session"

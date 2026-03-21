@@ -25,6 +25,18 @@ Expected future sub-areas:
 
 ## Current State
 
-This is scaffolding only.
-No functioning compiler is implemented here yet.
+TWO-08 implements only the first narrow slice:
 
+- raw profile loading
+- schema-facing validation
+- normalization
+- resolved-profile scaffolding
+- a dev-only inspection entrypoint
+
+Still not implemented here:
+
+- capability filtering
+- target planning
+- artifact planning
+- target emission
+- session orchestration

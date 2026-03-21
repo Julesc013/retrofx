@@ -3,6 +3,26 @@
 This document defines the future heart of the RetroFX 2.x engine.
 It explains how authored profile intent becomes a capability-aware, target-ready plan without collapsing into direct profile-to-backend shortcuts.
 
+## Current Implementation Status
+
+TWO-08 implements the first narrow executable slice of this pipeline under `v2/core/`:
+
+- raw profile loading
+- schema-facing validation
+- target-agnostic normalization
+- resolved-profile scaffolding before capability filtering
+- a dev-only inspection entrypoint and isolated fixture tests
+
+The implementation uses Python 3 stdlib only, specifically `tomllib`, because it provides deterministic TOML parsing without adding dependencies or disturbing the working 1.x shell runtime.
+
+These stages remain intentionally unimplemented:
+
+- capability filtering
+- target planning
+- artifact planning
+- target emission
+- session orchestration
+
 ## Why The Core Pipeline Exists
 
 RetroFX 1.x succeeded when it was explicit about:
@@ -213,4 +233,3 @@ Every later implementation prompt should preserve these guarantees:
 - side effects begin only after planning is complete
 
 If a design bypasses those guarantees, it is bypassing the 2.x core engine.
-

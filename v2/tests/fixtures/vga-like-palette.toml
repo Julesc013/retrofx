@@ -1,0 +1,36 @@
+schema = "retrofx.profile/v2alpha1"
+
+[identity]
+id = "vga-like-palette"
+name = "VGA-Like Palette"
+family = "dos"
+strictness = "strict-authentic"
+
+[color.semantic]
+bg0 = "#000000"
+fg0 = "#c0c0c0"
+accent_primary = "#55ffff"
+accent_error = "#aa0000"
+accent_success = "#00aa00"
+accent_warn = "#aa5500"
+accent_info = "#0000aa"
+
+[render]
+mode = "palette"
+
+[render.palette]
+kind = "vga16"
+
+[render.effects]
+blur = 1
+dither = "none"
+scanlines = false
+flicker = false
+vignette = false
+hotcore = false
+
+[session]
+targets = ["terminal", "tty", "tui", "x11"]
+apply_mode = "current-session"
+persistence = "ephemeral"
+

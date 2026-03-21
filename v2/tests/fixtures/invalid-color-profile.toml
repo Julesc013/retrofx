@@ -1,0 +1,14 @@
+schema = "retrofx.profile/v2alpha1"
+
+[identity]
+id = "invalid-color-profile"
+name = "Invalid Color Profile"
+family = "crt"
+
+[color.semantic]
+bg0 = "green"
+fg0 = "#ffffff"
+
+[session]
+targets = ["terminal"]
+apply_mode = "current-session"
