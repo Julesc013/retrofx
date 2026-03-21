@@ -34,29 +34,33 @@ def main(argv: list[str] | None = None) -> int:
             "Unified experimental RetroFX 2.x developer surface. "
             "This command does not replace the 1.x runtime or the production `retrofx` CLI."
         ),
+        epilog=(
+            "This surface exposes only the currently implemented experimental commands. "
+            "Export-oriented targets remain far more complete than live apply behavior."
+        ),
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    subparsers.add_parser("status", help="Show the current 2.x platform status, implemented surface, environment, and active experimental state.")
-    subparsers.add_parser("capabilities", help="Alias for `status` with the same machine-readable platform report.")
+    subparsers.add_parser("status", help="Show the current 2.x platform status, implemented interfaces, environment, and active experimental state.")
+    subparsers.add_parser("capabilities", help="Alias for `status` with the same machine-readable experimental platform report.")
 
-    _add_passthrough_command(subparsers, "resolve", "Delegate to the existing 2.x resolve entrypoint.")
-    _add_passthrough_command(subparsers, "compile", "Delegate to the existing 2.x compile entrypoint.")
-    _add_passthrough_command(subparsers, "plan", "Delegate to the existing 2.x planning entrypoint.")
-    _add_passthrough_command(subparsers, "preview-x11", "Delegate to the existing bounded X11 preview entrypoint.")
-    _add_passthrough_command(subparsers, "apply", "Delegate to the bounded TWO-19 apply entrypoint.")
-    _add_passthrough_command(subparsers, "off", "Delegate to the bounded TWO-19 off entrypoint.")
-    _add_passthrough_command(subparsers, "bundle", "Delegate to the TWO-16 bundle builder.")
-    _add_passthrough_command(subparsers, "install", "Delegate to the TWO-16 user-local bundle install flow.")
-    _add_passthrough_command(subparsers, "uninstall", "Delegate to the TWO-16 uninstall flow.")
+    _add_passthrough_command(subparsers, "resolve", "Resolve one 2.x profile through the implemented dev-only load/validate/normalize/resolve pipeline.")
+    _add_passthrough_command(subparsers, "compile", "Compile the implemented target families into deterministic export artifacts.")
+    _add_passthrough_command(subparsers, "plan", "Run the implemented non-destructive session planning preview for the current environment.")
+    _add_passthrough_command(subparsers, "preview-x11", "Run the bounded X11 render preview surface. This remains explicit and experimental.")
+    _add_passthrough_command(subparsers, "apply", "Run the bounded TWO-19 experimental apply flow under the isolated 2.x-owned footprint.")
+    _add_passthrough_command(subparsers, "off", "Clear the bounded TWO-19 experimental activation without touching 1.x.")
+    _add_passthrough_command(subparsers, "bundle", "Build one deterministic TWO-16 dev bundle.")
+    _add_passthrough_command(subparsers, "install", "Install one dev bundle into the isolated user-local 2.x footprint.")
+    _add_passthrough_command(subparsers, "uninstall", "Remove one installed dev bundle from the isolated user-local 2.x footprint.")
 
-    packs_parser = subparsers.add_parser("packs", help="Inspect the local 2.x pack surface.")
+    packs_parser = subparsers.add_parser("packs", help="Inspect the implemented local 2.x pack surface.")
     packs_subparsers = packs_parser.add_subparsers(dest="packs_command", required=True)
     packs_subparsers.add_parser("list", help="List available 2.x packs.")
     packs_show = packs_subparsers.add_parser("show", help="Show one 2.x pack manifest.")
     packs_show.add_argument("pack_id", help="Pack id under v2/packs/.")
 
-    migrate_parser = subparsers.add_parser("migrate", help="Inspect supported 1.x profiles and draft migration output.")
+    migrate_parser = subparsers.add_parser("migrate", help="Inspect supported 1.x profiles and draft migration output. This is not runtime compatibility.")
     migrate_subparsers = migrate_parser.add_subparsers(dest="migrate_command", required=True)
     migrate_inspect = migrate_subparsers.add_parser("inspect-1x", help="Inspect one 1.x profile for supported migration mapping.")
     migrate_inspect.add_argument("profile", help="Path to a 1.x profile.")

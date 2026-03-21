@@ -5,10 +5,17 @@ The core owns meaning and planning.
 Target adapters own environment-specific compilation and emission.
 Session orchestration owns lifecycle and recovery.
 
+Current branch truth as of TWO-21:
+
+- parse, validate, normalize, and resolve are implemented in `v2/core/`
+- target compilation is implemented across terminal, WM, toolkit, and bounded X11 families
+- environment detection, planning, install, apply, and off are implemented experimentally in `v2/session/`
+- capability-filtered target planning and artifact planning still exist partly as preview-layer outputs, not as a finalized stable core contract
+
 ## Module Stack
 
 1. Packs provide curated profile inputs and metadata.
-2. Core turns source profiles into a normalized profile, a resolved semantic model, and then a capability-filtered resolved profile with an artifact plan.
+2. Core currently turns source profiles into a normalized profile and a resolved semantic model. Capability-aware session planning exists, but finalized capability-filtered resolved profiles and artifact-plan contracts are still future work.
 3. Theme and Render interpret different output domains from the resolved semantic model.
 4. Targets and Adapters compile those domains from the resolved profile into backend-specific artifacts.
 5. Session applies, exports, installs, disables, or repairs those artifacts within declared scope.

@@ -1,6 +1,6 @@
 # RetroFX 2.x Implemented Status
 
-This document is the current truth pass for the 2.x branch.
+This document is the current truth pass for the 2.x branch as of TWO-21.
 It is intentionally blunt.
 
 1.x remains the production line.
@@ -55,3 +55,8 @@ Not implemented:
 - global desktop ownership
 - live Wayland render
 - full 1.x runtime replacement or compatibility mode
+
+Related truth docs:
+
+- [IMPLEMENTED_INTERFACES.md](IMPLEMENTED_INTERFACES.md) for the currently enforced code-side boundaries
+- [STABILIZATION_CHECKLIST.md](STABILIZATION_CHECKLIST.md) for the next trust gates

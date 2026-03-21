@@ -13,7 +13,7 @@ It is a first-class subsystem with explicit ownership and safety rules.
 
 ## Current Implementation Status
 
-As of TWO-19:
+As of TWO-21:
 
 - `v2/session/environment/` implements best-effort environment detection for the dev scaffold
 - `v2/session/planning/` implements non-destructive capability-aware planning against the resolved profile and implemented target families
@@ -23,7 +23,8 @@ As of TWO-19:
 - `v2/session/dev/preview_x11_render.py` now stages real X11 render artifacts and can run an explicit short-lived `picom` probe without touching 1.x state
 - `v2/session/install/` now also contains a separate experimental user-local bundle/install slice for `retrofx-v2-dev`
 - `v2/session/apply/` now stages bounded 2.x-owned current activations, writes explicit manifests and last-good records, and can clear that active state safely
-- `scripts/dev/retrofx-v2-apply`, `retrofx-v2-off`, and `retrofx-v2-status` expose that bounded flow as an explicit dev-only surface
+- `scripts/dev/retrofx-v2` now exposes planning, preview, apply, off, and status through one unified experimental entrypoint
+- [IMPLEMENTED_INTERFACES.md](IMPLEMENTED_INTERFACES.md) now documents the current plan, install, and activation record contracts that the TWO-21 test suite enforces structurally
 - session-default install orchestration, broad repair, and login integration execution are still not implemented
 
 ## What The Session System Is Responsible For

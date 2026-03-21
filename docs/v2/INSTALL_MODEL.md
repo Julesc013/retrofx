@@ -16,7 +16,7 @@ It does not mean:
 
 ## Current Implementation Status
 
-As of TWO-19:
+As of TWO-21:
 
 - repo-local dev mode is real and runs directly from the repository
 - repo-local bundle generation is real under `v2/bundles/<bundle-id>/`
@@ -38,15 +38,15 @@ Characteristics:
 
 Current entrypoints:
 
-- `v2/core/dev/resolve-profile`
-- `v2/core/dev/compile-targets`
-- `v2/core/dev/plan-session`
-- `scripts/dev/retrofx-v2-bundle`
-- `scripts/dev/retrofx-v2-install`
-- `scripts/dev/retrofx-v2-apply`
-- `scripts/dev/retrofx-v2-off`
-- `scripts/dev/retrofx-v2-status`
-- `scripts/dev/retrofx-v2-uninstall`
+- `scripts/dev/retrofx-v2 resolve`
+- `scripts/dev/retrofx-v2 compile`
+- `scripts/dev/retrofx-v2 plan`
+- `scripts/dev/retrofx-v2 bundle`
+- `scripts/dev/retrofx-v2 install`
+- `scripts/dev/retrofx-v2 apply`
+- `scripts/dev/retrofx-v2 off`
+- `scripts/dev/retrofx-v2 status`
+- `scripts/dev/retrofx-v2 uninstall`
 
 ### Installed Dev Mode
 

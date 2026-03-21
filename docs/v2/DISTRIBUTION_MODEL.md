@@ -6,12 +6,13 @@ It is a controlled, local-first shape for packaging resolved-profile outputs int
 
 ## Current Implementation Status
 
-As of TWO-16:
+As of TWO-21:
 
 - repo-local bundles are real under `v2/bundles/<bundle-id>/`
 - the bundle manifest schema is `retrofx.bundle/v2alpha1`
 - bundles can be installed into an isolated user-local `retrofx-v2-dev` footprint
 - uninstall and status are driven from install-state metadata
+- the unified dev surface now exposes bundle, install, uninstall, and status through `scripts/dev/retrofx-v2`
 - public archives, remote registries, and distro packaging are still future work
 
 ## Distribution Units

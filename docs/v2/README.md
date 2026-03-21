@@ -19,7 +19,7 @@ It is still not a description of current `1.x` runtime behavior.
 12. [TARGET_FAMILIES.md](TARGET_FAMILIES.md), [TERMINAL_TUI_TARGETS.md](TERMINAL_TUI_TARGETS.md), [X11_TARGETS.md](X11_TARGETS.md), [WM_TARGETS.md](WM_TARGETS.md), and [FUTURE_TOOLKIT_TARGETS.md](FUTURE_TOOLKIT_TARGETS.md) for target-family design.
 13. [SESSION_SYSTEM.md](SESSION_SYSTEM.md), [APPLY_MODES.md](APPLY_MODES.md), [ENVIRONMENT_MODEL.md](ENVIRONMENT_MODEL.md), [INSTALL_MODEL.md](INSTALL_MODEL.md), [DISTRIBUTION_MODEL.md](DISTRIBUTION_MODEL.md), [UNINSTALL_MODEL.md](UNINSTALL_MODEL.md), [RELEASE_SHAPE.md](RELEASE_SHAPE.md), [STATE_AND_RECOVERY.md](STATE_AND_RECOVERY.md), [SESSION_INTEGRATIONS.md](SESSION_INTEGRATIONS.md), and [SIDE_EFFECT_POLICY.md](SIDE_EFFECT_POLICY.md) for lifecycle, orchestration, recovery, and experimental distribution behavior.
 14. [REPO_LAYOUT.md](REPO_LAYOUT.md), [MODULE_BOUNDARIES.md](MODULE_BOUNDARIES.md), [COMPATIBILITY_SHELL.md](COMPATIBILITY_SHELL.md), and [IMPLEMENTATION_SEQUENCE.md](IMPLEMENTATION_SEQUENCE.md) for repository structure and execution discipline.
-15. [IMPLEMENTED_STATUS.md](IMPLEMENTED_STATUS.md), [DEV_WORKFLOW.md](DEV_WORKFLOW.md), [ROADMAP.md](ROADMAP.md), and [STABILIZATION_PLAN.md](STABILIZATION_PLAN.md) for current branch truth, developer entrypoints, phased delivery, and the next stabilization handoff.
+15. [IMPLEMENTED_STATUS.md](IMPLEMENTED_STATUS.md), [IMPLEMENTED_INTERFACES.md](IMPLEMENTED_INTERFACES.md), [DEV_WORKFLOW.md](DEV_WORKFLOW.md), [ROADMAP.md](ROADMAP.md), [STABILIZATION_PLAN.md](STABILIZATION_PLAN.md), and [STABILIZATION_CHECKLIST.md](STABILIZATION_CHECKLIST.md) for current branch truth, interface contracts, developer entrypoints, phased delivery, and the stabilization handoff.
 16. [RELATION_TO_1X.md](RELATION_TO_1X.md) for branch and migration discipline.
 
 ## Intent
@@ -29,7 +29,7 @@ It is broader than RetroFX 1.x, but it is still bounded by explicit capability d
 
 ## Current Implementation State
 
-As of TWO-20:
+As of TWO-21:
 
 - `v2/core/` contains an experimental dev-only scaffold for loading, validating, normalizing, and resolving 2.x profiles
 - `v2/tests/` contains isolated 2.x fixtures and tests for that scaffold
@@ -57,7 +57,10 @@ As of TWO-20:
 - `scripts/dev/retrofx-v2-install`, `retrofx-v2-status`, and `retrofx-v2-uninstall` still manage the separate user-local install footprint used by the apply layer
 - `scripts/dev/retrofx-v2` now provides a unified experimental dispatcher across resolve, plan, compile, packs, migration, install, apply, off, preview, and smoke workflows
 - [IMPLEMENTED_STATUS.md](IMPLEMENTED_STATUS.md) now provides the branch-level implemented-versus-planned truth matrix
+- [IMPLEMENTED_INTERFACES.md](IMPLEMENTED_INTERFACES.md) now lists the current code-backed internal or dev-facing interface contracts
+- `v2/core/interfaces/contracts.py` now provides a small code-side contract layer that the test suite enforces structurally
 - [STABILIZATION_PLAN.md](STABILIZATION_PLAN.md) now defines the shift from architecture expansion to controlled stabilization
+- [STABILIZATION_CHECKLIST.md](STABILIZATION_CHECKLIST.md) now defines the trust gates for the next maturity step
 - that install flow is still dev-only, user-local, and non-destructive to 1.x
 - stable live apply across broad targets, session-default switching, public packaging, Wayland render, and full session orchestration are still future work
 - the working product line remains 1.x; no default CLI migration has happened

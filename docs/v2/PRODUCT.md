@@ -7,6 +7,13 @@ RetroFX 2.x is broader than RetroFX 1.x.
 It is not just a shader tool, not just an X11 effect wrapper, and not merely a collection of scripts.
 It also does not promise identical behavior on all stacks.
 
+Current branch truth as of TWO-21:
+
+- the implemented branch surface is still experimental and developer-facing
+- the unified entrypoint is `scripts/dev/retrofx-v2`
+- 1.x remains the production runtime and CLI
+- bounded apply or off, X11 preview, install, and toolkit exports exist, but they do not amount to production-ready desktop ownership
+
 ## Who It Is For
 
 - Linux users who want one coherent retro or style-driven appearance across multiple tools and session layers.
@@ -78,4 +85,3 @@ RetroFX 2.x succeeds if it can truthfully say:
 - what degraded and why
 
 If those answers are unclear, the design is not ready.
-

@@ -5,12 +5,13 @@ It is a redesign.
 
 This file defines how 1.x concepts map into 2.x concepts, what can be migrated automatically, what needs manual review, and which old ambiguities 2.x resolves by design.
 
-Current implementation truth as of TWO-15:
+Current implementation truth as of TWO-21:
 
 - `v2/compat/` now contains a real first migration slice for 1.x profile intake
 - the supported 1.x subset can be inspected and mapped into a deterministic 2.x draft profile
 - migration reports explicitly classify fields as clean, degraded, manual follow-up, or unsupported
 - generated draft profiles are dev-only review artifacts and do not replace the 1.x source files
+- the unified 2.x dev surface now exposes that slice as `scripts/dev/retrofx-v2 migrate inspect-1x`
 
 ## Migration Principles
 
@@ -68,7 +69,7 @@ Current implementation truth as of TWO-15:
 | 1.x pack metadata | `identity.family`, pack defaults, reserved `compose.*` hooks | assisted | Pack lineage becomes data instead of implicit behavior. |
 | 1.x runtime manifest distinction | resolved `artifact_plan.required` and `artifact_plan.optional` | redesign | This moves from implementation detail to planned compiler output. |
 
-Current TWO-15 implementation note:
+Current TWO-21 implementation note:
 
 - the first compatibility slice implements the mappings in the `automatic`, `assisted`, and part of the `manual` column only for the supported 1.x schema subset
 - `effects.transparency`, `effects.scanline_preset`, and `rules.*` are reported, not emitted

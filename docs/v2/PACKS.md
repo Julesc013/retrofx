@@ -4,8 +4,8 @@ RetroFX 2.x packs are local curated collections of profiles, metadata, family id
 They are data containers for discovery and organization.
 They are not runtime executables and they are not a network marketplace.
 
-As of TWO-14, RetroFX 2.x has a real local pack manifest format and built-in curated packs under `v2/packs/`.
-Pack-aware profile resolution is implemented only in the dev-only 2.x inspection, compile, and planning entrypoints.
+As of TWO-21, RetroFX 2.x has a real local pack manifest format and built-in curated packs under `v2/packs/`.
+Pack-aware profile resolution is implemented only in the dev-only 2.x surfaces.
 
 ## Purpose
 
@@ -112,13 +112,13 @@ Packs do not own:
 
 ## Current Implementation Truth
 
-As of TWO-14:
+As of TWO-21:
 
 - `v2/packs/loader.py` parses `retrofx.pack/v2alpha1` manifests
-- `v2/core/dev/list-packs` lists built-in local packs
-- `v2/core/dev/show-pack <pack-id>` inspects a pack manifest and its profiles
-- `v2/core/dev/resolve-profile --pack <pack-id> --profile-id <profile-id>` resolves a profile through the normal 2.x core pipeline
-- `v2/core/dev/compile-targets` and `v2/core/dev/plan-session` can also resolve profiles by pack id and profile id
+- `scripts/dev/retrofx-v2 packs list` lists built-in local packs
+- `scripts/dev/retrofx-v2 packs show <pack-id>` inspects a pack manifest and its profiles
+- `scripts/dev/retrofx-v2 resolve --pack <pack-id> --profile-id <profile-id>` resolves a profile through the normal 2.x core pipeline
+- `scripts/dev/retrofx-v2 compile`, `plan`, and `smoke` can also resolve profiles by pack id and profile id
 - resolved profiles now carry pack-origin metadata when loaded from a pack
 
 Not implemented yet:

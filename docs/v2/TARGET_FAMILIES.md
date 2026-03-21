@@ -2,6 +2,12 @@
 
 This document defines the major target families in RetroFX 2.x and why they remain separate.
 
+Current branch truth as of TWO-21:
+
+- terminal, WM, toolkit, and bounded X11 families are implemented experimentally
+- TTY and login families remain design-level only
+- bounded TWO-19 apply can stage artifacts from implemented families, but most targets still remain export-oriented rather than live-owned
+
 ## Why Families Exist
 
 Target families group adapters that share:

@@ -31,7 +31,9 @@ class UnifiedDevSurfaceTests(unittest.TestCase):
             self.assertTrue(payload["ok"])
             self.assertEqual(payload["stage"], "platform-status")
             self.assertIn("implemented_status_matrix", payload)
+            self.assertIn("implemented_interfaces", payload)
             self.assertIn("current_activation", payload["implemented_surface"])
+            self.assertGreaterEqual(payload["implemented_interfaces"]["count"], 6)
 
     def test_resolve_plan_compile_apply_off_are_reachable(self) -> None:
         with TemporaryDirectory() as tmphome, TemporaryDirectory() as tmpout:
@@ -89,6 +91,9 @@ class UnifiedDevSurfaceTests(unittest.TestCase):
         areas = [item["area"] for item in payload["implemented_status_matrix"]]
         self.assertIn("X11 render or compiler", areas)
         self.assertIn("live Wayland render", areas)
+        interface_names = [item["name"] for item in payload["implemented_interfaces"]["interfaces"]]
+        self.assertIn("resolved-profile", interface_names)
+        self.assertIn("session-plan", interface_names)
 
     def test_smoke_workflow_runs_non_destructively(self) -> None:
         with TemporaryDirectory() as tmphome, TemporaryDirectory() as tmpout:
@@ -127,6 +132,12 @@ class UnifiedDevSurfaceTests(unittest.TestCase):
         self.assertIn("schema validation", content)
         self.assertIn("bounded apply or off", content)
         self.assertIn("live Wayland render", content)
+
+    def test_implemented_interfaces_doc_mentions_current_contracts(self) -> None:
+        content = (REPO_ROOT / "docs" / "v2" / "IMPLEMENTED_INTERFACES.md").read_text(encoding="utf-8")
+        self.assertIn("resolved profile", content)
+        self.assertIn("target compile result", content)
+        self.assertIn("migration report", content)
 
     def _temp_env(self, home: str) -> dict[str, str]:
         home_path = Path(home)

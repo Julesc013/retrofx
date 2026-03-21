@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Mapping
 
+from v2.core.interfaces import IMPLEMENTED_INTERFACES
 from v2.core.pipeline import IMPLEMENTATION_INFO as CORE_IMPLEMENTATION_INFO
 from v2.packs import discover_packs
 from v2.session.apply import describe_current_activation
@@ -19,7 +20,7 @@ COMMAND_SUMMARY = [
         "command": "status",
         "category": "inspect",
         "implemented": True,
-        "description": "Show the current environment, implemented 2.x surface, and bounded current-state status.",
+        "description": "Show the current environment, implemented 2.x surface, interface contracts, and bounded current-state status.",
     },
     {
         "command": "resolve",
@@ -43,7 +44,7 @@ COMMAND_SUMMARY = [
         "command": "apply",
         "category": "session",
         "implemented": True,
-        "description": "Run the bounded experimental 2.x apply path under the isolated user-local footprint.",
+        "description": "Run the bounded experimental 2.x apply path under the isolated user-local footprint. This is not a production runtime claim.",
     },
     {
         "command": "off",
@@ -55,7 +56,7 @@ COMMAND_SUMMARY = [
         "command": "preview-x11",
         "category": "render",
         "implemented": True,
-        "description": "Stage bounded X11 render artifacts and optionally run an explicit short-lived picom probe.",
+        "description": "Stage bounded X11 render artifacts and optionally run an explicit short-lived picom probe when X11 support is detected.",
     },
     {
         "command": "packs list",
@@ -97,7 +98,7 @@ COMMAND_SUMMARY = [
         "command": "smoke",
         "category": "inspect",
         "implemented": True,
-        "description": "Run the safe developer smoke flow: resolve, plan, compile, and optionally bounded apply.",
+        "description": "Run the safe developer smoke flow: resolve, plan, compile, and optionally bounded apply. Non-destructive by default.",
     },
 ]
 
@@ -225,8 +226,8 @@ IMPLEMENTED_STATUS_MATRIX = [
 
 PLATFORM_IMPLEMENTATION_INFO = {
     "status": "experimental-dev-only",
-    "prompt": "TWO-20",
-    "surface": "unified-dev-platform",
+    "prompt": "TWO-21",
+    "surface": "unified-dev-platform-hardened",
     "entrypoint": str(UNIFIED_ENTRYPOINT),
     "implemented_targets": list_targets(),
     "families": list_target_families(),
@@ -278,6 +279,11 @@ def build_platform_status(
                 "scripts/dev/retrofx-v2-uninstall",
             ],
         },
+        "implemented_interfaces": {
+            "doc": str(REPO_ROOT / "docs" / "v2" / "IMPLEMENTED_INTERFACES.md"),
+            "count": len(IMPLEMENTED_INTERFACES),
+            "interfaces": list(IMPLEMENTED_INTERFACES),
+        },
         "implemented_surface": {
             "core_pipeline": {
                 "implemented_stages": CORE_IMPLEMENTATION_INFO["implemented_stages"],
@@ -301,8 +307,9 @@ def build_platform_status(
             "Compatibility work is inspection and draft migration only, not runtime parity.",
         ],
         "next_focus": {
-            "phase": "controlled-stabilization",
+            "phase": "controlled-stabilization-and-validation",
             "doc": str(REPO_ROOT / "docs" / "v2" / "STABILIZATION_PLAN.md"),
+            "checklist": str(REPO_ROOT / "docs" / "v2" / "STABILIZATION_CHECKLIST.md"),
             "goals": [
                 "real-world test passes against the implemented dev surface",
                 "interface hardening and cleanup instead of new feature sprawl",
