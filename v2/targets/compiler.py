@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import inspect
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -9,14 +10,16 @@ from v2.targets.interfaces import TargetCompileResult
 from v2.targets.terminal import TERMINAL_COMPILERS, list_terminal_targets
 from v2.targets.toolkit import TOOLKIT_COMPILERS, list_toolkit_targets
 from v2.targets.wm import WM_COMPILERS, list_wm_targets
+from v2.targets.x11 import X11_COMPILERS, list_x11_targets
 
 TARGET_COMPILERS = {
     **TERMINAL_COMPILERS,
     **TOOLKIT_COMPILERS,
     **WM_COMPILERS,
+    **X11_COMPILERS,
 }
 
-if len(TARGET_COMPILERS) != len(TERMINAL_COMPILERS) + len(TOOLKIT_COMPILERS) + len(WM_COMPILERS):
+if len(TARGET_COMPILERS) != len(TERMINAL_COMPILERS) + len(TOOLKIT_COMPILERS) + len(WM_COMPILERS) + len(X11_COMPILERS):
     raise RuntimeError("Duplicate target names were registered across target families.")
 
 
@@ -29,6 +32,7 @@ def list_target_families() -> dict[str, list[str]]:
         "terminal-tui": list_terminal_targets(),
         "toolkit": list_toolkit_targets(),
         "wm": list_wm_targets(),
+        "x11": list_x11_targets(),
     }
 
 
@@ -36,6 +40,7 @@ def compile_resolved_profile_targets(
     resolved_profile: Mapping[str, Any],
     out_root: str | Path,
     target_names: list[str] | None = None,
+    compile_context: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     profile_id = str(resolved_profile["identity"]["id"])
     base_output_root = Path(out_root)
@@ -57,7 +62,11 @@ def compile_resolved_profile_targets(
     results: list[TargetCompileResult] = []
     for target_name in selected_targets:
         compiler = TARGET_COMPILERS[target_name]
-        results.append(compiler.compile(resolved_profile, profile_output_root))
+        compile_signature = inspect.signature(compiler.compile)
+        if "compile_context" in compile_signature.parameters:
+            results.append(compiler.compile(resolved_profile, profile_output_root, compile_context=compile_context))
+        else:
+            results.append(compiler.compile(resolved_profile, profile_output_root))
 
     return {
         "profile_id": profile_id,

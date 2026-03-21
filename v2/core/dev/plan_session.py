@@ -16,7 +16,7 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_OUT_ROOT = REPO_ROOT / "v2" / "out"
 IMPLEMENTATION_INFO = {
     "status": "experimental-dev-only",
-    "prompt": "TWO-12",
+    "prompt": "TWO-13",
     "surface": "session-planning-preview",
     "implemented_targets": list_targets(),
     "families": list_target_families(),
@@ -25,7 +25,7 @@ IMPLEMENTATION_INFO = {
         "live apply/off/install behavior",
         "session wrapper mutation",
         "artifact-plan driven lifecycle execution",
-        "X11 render family",
+        "live X11 render family",
         "global toolkit orchestration and login target families",
     ],
 }
@@ -84,6 +84,7 @@ def plan_profile_session(
             "apply_mode": plan["session_policy"]["apply_mode"],
             "persistence": plan["session_policy"]["persistence"],
             "typography": resolved_profile["semantics"]["typography"],
+            "display_policy": resolved_profile["semantics"]["render"]["display"],
         },
         "environment": environment,
         "plan": plan,
@@ -134,6 +135,7 @@ def _write_preview_bundle(
             "id": resolved_profile["identity"]["id"],
             "name": resolved_profile["identity"]["name"],
             "typography": resolved_profile["semantics"]["typography"],
+            "display_policy": resolved_profile["semantics"]["render"]["display"],
         },
         "environment": environment,
         "plan": plan,
@@ -177,6 +179,16 @@ def _render_summary_text(payload: Mapping[str, Any]) -> str:
             f"subpixel={payload['profile']['typography']['aa']['subpixel']}, "
             f"hinting={payload['profile']['typography']['aa']['hinting']}"
         ),
+        (
+            "display_policy: "
+            f"gamma={payload['profile']['display_policy']['gamma']}, "
+            f"contrast={payload['profile']['display_policy']['contrast']}, "
+            f"temperature={payload['profile']['display_policy']['temperature']}, "
+            f"black_lift={payload['profile']['display_policy']['black_lift']}, "
+            f"blue_light_reduction={payload['profile']['display_policy']['blue_light_reduction']}, "
+            f"tint_bias={payload['profile']['display_policy']['tint_bias']}"
+        ),
+        f"display_policy_status: {plan['display_policy']['overall_status']}",
         f"compile_targets: {', '.join(plan['compile_targets']) or '(none)'}",
         f"apply_preview_targets: {', '.join(plan['apply_preview_targets']) or '(none)'}",
         f"export_only_targets: {', '.join(plan['export_only_targets']) or '(none)'}",

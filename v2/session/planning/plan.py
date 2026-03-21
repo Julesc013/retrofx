@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Mapping
 
+from v2.render import build_display_policy_summary
 from v2.targets import TARGET_COMPILERS, list_target_families, list_targets
 
 TARGET_RULES = {
@@ -30,6 +31,10 @@ TARGET_RULES = {
     "xresources": {
         "preferred_session_types": {"x11"},
         "apply_preview_session_types": {"x11"},
+    },
+    "x11-display-policy": {
+        "preferred_session_types": {"x11", "wayland"},
+        "apply_preview_session_types": set(),
     },
     "i3": {
         "preferred_session_types": {"x11"},
@@ -64,6 +69,7 @@ def build_session_plan(resolved_profile: Mapping[str, Any], environment: Mapping
     apply_mode = str(resolved_profile["semantics"]["session"]["apply_mode"])
     persistence = str(resolved_profile["semantics"]["session"]["persistence"])
     render_mode = str(resolved_profile["semantics"]["render"]["mode"])
+    display_policy = build_display_policy_summary(resolved_profile, environment)
     implemented_families = list_target_families()
     implemented_targets = list_targets()
     implemented_target_classes = sorted(
@@ -83,7 +89,7 @@ def build_session_plan(resolved_profile: Mapping[str, Any], environment: Mapping
     skipped_targets: list[dict[str, Any]] = []
     warnings: list[str] = []
     notes: list[str] = [
-        "TWO-11 planning is preview-only and does not mutate the current session.",
+        "TWO-13 planning is preview-only and does not mutate the current session.",
         "Capability filtering currently reasons over implemented target families only.",
     ]
 
@@ -135,8 +141,10 @@ def build_session_plan(resolved_profile: Mapping[str, Any], environment: Mapping
 
     if render_mode != "passthrough":
         warnings.append(
-            "Resolved render intent is present, but TWO-11 planning can only preview terminal/TUI and WM theme/config targets."
+            "Resolved render intent is present, but TWO-13 planning still treats live render/runtime execution as future work."
         )
+    if display_policy["requested_fields"]:
+        warnings.extend(display_policy["warnings"])
 
     if apply_mode != "export-only":
         warnings.append(
@@ -162,6 +170,7 @@ def build_session_plan(resolved_profile: Mapping[str, Any], environment: Mapping
             "apply_mode": apply_mode,
             "persistence": persistence,
         },
+        "display_policy": display_policy,
         "environment_capabilities": environment_capabilities,
         "family_plans": family_plan_summary,
         "target_entries": target_entries,
@@ -206,14 +215,14 @@ def _build_target_entry(
             plan_action = "compile-and-apply-preview"
             status_class = "partial"
             reasons.append("This target would be a current-session apply candidate once live orchestration exists.")
-            warnings.append("Preview only: TWO-11 does not execute current-session side effects.")
+            warnings.append("Preview only: TWO-13 does not execute current-session side effects.")
         elif aligned:
             warnings.append(
                 "Current-session intent is requested, but this target remains export-only until live session orchestration exists."
             )
     elif apply_mode in {"installed-default", "explicit-only"} and aligned:
         warnings.append(
-            f"`session.apply_mode = \"{apply_mode}\"` is not implemented; this target remains an export-only preview in TWO-11."
+            f"`session.apply_mode = \"{apply_mode}\"` is not implemented; this target remains an export-only preview in TWO-13."
         )
 
     if target_name in {"i3", "sway", "waybar"} and session_type not in {"x11", "wayland"}:
@@ -258,7 +267,7 @@ def _summarize_environment_capabilities(environment: Mapping[str, Any]) -> dict[
             "possible_if_implemented": x11_render_possible,
             "implemented_now": False,
             "reason": (
-                "The detected environment could host an X11 compositor path, but TWO-11 still lacks the X11 render family."
+                "The detected environment could host an X11 compositor path, but TWO-13 still lacks the live X11 render family."
                 if session_type == "x11"
                 else "The detected environment is not an X11 session."
             ),

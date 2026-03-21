@@ -4,6 +4,10 @@ Purpose:
 
 - future home of render-capable X11 target adapters
 
+Implemented now:
+
+- `x11-display-policy`: advisory/export-only packaging of resolved display policy for future X11/render consumers
+
 What belongs here:
 
 - picom config adapters
@@ -25,4 +29,3 @@ Governing docs:
 Later prompts should implement:
 
 - truthful X11 adapters that consume resolved render policy and respect planner-owned compositor requirements
-

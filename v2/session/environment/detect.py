@@ -31,7 +31,7 @@ def detect_environment(
 
     notes: list[str] = [
         "Environment detection is best-effort and uses local process context only.",
-        "TWO-11 planning is dev-only and does not mutate the live session.",
+        "TWO-13 planning is dev-only and does not mutate the live session.",
     ]
     warnings: list[str] = []
 

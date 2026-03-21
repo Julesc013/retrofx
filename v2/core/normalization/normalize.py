@@ -210,11 +210,11 @@ def _normalize_render(raw_render: Any, raw_profile: RawProfile, identity: dict[s
     display = display if isinstance(display, dict) else {}
     tint_bias = display.get("tint_bias")
     display_normalized = {
-        "gamma": display.get("gamma", 1.0),
-        "contrast": display.get("contrast", 1.0),
-        "temperature": display.get("temperature", 6500),
-        "black_lift": display.get("black_lift", 0.0),
-        "blue_light_reduction": display.get("blue_light_reduction", 0.0),
+        "gamma": _normalize_float(display.get("gamma"), 1.0),
+        "contrast": _normalize_float(display.get("contrast"), 1.0),
+        "temperature": _normalize_int(display.get("temperature"), 6500),
+        "black_lift": _normalize_float(display.get("black_lift"), 0.0),
+        "blue_light_reduction": _normalize_float(display.get("blue_light_reduction"), 0.0),
         "tint_bias": normalize_hex_color(tint_bias) if isinstance(tint_bias, str) and tint_bias.strip() else None,
     }
 
@@ -519,6 +519,24 @@ def _normalize_path_like(authored: str, raw_profile: RawProfile, report: Normali
         absolute = (Path(raw_profile.source_dir) / authored_path).resolve()
     report.path_normalizations.append({"authored": authored, "absolute": str(absolute)})
     return str(absolute)
+
+
+def _normalize_float(value: Any, default: float) -> float:
+    if isinstance(value, bool) or value is None:
+        return default
+    if isinstance(value, (int, float)):
+        return round(float(value), 4)
+    return default
+
+
+def _normalize_int(value: Any, default: int) -> int:
+    if isinstance(value, bool) or value is None:
+        return default
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return int(round(value))
+    return default
 
 
 def _default_blur(family: str, strictness: str) -> int:

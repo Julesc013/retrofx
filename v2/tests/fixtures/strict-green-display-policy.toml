@@ -1,0 +1,32 @@
+schema = "retrofx.profile/v2alpha1"
+
+[identity]
+id = "strict-green-display-policy"
+name = "Strict Green Display Policy"
+family = "crt"
+strictness = "strict-authentic"
+
+[color.semantic]
+bg0 = "#061008"
+fg0 = "#92ff84"
+accent_primary = "#7dff70"
+glow_tint = "#7dff70"
+
+[render]
+mode = "monochrome"
+
+[render.quantization]
+bands = 4
+
+[render.display]
+gamma = 1.08
+contrast = 1.14
+temperature = 5900
+black_lift = 0.03
+blue_light_reduction = 0.18
+tint_bias = "#7dff70"
+
+[session]
+targets = ["x11", "wm"]
+apply_mode = "current-session"
+persistence = "ephemeral"

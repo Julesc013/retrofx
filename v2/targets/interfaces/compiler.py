@@ -44,5 +44,10 @@ class TargetCompiler(Protocol):
     output_file_name: str
     supported_target_classes: tuple[str, ...]
 
-    def compile(self, resolved_profile: Mapping[str, Any], profile_output_root: Path) -> TargetCompileResult:
+    def compile(
+        self,
+        resolved_profile: Mapping[str, Any],
+        profile_output_root: Path,
+        compile_context: Mapping[str, Any] | None = None,
+    ) -> TargetCompileResult:
         """Emit deterministic artifacts for a resolved profile."""

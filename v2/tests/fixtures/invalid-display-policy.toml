@@ -1,0 +1,27 @@
+schema = "retrofx.profile/v2alpha1"
+
+[identity]
+id = "invalid-display-policy"
+name = "Invalid Display Policy"
+family = "terminal"
+strictness = "modernized-retro"
+
+[color.semantic]
+bg0 = "#101010"
+fg0 = "#f0f0f0"
+
+[render]
+mode = "passthrough"
+
+[render.display]
+gamma = 2.5
+contrast = "high"
+temperature = 900
+black_lift = 0.5
+blue_light_reduction = 1.5
+tint_bias = "green"
+
+[session]
+targets = ["wm"]
+apply_mode = "export-only"
+persistence = "export-only"

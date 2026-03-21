@@ -23,6 +23,12 @@ Render answers:
 - whether scanlines, dithering, glow, or display transforms should apply
 - how a render-capable host should transform pixels
 
+Current TWO-13 implementation note:
+
+- theme compilation is already real for terminal, WM, and typography-policy outputs
+- render is still mostly advisory, but display-policy values are now resolved, planned, and exported in the first X11/render-adjacent compiler slice
+- this remains export-oriented and non-destructive, not live global display control
+
 ## Where They Overlap
 
 They overlap conceptually because they share one resolved profile.
@@ -89,4 +95,3 @@ Use this rule in future prompts:
 
 1.x often mixed exports, fonts, and render-adjacent behavior in one practical flow.
 2.x keeps the useful ideas but separates the subsystems so target compilers and planners can stay coherent.
-

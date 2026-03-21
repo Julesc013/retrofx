@@ -3,6 +3,14 @@
 The X11 family is the primary early render-capable target family in RetroFX 2.x.
 It remains important, but it is no longer the definition of the whole product.
 
+## Current Implementation Status
+
+As of TWO-13:
+
+- the full X11 render family is still not implemented
+- one narrow advisory/export target now exists for resolved display policy
+- that target is meant to package resolved display-transform intent for future consumers, not to claim live compositor control
+
 ## Family Scope
 
 The X11 family includes targets such as:
@@ -126,4 +134,3 @@ Theme-only targets generally:
 - degradation must be honest when the host path is unavailable
 
 2.x keeps those lessons, but moves them behind target compilers and session orchestration rather than one shell backend.
-

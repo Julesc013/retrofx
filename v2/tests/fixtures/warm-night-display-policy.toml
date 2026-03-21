@@ -1,0 +1,28 @@
+schema = "retrofx.profile/v2alpha1"
+
+[identity]
+id = "warm-night-display-policy"
+name = "Warm Night Display Policy"
+family = "warm-night"
+strictness = "practical-daily-driver"
+
+[color.semantic]
+bg0 = "#16120f"
+fg0 = "#f0e3cf"
+accent_primary = "#d9a066"
+
+[render]
+mode = "passthrough"
+
+[render.display]
+gamma = 0.98
+contrast = 1.05
+temperature = 4200
+black_lift = 0.01
+blue_light_reduction = 0.45
+tint_bias = "#c98b5a"
+
+[session]
+targets = ["wayland", "wm", "terminal"]
+apply_mode = "export-only"
+persistence = "export-only"

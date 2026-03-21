@@ -8,17 +8,19 @@ This tree exists so later prompts implement 2.x in the right places instead of e
 
 ## Current State
 
-As of TWO-12:
+As of TWO-13:
 
 - `v2/core/` contains an experimental stdlib-only Python scaffold for loading, validating, normalizing, and resolving 2.x profile documents
 - `v2/tests/` contains isolated fixtures and tests for that scaffold
 - `v2/targets/terminal/` contains the first real 2.x compiler family for terminal/TUI exports
 - `v2/targets/wm/` now contains the second real 2.x compiler family for WM/theme-adjacent exports: `i3`, `sway`, and `waybar`
 - `v2/targets/toolkit/` now contains the first real typography-policy export target: a session-local `fontconfig` fragment
+- `v2/targets/x11/` now contains the first advisory X11/render-adjacent display-policy target
 - `v2/core/dev/compile-targets` writes deterministic dev-only artifacts under `v2/out/<profile-id>/`
 - `v2/session/` now contains the first real session-planning slice: environment detection and capability-aware non-destructive planning
 - `v2/core/dev/plan-session` previews what would be exported, degraded, skipped, or eventually applyable in the detected environment
 - typography is now concretely resolved in the core scaffold and visible in both compile and plan previews
+- display policy is now concretely resolved in the core scaffold and visible in both compile and plan previews
 - live session orchestration and production command delegation still do not exist
 
 Python is used only for the early 2.x internal scaffold because `tomllib` gives deterministic TOML parsing with no extra dependency burden.
