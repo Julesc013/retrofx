@@ -22,6 +22,7 @@ class Issue:
 class RawProfile:
     source_path: str
     source_dir: str
+    origin: dict[str, Any]
     data: dict[str, Any]
 
 

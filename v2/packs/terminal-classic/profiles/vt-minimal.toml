@@ -1,0 +1,32 @@
+schema = "retrofx.profile/v2alpha1"
+
+[identity]
+id = "vt-minimal"
+name = "VT Minimal"
+description = "Low-chrome terminal profile with mild blue accents and restrained chrome."
+family = "terminal"
+strictness = "modernized-retro"
+tags = ["terminal", "minimal", "vt", "pack"]
+
+[color.semantic]
+bg0 = "#0d1013"
+fg0 = "#cfe1f0"
+accent_primary = "#84a9c8"
+accent_info = "#6eb7d8"
+
+[typography]
+terminal_primary = "IBM Plex Mono"
+terminal_fallbacks = ["DejaVu Sans Mono", "Noto Color Emoji"]
+ui_sans = "Source Sans 3"
+
+[render]
+mode = "passthrough"
+
+[chrome]
+bar_style = "minimal"
+notification_style = "toast"
+
+[session]
+targets = ["terminal", "wm", "launcher", "notifications"]
+apply_mode = "current-session"
+persistence = "ephemeral"

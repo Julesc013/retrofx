@@ -1,0 +1,46 @@
+schema = "retrofx.profile/v2alpha1"
+
+[identity]
+id = "daily-driver"
+name = "Daily Driver"
+description = "Balanced modern profile for terminal, WM, font-policy, and advisory display-policy outputs."
+family = "modern-minimal"
+strictness = "practical-daily-driver"
+tags = ["daily-driver", "modern", "pack"]
+
+[color.semantic]
+bg0 = "#101419"
+fg0 = "#ecf1f5"
+accent_primary = "#8ca4ff"
+accent_info = "#7ac7d8"
+accent_success = "#88c399"
+accent_warn = "#d9b26b"
+accent_error = "#d88c8c"
+
+[typography]
+terminal_primary = "JetBrains Mono"
+terminal_fallbacks = ["DejaVu Sans Mono", "Noto Color Emoji"]
+ui_sans = "IBM Plex Sans"
+ui_mono = "JetBrains Mono"
+
+[typography.aa]
+antialias = "on"
+subpixel = "rgb"
+hinting = "slight"
+
+[render]
+mode = "passthrough"
+
+[render.display]
+contrast = 1.02
+temperature = 6100
+
+[chrome]
+bar_style = "minimal"
+launcher_style = "boxed"
+notification_style = "toast"
+
+[session]
+targets = ["terminal", "wm", "gtk", "qt"]
+apply_mode = "export-only"
+persistence = "export-only"

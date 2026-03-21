@@ -1,0 +1,4 @@
+title = "Terminal Classic"
+summary = "Built-in local pack metadata for workstation and DOS-like terminal previews."
+accent = "#55ffff"
+recommended_terminal = "IBM Plex Mono"

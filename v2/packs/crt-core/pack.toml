@@ -1,0 +1,41 @@
+schema = "retrofx.pack/v2alpha1"
+
+[pack]
+id = "crt-core"
+name = "CRT Core"
+description = "Curated phosphor-forward profiles for green, amber, and cool-blue CRT styles."
+family = "crt"
+tags = ["crt", "retro", "display", "monochrome"]
+author = "RetroFX"
+source = "builtin-local"
+
+[assets]
+preview = "assets/preview.toml"
+
+[recommendations.typography]
+terminal_primary = "Terminus Nerd Font"
+ui_sans = "IBM Plex Sans"
+
+[[profiles]]
+id = "green-crt"
+file = "profiles/green-crt.toml"
+name = "Green CRT"
+description = "Authentic green phosphor baseline."
+family = "crt"
+tags = ["green", "phosphor", "strict"]
+
+[[profiles]]
+id = "amber-crt"
+file = "profiles/amber-crt.toml"
+name = "Amber CRT"
+description = "Warm amber phosphor with mild display warmth bias."
+family = "crt"
+tags = ["amber", "phosphor", "warm"]
+
+[[profiles]]
+id = "blue-white-crt"
+file = "profiles/blue-white-crt.toml"
+name = "Blue White CRT"
+description = "Cool blue-white monochrome variant with crisp typography."
+family = "crt"
+tags = ["blue", "cool", "phosphor"]

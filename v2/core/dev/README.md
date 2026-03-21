@@ -12,6 +12,10 @@ Implemented now:
 - `compile-targets`: thin shell wrapper around the compiler entrypoint
 - `plan_session.py`: detect the environment, build a capability-aware session plan, surface resolved typography and display policy, and optionally write a preview bundle
 - `plan-session`: thin shell wrapper around the session planner
+- `list_packs.py`: list built-in local 2.x packs from `v2/packs/`
+- `list-packs`: thin shell wrapper around the local pack listing entrypoint
+- `show_pack.py`: inspect one local pack manifest and its curated profiles
+- `show-pack`: thin shell wrapper around the pack inspection entrypoint
 
 What belongs here:
 
@@ -35,3 +39,4 @@ Current rule:
 
 - these entrypoints are experimental and must not be presented as the real RetroFX user workflow
 - emitted artifacts land under `v2/out/`, which is intentionally separate from 1.x `active/` and `state/`
+- pack-aware resolution is local-only and uses `--pack <pack-id> --profile-id <profile-id>` instead of changing the 1.x CLI path

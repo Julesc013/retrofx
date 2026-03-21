@@ -134,6 +134,7 @@ def normalize_profile(raw_profile: RawProfile) -> NormalizedProfile:
         "source": {
             "profile_path": raw_profile.source_path,
             "profile_dir": raw_profile.source_dir,
+            "origin": raw_profile.origin,
         },
         "identity": identity,
         "color": color,

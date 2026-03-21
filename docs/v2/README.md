@@ -10,7 +10,7 @@ It is the design constitution for future `2.x` work, not a description of curren
 3. [PROFILE_SCHEMA.md](PROFILE_SCHEMA.md), [TOKEN_CATALOG.md](TOKEN_CATALOG.md), and [VALIDATION_RULES.md](VALIDATION_RULES.md) for the 2.x profile language.
 4. [RESOLVED_MODEL.md](RESOLVED_MODEL.md) for the compiler-facing model.
 5. [CAPABILITY_MODEL.md](CAPABILITY_MODEL.md) and [TARGET_MATRIX.md](TARGET_MATRIX.md) for support truth.
-6. [EXAMPLES.md](EXAMPLES.md) and [MIGRATION.md](MIGRATION.md) for authoring and continuity.
+6. [EXAMPLES.md](EXAMPLES.md), [MIGRATION.md](MIGRATION.md), and [PACKS.md](PACKS.md) for authoring, continuity, and local pack structure.
 7. [TERMINOLOGY.md](TERMINOLOGY.md) for precise language.
 8. [ARCHITECTURE.md](ARCHITECTURE.md) and [PRINCIPLES.md](PRINCIPLES.md) for implementation guardrails.
 9. [THEME_SYSTEM.md](THEME_SYSTEM.md), [THEME_TOKENS.md](THEME_TOKENS.md), [TYPOGRAPHY_MODEL.md](TYPOGRAPHY_MODEL.md), [ICON_CURSOR_MODEL.md](ICON_CURSOR_MODEL.md), [STYLE_FAMILIES.md](STYLE_FAMILIES.md), [THEME_COMPILATION.md](THEME_COMPILATION.md), and [RENDER_VS_THEME.md](RENDER_VS_THEME.md) for the theme subsystem.
@@ -29,7 +29,7 @@ It is broader than RetroFX 1.x, but it is still bounded by explicit capability d
 
 ## Current Implementation State
 
-As of TWO-13:
+As of TWO-14:
 
 - `v2/core/` contains an experimental dev-only scaffold for loading, validating, normalizing, and resolving 2.x profiles
 - `v2/tests/` contains isolated 2.x fixtures and tests for that scaffold
@@ -42,5 +42,8 @@ As of TWO-13:
 - `v2/core/dev/plan-session <profile>` detects the environment, builds a preview plan, and can write a non-destructive preview bundle under `v2/out/<profile-id>/plan/`
 - resolved typography defaults, stacks, and session-local font-policy artifacts now exist, but global font orchestration does not
 - resolved display policy is now concrete, planned, and exportable, but live display mutation does not exist
+- `v2/packs/` now contains a real local pack system with `retrofx.pack/v2alpha1` manifests and curated built-in packs
+- `v2/core/dev/list-packs` and `v2/core/dev/show-pack` now inspect those local packs
+- `v2/core/dev/resolve-profile`, `compile-targets`, and `plan-session` can now resolve profiles from local packs via `--pack <pack-id> --profile-id <profile-id>`
 - live apply, install, off, artifact planning, and full session orchestration are still future work
 - the working product line remains 1.x; no default CLI migration has happened

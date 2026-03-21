@@ -1,0 +1,37 @@
+schema = "retrofx.profile/v2alpha1"
+
+[identity]
+id = "vga16-dos"
+name = "VGA16 DOS"
+description = "Curated VGA-like palette profile from the built-in terminal classic pack."
+family = "dos"
+strictness = "strict-authentic"
+tags = ["dos", "vga16", "terminal", "pack"]
+
+[color.semantic]
+bg0 = "#000000"
+fg0 = "#c0c0c0"
+accent_primary = "#55ffff"
+accent_error = "#aa0000"
+accent_success = "#00aa00"
+accent_warn = "#aa5500"
+accent_info = "#0000aa"
+
+[render]
+mode = "palette"
+
+[render.palette]
+kind = "vga16"
+
+[render.effects]
+blur = 1
+dither = "none"
+scanlines = false
+flicker = false
+vignette = false
+hotcore = false
+
+[session]
+targets = ["terminal", "tty", "tui", "x11"]
+apply_mode = "current-session"
+persistence = "ephemeral"

@@ -1,0 +1,40 @@
+schema = "retrofx.profile/v2alpha1"
+
+[identity]
+id = "warm-night"
+name = "Warm Night"
+description = "Curated warm-night readable profile from the built-in modern minimal pack."
+family = "warm-night"
+strictness = "practical-daily-driver"
+tags = ["warm-night", "theme", "pack"]
+
+[color.semantic]
+bg0 = "#16120f"
+fg0 = "#f0e3cf"
+accent_primary = "#d9a066"
+
+[typography]
+terminal_primary = "Berkeley Mono"
+terminal_fallbacks = ["DejaVu Sans Mono", "Noto Color Emoji"]
+ui_sans = "Source Sans 3"
+
+[typography.aa]
+antialias = "on"
+subpixel = "none"
+hinting = "slight"
+
+[chrome]
+bar_style = "minimal"
+launcher_style = "minimal"
+
+[render]
+mode = "passthrough"
+
+[render.display]
+temperature = 4600
+blue_light_reduction = 0.32
+
+[session]
+targets = ["terminal", "gtk", "qt", "wm"]
+apply_mode = "current-session"
+persistence = "ephemeral"

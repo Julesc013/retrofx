@@ -1,0 +1,7 @@
+schema = "retrofx.pack/v2alpha1"
+
+[pack]
+id = "broken-pack"
+name = "Broken Pack"
+family = "broken"
+tags = ["broken", "test"]

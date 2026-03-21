@@ -1,0 +1,4 @@
+title = "CRT Core"
+summary = "Built-in local pack metadata for phosphor-oriented preview tooling."
+accent = "#7dff70"
+recommended_terminal = "Terminus Nerd Font"

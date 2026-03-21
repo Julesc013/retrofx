@@ -3,6 +3,9 @@
 Style families are higher-level appearance identities that sit above raw tokens.
 They are not targets and they are not backend behaviors.
 
+As of TWO-14, style-family identity is now embodied in real local pack manifests under `v2/packs/`.
+The pack system remains local and dev-only, but family metadata is no longer docs-only.
+
 ## Purpose
 
 A style family provides:
@@ -134,8 +137,14 @@ They can provide:
 
 That makes style families especially important for future pack design.
 
+Current implementation truth:
+
+- built-in local packs now exist for `crt-core`, `terminal-classic`, and `modern-minimal`
+- pack manifests now carry family metadata, tags, and curated profile catalogs
+- pack-aware dev commands can resolve profiles from those packs and surface the originating family metadata
+- pack-local recommendations and assets are metadata-only at this stage; they do not apply anything by themselves
+
 ## Relation To 1.x
 
 1.x core packs already hinted at family identity through pack names and profile tags.
 2.x formalizes that layer so packs can influence defaults cleanly without coupling aesthetic identity to implementation branches.
-

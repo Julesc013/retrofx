@@ -16,6 +16,12 @@ Current implementation truth as of TWO-13:
 - advisory display-policy artifacts now exist for the early X11/render-adjacent family
 - live display mutation and full render-target consumption are still future work
 
+Current implementation truth as of TWO-14:
+
+- profile documents can now be resolved either as standalone TOML files or via local `retrofx.pack/v2alpha1` manifests under `v2/packs/`
+- pack metadata is external profile origin data; it is not authored inline in the profile schema itself
+- pack-aware dev resolution, compile, and planning commands now surface pack origin and family metadata alongside the resolved profile
+
 ## Design Laws
 
 - Users author semantic intent, not backend-specific implementation whenever possible.
@@ -32,6 +38,7 @@ RetroFX 2.x distinguishes four layers:
 
 The authored TOML file.
 It may omit optional values, rely on defaults, and declare intent in target classes such as `terminal` or `wm` rather than concrete backend syntax.
+It may live as a standalone file or as a pack-local file referenced by a pack manifest.
 
 ### Layer B: Normalized Profile
 
@@ -112,6 +119,9 @@ persistence = "ephemeral"
 | `[chrome]` | UI and chrome-level theme hints. |
 | `[session]` | Target classes and lifecycle policy. |
 | `[compose]` | Reserved future composition hooks. Not baseline-authorable in the first implementation phase. |
+
+Pack metadata is intentionally not a top-level authored profile section.
+In 2.x, packs are separate local manifests that group and label authored profiles without changing the authored profile schema.
 
 ## Identity And Metadata
 

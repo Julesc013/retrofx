@@ -1,7 +1,7 @@
 # RetroFX 2.x Profile Examples
 
-These examples are documentation-only schema examples.
-They are not wired into the current implementation.
+These examples are documentation-first schema examples.
+As of TWO-14, several of the same ideas now also exist as real local curated pack profiles under `v2/packs/`, but this document still describes the semantic examples rather than the pack manifest format.
 
 ## 1. Strict Green CRT
 
@@ -322,4 +322,3 @@ Conceptual compile result:
 
 - RetroFX would emit terminal, toolkit, icon, and cursor-related exports.
 - No live apply plan would be claimed unless a later explicit workflow selects one.
-

@@ -1,0 +1,41 @@
+schema = "retrofx.pack/v2alpha1"
+
+[pack]
+id = "terminal-classic"
+name = "Terminal Classic"
+description = "Curated workstation, DOS, and VT-like profiles for terminal-first environments."
+family = "workstation-classic"
+tags = ["terminal", "workstation", "dos", "classic"]
+author = "RetroFX"
+source = "builtin-local"
+
+[assets]
+preview = "assets/preview.toml"
+
+[recommendations.typography]
+terminal_primary = "IBM Plex Mono"
+ui_sans = "IBM Plex Sans"
+
+[[profiles]]
+id = "vga16-dos"
+file = "profiles/vga16-dos.toml"
+name = "VGA16 DOS"
+description = "Classic 16-color DOS-like palette with minimal modern concessions."
+family = "dos"
+tags = ["vga16", "dos", "palette"]
+
+[[profiles]]
+id = "workstation-gray"
+file = "profiles/workstation-gray.toml"
+name = "Workstation Gray"
+description = "Conservative gray workstation palette for daily terminal use."
+family = "terminal"
+tags = ["gray", "workstation", "terminal"]
+
+[[profiles]]
+id = "vt-minimal"
+file = "profiles/vt-minimal.toml"
+name = "VT Minimal"
+description = "Low-chrome terminal-first profile with restrained accents."
+family = "terminal"
+tags = ["vt", "minimal", "terminal"]

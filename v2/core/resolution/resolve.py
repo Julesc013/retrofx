@@ -17,6 +17,7 @@ def build_resolved_profile(normalized_profile: NormalizedProfile, warnings: list
     resolved = {
         "schema": data["schema"],
         "source": data["source"],
+        "pack": data["source"]["origin"].get("pack") if data["source"]["origin"].get("type") == "pack" else None,
         "implementation": {
             "status": "experimental-dev-only",
             "capability_filtering": "not-implemented",
@@ -76,4 +77,3 @@ def build_resolved_profile(normalized_profile: NormalizedProfile, warnings: list
         },
     }
     return ResolvedProfile(data=resolved)
-

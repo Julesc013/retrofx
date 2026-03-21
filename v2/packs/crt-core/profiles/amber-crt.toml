@@ -1,0 +1,45 @@
+schema = "retrofx.profile/v2alpha1"
+
+[identity]
+id = "amber-crt"
+name = "Amber CRT"
+description = "Warm amber phosphor profile with restrained blur and late-night display bias."
+family = "crt"
+strictness = "modernized-retro"
+tags = ["crt", "amber", "retro", "pack"]
+
+[color.semantic]
+bg0 = "#120b04"
+fg0 = "#ffcf82"
+accent_primary = "#ffb347"
+accent_warn = "#ffc56b"
+glow_tint = "#ffb347"
+cursor = "#ffe0a8"
+
+[typography]
+terminal_primary = "Terminus Nerd Font"
+terminal_fallbacks = ["DejaVu Sans Mono", "Noto Color Emoji"]
+ui_sans = "IBM Plex Sans"
+
+[render]
+mode = "monochrome"
+
+[render.quantization]
+bands = 6
+
+[render.effects]
+blur = 2
+dither = "ordered"
+scanlines = false
+vignette = true
+hotcore = true
+
+[render.display]
+temperature = 4300
+contrast = 1.05
+blue_light_reduction = 0.2
+
+[session]
+targets = ["x11", "terminal", "wm"]
+apply_mode = "current-session"
+persistence = "ephemeral"

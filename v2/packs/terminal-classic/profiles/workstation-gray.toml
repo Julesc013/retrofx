@@ -1,0 +1,38 @@
+schema = "retrofx.profile/v2alpha1"
+
+[identity]
+id = "workstation-gray"
+name = "Workstation Gray"
+description = "Practical gray workstation style for terminal, WM, and font-policy exports."
+family = "terminal"
+strictness = "practical-daily-driver"
+tags = ["gray", "workstation", "terminal", "pack"]
+
+[color.semantic]
+bg0 = "#14181c"
+fg0 = "#dde4ea"
+accent_primary = "#9fb3c4"
+accent_muted = "#6b7a86"
+border_active = "#8797a6"
+
+[typography]
+terminal_primary = "IBM Plex Mono"
+ui_sans = "IBM Plex Sans"
+ui_mono = "IBM Plex Mono"
+
+[typography.aa]
+antialias = "on"
+subpixel = "rgb"
+hinting = "slight"
+
+[render]
+mode = "passthrough"
+
+[chrome]
+bar_style = "boxed"
+launcher_style = "minimal"
+
+[session]
+targets = ["terminal", "wm", "gtk", "qt"]
+apply_mode = "export-only"
+persistence = "export-only"

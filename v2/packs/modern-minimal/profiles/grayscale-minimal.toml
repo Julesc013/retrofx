@@ -1,0 +1,39 @@
+schema = "retrofx.profile/v2alpha1"
+
+[identity]
+id = "grayscale-minimal"
+name = "Grayscale Minimal"
+description = "Curated grayscale minimal profile for low-distraction terminals and WM styling."
+family = "modern-minimal"
+strictness = "practical-daily-driver"
+tags = ["minimal", "grayscale", "pack"]
+
+[color.semantic]
+bg0 = "#121212"
+bg1 = "#1c1c1c"
+bg2 = "#2a2a2a"
+fg0 = "#efefef"
+fg1 = "#c7c7c7"
+fg2 = "#8f8f8f"
+accent_primary = "#d0d0d0"
+accent_muted = "#6d6d6d"
+
+[typography]
+terminal_primary = "JetBrains Mono"
+ui_sans = "Inter"
+ui_mono = "JetBrains Mono"
+emoji_policy = "color"
+
+[render]
+mode = "passthrough"
+
+[chrome]
+gaps = 10
+bar_style = "minimal"
+launcher_style = "minimal"
+notification_style = "minimal"
+
+[session]
+targets = ["terminal", "gtk", "qt", "wm", "launcher", "notifications"]
+apply_mode = "installed-default"
+persistence = "installed"

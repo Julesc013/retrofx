@@ -1,0 +1,42 @@
+schema = "retrofx.profile/v2alpha1"
+
+[identity]
+id = "green-crt"
+name = "Green CRT"
+description = "Curated phosphor-green CRT baseline from the built-in CRT core pack."
+family = "crt"
+strictness = "strict-authentic"
+tags = ["crt", "green", "retro", "pack"]
+
+[color.semantic]
+bg0 = "#061008"
+fg0 = "#92ff84"
+accent_primary = "#7dff70"
+glow_tint = "#7dff70"
+cursor = "#b7ffac"
+
+[typography]
+terminal_primary = "Terminus Nerd Font"
+terminal_fallbacks = ["DejaVu Sans Mono", "Noto Color Emoji"]
+ui_sans = "IBM Plex Sans"
+
+[render]
+mode = "monochrome"
+
+[render.quantization]
+bands = 4
+
+[render.effects]
+blur = 3
+dither = "ordered"
+scanlines = true
+vignette = true
+
+[render.display]
+gamma = 1.04
+contrast = 1.08
+
+[session]
+targets = ["x11", "terminal", "wm"]
+apply_mode = "current-session"
+persistence = "ephemeral"

@@ -16,7 +16,7 @@ class ProfileLoadError(Exception):
         self.issue = issue
 
 
-def load_profile_document(path: str | Path) -> RawProfile:
+def load_profile_document(path: str | Path, *, origin: dict[str, object] | None = None) -> RawProfile:
     candidate = Path(path).expanduser()
     if not candidate.is_file():
         raise ProfileLoadError(
@@ -55,6 +55,21 @@ def load_profile_document(path: str | Path) -> RawProfile:
     return RawProfile(
         source_path=str(resolved_path),
         source_dir=str(resolved_path.parent),
+        origin=_normalize_origin(origin, resolved_path),
         data=data,
     )
 
+
+def _normalize_origin(origin: dict[str, object] | None, resolved_path: Path) -> dict[str, object]:
+    if origin is None:
+        return {
+            "type": "standalone",
+            "profile_path": str(resolved_path),
+            "profile_dir": str(resolved_path.parent),
+        }
+
+    normalized = dict(origin)
+    normalized.setdefault("type", "standalone")
+    normalized.setdefault("profile_path", str(resolved_path))
+    normalized.setdefault("profile_dir", str(resolved_path.parent))
+    return normalized

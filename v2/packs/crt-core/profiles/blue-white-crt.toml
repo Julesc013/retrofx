@@ -1,0 +1,44 @@
+schema = "retrofx.profile/v2alpha1"
+
+[identity]
+id = "blue-white-crt"
+name = "Blue White CRT"
+description = "Cool phosphor variant for crisp monochrome terminals and WM snippets."
+family = "crt"
+strictness = "modernized-retro"
+tags = ["crt", "blue", "cool", "pack"]
+
+[color.semantic]
+bg0 = "#081018"
+fg0 = "#dff3ff"
+accent_primary = "#8bc5ff"
+accent_info = "#90d6ff"
+glow_tint = "#8bc5ff"
+cursor = "#f5fbff"
+
+[typography]
+terminal_primary = "Iosevka Term"
+terminal_fallbacks = ["DejaVu Sans Mono", "Noto Color Emoji"]
+ui_sans = "IBM Plex Sans"
+
+[render]
+mode = "monochrome"
+
+[render.quantization]
+bands = 5
+
+[render.effects]
+blur = 2
+dither = "ordered"
+scanlines = true
+vignette = false
+
+[render.display]
+gamma = 1.02
+contrast = 1.06
+tint_bias = "#9fd4ff"
+
+[session]
+targets = ["x11", "terminal", "wm"]
+apply_mode = "current-session"
+persistence = "ephemeral"

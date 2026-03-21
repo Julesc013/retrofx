@@ -8,7 +8,7 @@ import json
 from pathlib import Path
 from typing import Any, Mapping
 
-from v2.core.pipeline import run_profile_pipeline
+from v2.core.dev.profile_input import add_profile_selection_args, run_selected_profile_pipeline
 from v2.session import build_session_plan, detect_environment
 from v2.targets import list_target_families, list_targets
 
@@ -16,7 +16,7 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_OUT_ROOT = REPO_ROOT / "v2" / "out"
 IMPLEMENTATION_INFO = {
     "status": "experimental-dev-only",
-    "prompt": "TWO-13",
+    "prompt": "TWO-14",
     "surface": "session-planning-preview",
     "implemented_targets": list_targets(),
     "families": list_target_families(),
@@ -32,15 +32,21 @@ IMPLEMENTATION_INFO = {
 
 
 def plan_profile_session(
-    profile_path: str | Path,
+    profile_path: str | Path | None = None,
     *,
+    pack_id: str | None = None,
+    pack_profile_id: str | None = None,
     env: Mapping[str, str] | None = None,
     cwd: str | Path | None = None,
     stdin_isatty: bool | None = None,
     out_root: str | Path | None = None,
     write_preview: bool = False,
 ) -> dict[str, Any]:
-    pipeline_result = run_profile_pipeline(profile_path)
+    pipeline_result = run_selected_profile_pipeline(
+        profile=str(profile_path) if profile_path is not None else None,
+        pack_id=pack_id,
+        pack_profile_id=pack_profile_id,
+    )
     chosen_out_root = Path(out_root) if out_root is not None else DEFAULT_OUT_ROOT
 
     if not pipeline_result.ok:
@@ -80,6 +86,8 @@ def plan_profile_session(
         "profile": {
             "id": resolved_profile["identity"]["id"],
             "name": resolved_profile["identity"]["name"],
+            "origin": resolved_profile["source"]["origin"],
+            "pack": resolved_profile.get("pack"),
             "requested_targets": plan["requested_targets"],
             "apply_mode": plan["session_policy"]["apply_mode"],
             "persistence": plan["session_policy"]["persistence"],
@@ -97,7 +105,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Plan an experimental RetroFX 2.x session preview from a 2.x profile without mutating the live session.",
     )
-    parser.add_argument("profile", help="Path to a RetroFX 2.x TOML profile.")
+    add_profile_selection_args(parser)
     parser.add_argument(
         "--out-root",
         default=str(DEFAULT_OUT_ROOT),
@@ -112,6 +120,8 @@ def main(argv: list[str] | None = None) -> int:
 
     payload = plan_profile_session(
         args.profile,
+        pack_id=args.pack_id,
+        pack_profile_id=args.pack_profile_id,
         out_root=args.out_root,
         write_preview=args.write_preview,
     )
@@ -134,6 +144,8 @@ def _write_preview_bundle(
         "profile": {
             "id": resolved_profile["identity"]["id"],
             "name": resolved_profile["identity"]["name"],
+            "origin": resolved_profile["source"]["origin"],
+            "pack": resolved_profile.get("pack"),
             "typography": resolved_profile["semantics"]["typography"],
             "display_policy": resolved_profile["semantics"]["render"]["display"],
         },
@@ -168,6 +180,7 @@ def _render_summary_text(payload: Mapping[str, Any]) -> str:
         "RetroFX 2.x Session Plan Preview",
         f"profile.id: {payload['profile']['id']}",
         f"profile.name: {payload['profile']['name']}",
+        f"profile.origin: {payload['profile']['origin']['type']}",
         f"session_type: {environment['session_type']}",
         f"wm_or_de: {environment['wm_or_de']}",
         f"requested_targets: {', '.join(plan['requested_targets']) or '(none)'}",
@@ -195,6 +208,15 @@ def _render_summary_text(payload: Mapping[str, Any]) -> str:
         f"degraded_targets: {', '.join(plan['degraded_targets']) or '(none)'}",
         "",
     ]
+    if payload["profile"]["pack"] is not None:
+        lines.extend(
+            [
+                f"pack.id: {payload['profile']['pack']['id']}",
+                f"pack.name: {payload['profile']['pack']['name']}",
+                f"pack.family: {payload['profile']['pack']['family'] or '(none)'}",
+                "",
+            ]
+        )
     if plan["skipped_targets"]:
         lines.append("skipped_targets:")
         for entry in plan["skipped_targets"]:

@@ -1,0 +1,41 @@
+schema = "retrofx.pack/v2alpha1"
+
+[pack]
+id = "modern-minimal"
+name = "Modern Minimal"
+description = "Curated grayscale, warm-night, and practical daily-driver profiles for modern desktops."
+family = "modern-minimal"
+tags = ["minimal", "modern", "daily-driver", "theme"]
+author = "RetroFX"
+source = "builtin-local"
+
+[assets]
+preview = "assets/preview.toml"
+
+[recommendations.typography]
+terminal_primary = "JetBrains Mono"
+ui_sans = "Inter"
+
+[[profiles]]
+id = "grayscale-minimal"
+file = "profiles/grayscale-minimal.toml"
+name = "Grayscale Minimal"
+description = "Low-distraction grayscale profile with clean typography."
+family = "modern-minimal"
+tags = ["grayscale", "minimal", "daily-driver"]
+
+[[profiles]]
+id = "warm-night"
+file = "profiles/warm-night.toml"
+name = "Warm Night"
+description = "Warm late-night readable profile with soft contrast."
+family = "warm-night"
+tags = ["warm-night", "readable", "night"]
+
+[[profiles]]
+id = "daily-driver"
+file = "profiles/daily-driver.toml"
+name = "Daily Driver"
+description = "Balanced modern profile for terminals, WM exports, and typography-policy outputs."
+family = "modern-minimal"
+tags = ["daily-driver", "modern", "balanced"]
