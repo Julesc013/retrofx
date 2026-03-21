@@ -140,6 +140,14 @@ Expected artifacts:
 | Toolkit/Desktop export | yes | yes | rarely truthful in early 2.x | limited | limited |
 | Session/helper | yes | limited | limited | yes | yes |
 
+## Current Early-Implementation Truth
+
+As of TWO-10:
+
+- `v2/core/dev/compile-targets` runs only in explicit dev export mode
+- implemented terminal/TUI and WM targets emit artifacts under `v2/out/<profile-id>/...`
+- no implemented target currently performs live apply, install, reload, or session-default actions
+
 ## How This Differs From Session Orchestration
 
 These modes describe what the target layer is allowed to do.
@@ -163,4 +171,3 @@ In short:
 - install assets
 
 2.x formalizes that distinction so every target family follows the same rule instead of inheriting it informally from CLI paths.
-

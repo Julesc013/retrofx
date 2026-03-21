@@ -1,0 +1,25 @@
+schema = "retrofx.profile/v2alpha1"
+
+[identity]
+id = "modern-minimal-wm"
+name = "Modern Minimal WM"
+family = "modern-minimal"
+strictness = "practical-daily-driver"
+
+[color.semantic]
+bg0 = "#111417"
+fg0 = "#e7ebef"
+accent_primary = "#8ca4ff"
+
+[typography]
+terminal_primary = "JetBrains Mono"
+ui_sans = "IBM Plex Sans"
+ui_mono = "JetBrains Mono"
+
+[chrome]
+bar_style = "minimal"
+
+[session]
+targets = ["wm", "wayland"]
+apply_mode = "export-only"
+persistence = "export-only"

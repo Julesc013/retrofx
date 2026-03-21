@@ -8,7 +8,9 @@ Purpose:
 Implemented now:
 
 - the first real terminal/TUI compiler family under `terminal/`
+- the first real WM/compiler family under `wm/`
 - a lightweight shared adapter interface under `interfaces/`
+- a shared target registry that dispatches implemented families from the resolved profile
 
 Do implement here later:
 
@@ -47,5 +49,5 @@ Core rule:
 
 Current implementation note:
 
-- TWO-09 compilers consume the resolved profile only
+- TWO-09 and TWO-10 compilers consume the resolved profile only
 - capability-filtered target plans and artifact-plan inputs remain future work, so current compilers run only in explicit dev export mode

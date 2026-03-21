@@ -3,6 +3,17 @@
 Window manager targets occupy the space between pure theme export and full session orchestration.
 They are intentionally treated as their own family.
 
+## Current Implementation Status
+
+As of TWO-10:
+
+- `v2/targets/wm/i3.py` emits deterministic i3 config fragments
+- `v2/targets/wm/sway.py` emits deterministic sway config fragments
+- `v2/targets/wm/waybar.py` emits deterministic waybar-style CSS fragments
+- outputs land under `v2/out/<profile-id>/<target>/`
+- all current WM targets are export-only dev outputs
+- no live reload, install ownership, or session orchestration exists yet
+
 ## Family Scope
 
 The WM family includes:
@@ -37,6 +48,10 @@ Mode:
 - install-capable
 - apply-now only when a future session plan explicitly owns i3 reload behavior
 
+Implemented now:
+
+- TWO-10 emits an include-oriented fragment at `v2/out/<profile-id>/i3/retrofx-theme.conf`
+
 Limitations:
 
 - does not itself decide X11 render behavior
@@ -65,6 +80,10 @@ Mode:
 - export-capable
 - install-capable
 - apply-now only when a future scoped sway integration path exists
+
+Implemented now:
+
+- TWO-10 emits an include-oriented fragment at `v2/out/<profile-id>/sway/retrofx-theme.conf`
 
 Key limitation:
 
@@ -119,6 +138,10 @@ Mode:
 - export-capable
 - install-capable
 
+Implemented now:
+
+- TWO-10 emits a styling-only artifact at `v2/out/<profile-id>/waybar/style.css`
+
 Limitations:
 
 - no render semantics
@@ -169,4 +192,3 @@ Common downgrade pattern:
 
 1.x focused on i3 wrapper flows and manual integration elsewhere.
 2.x keeps i3 and sway important, but reframes them as target compilers plus separate session orchestration instead of one combined shell path.
-

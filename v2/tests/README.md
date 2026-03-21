@@ -9,6 +9,7 @@ Implemented now:
 - TOML fixtures for valid and invalid 2.x profiles
 - isolated unit tests for load, validate, normalize, and resolve behavior
 - end-to-end tests for the terminal/TUI compiler family
+- end-to-end tests for the WM target compiler family
 - a small shell runner for 2.x-only tests
 
 Do implement here later:

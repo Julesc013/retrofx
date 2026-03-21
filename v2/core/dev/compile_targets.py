@@ -8,22 +8,23 @@ from pathlib import Path
 from typing import Any
 
 from v2.core.pipeline import run_profile_pipeline
-from v2.targets.terminal import compile_resolved_profile_targets, list_terminal_targets
+from v2.targets import compile_resolved_profile_targets, list_target_families, list_targets
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_OUT_ROOT = REPO_ROOT / "v2" / "out"
 IMPLEMENTATION_INFO = {
     "status": "experimental-dev-only",
-    "prompt": "TWO-09",
-    "family": "terminal-tui",
-    "implemented_targets": list_terminal_targets(),
+    "prompt": "TWO-10",
+    "families": list_target_families(),
+    "implemented_targets": list_targets(),
     "mode": "export-only-dev",
     "not_implemented": [
         "capability-filtered target planning",
         "artifact planning",
         "session orchestration",
         "apply/install/off behavior",
-        "non-terminal target families",
+        "live WM reload or session integration",
+        "non-terminal/non-WM target families",
     ],
 }
 
@@ -68,7 +69,7 @@ def compile_profile_to_output(
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Compile experimental RetroFX 2.x terminal/TUI target artifacts from a 2.x profile.",
+        description="Compile experimental RetroFX 2.x terminal/TUI and WM target artifacts from a 2.x profile.",
     )
     parser.add_argument("profile", help="Path to a RetroFX 2.x TOML profile.")
     parser.add_argument(
@@ -85,12 +86,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--list-targets",
         action="store_true",
-        help="Print the implemented terminal/TUI targets and exit.",
+        help="Print the implemented dev-only 2.x targets and exit.",
     )
     args = parser.parse_args(argv)
 
     if args.list_targets:
-        print(json.dumps({"targets": list_terminal_targets()}, indent=2))
+        print(json.dumps({"targets": list_targets(), "families": list_target_families()}, indent=2))
         return 0
 
     try:

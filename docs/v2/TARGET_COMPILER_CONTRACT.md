@@ -11,12 +11,12 @@ If a compiler reads raw authored profile text, it is bypassing the 2.x engine.
 
 ## Current Implementation Status
 
-TWO-09 implements the first narrow subset of this contract under `v2/targets/terminal/`.
+TWO-09 and TWO-10 implement the first narrow subset of this contract under `v2/targets/terminal/` and `v2/targets/wm/`.
 
 Current truth:
 
 - implemented compilers consume the resolved profile only
-- they emit deterministic terminal or TUI artifacts into an explicit dev output root
+- they emit deterministic terminal, TUI, and WM theme/config artifacts into an explicit dev output root
 - they run only in explicit dev export mode
 
 Still not implemented:

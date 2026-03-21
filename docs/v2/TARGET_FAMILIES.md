@@ -141,11 +141,21 @@ What it compiles:
 - WM-specific config fragments
 - bar, launcher, and notification-adjacent outputs where the WM family owns them
 
+Current implementation status:
+
+- as of TWO-10 this is the second real implemented 2.x target family
+- implemented dev-only compilers currently cover `i3`, `sway`, and `waybar`
+- outputs are written under `v2/out/<profile-id>/<target>/`
+
 Typical mode:
 
 - export-capable
 - sometimes install-capable
 - sometimes apply-capable with scoped session reload behavior
+
+Current TWO-10 mode:
+
+- export-only dev compilation
 
 Typical artifacts:
 
@@ -162,6 +172,7 @@ Typical capability class:
 Common limitations:
 
 - Wayland WMs may expose theme/config targets without exposing global render transforms
+- current implementation does not include live reload, install ownership, or session orchestration
 
 ## 6. Toolkit/Desktop Export Family
 

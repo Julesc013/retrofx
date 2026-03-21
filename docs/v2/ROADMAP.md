@@ -5,10 +5,11 @@ Each phase should narrow uncertainty before more implementation surface is added
 
 ## Current Progress
 
-Status after TWO-09:
+Status after TWO-10:
 
 - 2.0-C has an experimental implementation foothold for load, validate, normalize, and resolve in `v2/core/`
 - 2.0-D has started with the first terminal/TUI compiler family under `v2/targets/terminal/`
+- 2.0-D now also has the first WM theme/config compiler family under `v2/targets/wm/`
 - session orchestration and broader target families remain future phases
 
 ## 2.0-A Product And Spec Design
@@ -83,8 +84,9 @@ Explicitly does not do:
 
 Current implementation note:
 
-- TWO-09 starts this phase narrowly with export-oriented terminal/TUI compilers only
-- X11, WM, TTY, and `tuigreet` implementations are still future work
+- TWO-09 starts this phase narrowly with export-oriented terminal/TUI compilers
+- TWO-10 extends that same export-oriented slice into WM theme/config compilers for `i3`, `sway`, and `waybar`
+- X11, TTY, `tuigreet`, install/apply, and session orchestration are still future work
 
 ## 2.0-E Session Orchestration Layer
 

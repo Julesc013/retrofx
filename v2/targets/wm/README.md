@@ -2,7 +2,14 @@
 
 Purpose:
 
-- future home of WM and adjacent UI target adapters
+- home of WM and adjacent UI target adapters for the experimental 2.x scaffold
+
+Implemented now:
+
+- `i3`: config-fragment compiler
+- `sway`: config-fragment compiler
+- `waybar`: stylesheet compiler
+- shared WM theme-context helpers under `common.py`
 
 What belongs here:
 
@@ -25,5 +32,10 @@ Governing docs:
 
 Later prompts should implement:
 
-- WM-facing config emitters that keep theme/config output separate from session and render ownership
+- additional WM-facing config emitters that keep theme/config output separate from session and render ownership
+- optional launcher-adjacent targets such as `rofi` or `wofi`
 
+Current rule:
+
+- TWO-10 WM compilers emit deterministic export-only dev artifacts under `v2/out/<profile-id>/...`
+- they do not apply, reload, install, or own session lifecycle behavior

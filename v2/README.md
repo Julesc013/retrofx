@@ -8,11 +8,12 @@ This tree exists so later prompts implement 2.x in the right places instead of e
 
 ## Current State
 
-As of TWO-08:
+As of TWO-10:
 
 - `v2/core/` contains an experimental stdlib-only Python scaffold for loading, validating, normalizing, and resolving 2.x profile documents
 - `v2/tests/` contains isolated fixtures and tests for that scaffold
-- `v2/targets/terminal/` now contains the first real 2.x compiler family for terminal/TUI exports
+- `v2/targets/terminal/` contains the first real 2.x compiler family for terminal/TUI exports
+- `v2/targets/wm/` now contains the second real 2.x compiler family for WM/theme-adjacent exports: `i3`, `sway`, and `waybar`
 - `v2/core/dev/compile-targets` writes deterministic dev-only artifacts under `v2/out/<profile-id>/`
 - session orchestration and production command delegation still do not exist
 
