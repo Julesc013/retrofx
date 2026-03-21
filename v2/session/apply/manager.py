@@ -43,6 +43,11 @@ APPLY_IMPLEMENTATION_INFO = {
     ],
 }
 
+MANAGED_CLEANUP_LAYOUT_KEYS = (
+    "active_root",
+    "preview_artifacts_root",
+)
+
 
 def apply_dev_profile(
     profile_path: str | Path | None = None,
@@ -137,8 +142,6 @@ def apply_dev_profile(
         pending_root.parent.mkdir(parents=True, exist_ok=True)
     shutil.copytree(installed_bundle_dir, pending_root)
 
-    env_fragment = _write_session_env_fragment(pending_root, resolved_profile, plan)
-
     probe_payload = None
     live_applied_targets: list[str] = []
     warnings = _dedupe([warning["message"] for warning in [item.to_dict() for item in pipeline_result.warnings]])
@@ -181,12 +184,22 @@ def apply_dev_profile(
 
     previous_state = load_current_state(layout)
     previous_manifest = None
+    replaced_cleanup_removed_paths: list[str] = []
+    skipped_previous_cleanup_paths: list[str] = []
     if previous_state is not None:
         previous_manifest_path = previous_state.get("manifest", {}).get("manifest_path")
         if previous_manifest_path and Path(str(previous_manifest_path)).is_file():
             previous_manifest = json.loads(Path(str(previous_manifest_path)).read_text(encoding="utf-8"))
             write_last_good_manifest(layout, previous_manifest)
         write_last_good_state(layout, previous_state)
+        replaced_cleanup_removed_paths, skipped_previous_cleanup_paths = _remove_managed_cleanup_paths(
+            previous_state.get("cleanup", {}).get("data_paths", []),
+            layout=layout,
+        )
+        if skipped_previous_cleanup_paths:
+            warnings.append(
+                "Skipped one or more cleanup paths from the previous 2.x activation because they were outside the managed 2.x roots."
+            )
 
     if current_root.exists():
         shutil.rmtree(current_root)
@@ -194,8 +207,23 @@ def apply_dev_profile(
     pending_root.rename(current_root)
 
     activated_targets = list(compile_targets)
-    export_only_targets = [target for target in plan["export_only_targets"] if target in activated_targets]
+    export_only_targets = [
+        target
+        for target in plan["export_only_targets"]
+        if target in activated_targets and target not in live_applied_targets
+    ]
     degraded_targets = [target for target in plan["degraded_targets"] if target in activated_targets]
+    env_fragment = _write_session_env_fragment(
+        pending_root,
+        resolved_profile,
+        compile_targets=compile_targets,
+        export_only_targets=export_only_targets,
+        degraded_targets=degraded_targets,
+        live_applied_targets=live_applied_targets,
+        toolkit_status=plan["toolkit_style"]["overall_status"],
+        x11_render_status=plan["x11_render"]["overall_status"],
+    )
+    combined_warnings = _dedupe(warnings)
     activation_manifest = _build_activation_manifest(
         activation_id=activation_id,
         activation_time=activation_time,
@@ -215,7 +243,7 @@ def apply_dev_profile(
         preview_payload=probe_payload,
         preview_owned_paths=preview_owned_paths,
         previous_state=previous_state,
-        warnings=_dedupe(warnings),
+        warnings=combined_warnings,
     )
     manifest_path = write_activation_manifest(layout, activation_manifest)
     current_state = _build_current_state(activation_manifest, manifest_path, layout)
@@ -242,7 +270,6 @@ def apply_dev_profile(
         "stage": "apply",
         "implementation": APPLY_IMPLEMENTATION_INFO,
         "source": pipeline_result.source,
-        "warnings": [warning.to_dict() for warning in pipeline_result.warnings],
         "errors": [],
         "profile": {
             "id": profile_id,
@@ -269,9 +296,12 @@ def apply_dev_profile(
             "live_applied_targets": live_applied_targets,
             "export_only_targets": export_only_targets,
             "degraded_targets": degraded_targets,
+            "replaced_cleanup_removed_paths": replaced_cleanup_removed_paths,
+            "skipped_previous_cleanup_paths": skipped_previous_cleanup_paths,
             "preview_probe": probe_payload.get("preview") if probe_payload else None,
             "log_path": str(log_path),
         },
+        "warnings": combined_warnings,
         "note": "This is a bounded experimental 2.x apply flow. It stages a 2.x-owned active bundle and optionally runs the explicit X11 live probe, but it does not replace 1.x.",
     }
 
@@ -292,19 +322,17 @@ def off_dev_profile(*, env: Mapping[str, str] | None = None, now: str | None = N
         }
 
     removed_paths: list[str] = []
+    skipped_cleanup_paths: list[str] = []
     current_root = Path(str(layout["active_current_root"]))
     if current_root.exists():
         shutil.rmtree(current_root)
         removed_paths.append(str(current_root))
 
-    for owned_path in current_state.get("cleanup", {}).get("data_paths", []):
-        path = Path(str(owned_path))
-        if path.exists():
-            if path.is_dir():
-                shutil.rmtree(path)
-            else:
-                path.unlink()
-            removed_paths.append(str(path))
+    removed_cleanup_paths, skipped_cleanup_paths = _remove_managed_cleanup_paths(
+        current_state.get("cleanup", {}).get("data_paths", []),
+        layout=layout,
+    )
+    removed_paths.extend(removed_cleanup_paths)
 
     current_state_path = Path(str(layout["current_state_path"]))
     if current_state_path.exists():
@@ -332,6 +360,7 @@ def off_dev_profile(*, env: Mapping[str, str] | None = None, now: str | None = N
         "active": False,
         "deactivated_profile": current_state.get("profile"),
         "removed_paths": _dedupe(removed_paths),
+        "skipped_cleanup_paths": skipped_cleanup_paths,
         "preserved_paths": [
             str(Path(str(layout["bundle_store_root"]))),
             str(Path(str(layout["installations_root"]))),
@@ -339,7 +368,11 @@ def off_dev_profile(*, env: Mapping[str, str] | None = None, now: str | None = N
             str(Path(str(layout["manifests_root"]))),
         ],
         "log_path": str(log_path),
-        "note": "Only 2.x-owned active state was cleared. Installed bundles and 1.x paths were preserved.",
+        "note": (
+            "Only 2.x-owned active state was cleared. Installed bundles and 1.x paths were preserved."
+            if not skipped_cleanup_paths
+            else "Only 2.x-owned active state was cleared. One or more recorded cleanup paths were skipped because they were outside the managed 2.x roots."
+        ),
     }
 
 
@@ -380,7 +413,13 @@ def describe_current_activation(
 def _write_session_env_fragment(
     active_root: Path,
     resolved_profile: Mapping[str, Any],
-    plan: Mapping[str, Any],
+    *,
+    compile_targets: list[str],
+    export_only_targets: list[str],
+    degraded_targets: list[str],
+    live_applied_targets: list[str],
+    toolkit_status: str,
+    x11_render_status: str,
 ) -> Path:
     session_root = active_root / "session"
     session_root.mkdir(parents=True, exist_ok=True)
@@ -392,14 +431,15 @@ def _write_session_env_fragment(
         f"RETROFX_V2_PROFILE_NAME={resolved_profile['identity']['name']}",
         f"RETROFX_V2_ACTIVE_ROOT={active_root}",
         f"RETROFX_V2_APPLY_MODE={resolved_profile['semantics']['session']['apply_mode']}",
-        f"RETROFX_V2_COMPILE_TARGETS={','.join(plan['compile_targets'])}",
-        f"RETROFX_V2_EXPORT_ONLY_TARGETS={','.join(plan['export_only_targets'])}",
-        f"RETROFX_V2_DEGRADED_TARGETS={','.join(plan['degraded_targets'])}",
-        f"RETROFX_V2_TOOLKIT_STATUS={plan['toolkit_style']['overall_status']}",
-        f"RETROFX_V2_X11_RENDER_STATUS={plan['x11_render']['overall_status']}",
+        f"RETROFX_V2_COMPILE_TARGETS={','.join(compile_targets)}",
+        f"RETROFX_V2_EXPORT_ONLY_TARGETS={','.join(export_only_targets)}",
+        f"RETROFX_V2_DEGRADED_TARGETS={','.join(degraded_targets)}",
+        f"RETROFX_V2_LIVE_APPLIED_TARGETS={','.join(live_applied_targets)}",
+        f"RETROFX_V2_TOOLKIT_STATUS={toolkit_status}",
+        f"RETROFX_V2_X11_RENDER_STATUS={x11_render_status}",
         "",
     ]
-    for target_name in sorted(plan["compile_targets"]):
+    for target_name in sorted(compile_targets):
         env_key = "RETROFX_V2_TARGET_" + target_name.upper().replace("-", "_")
         lines.append(f"{env_key}={active_root / 'targets' / target_name}")
     lines.append("")
@@ -538,3 +578,43 @@ def _dedupe(values: list[str]) -> list[str]:
             seen.add(value)
             result.append(value)
     return result
+
+
+def _remove_managed_cleanup_paths(
+    recorded_paths: list[str],
+    *,
+    layout: Mapping[str, Any],
+) -> tuple[list[str], list[str]]:
+    allowed_roots = [Path(str(layout[key])).resolve() for key in MANAGED_CLEANUP_LAYOUT_KEYS]
+    removed_paths: list[str] = []
+    skipped_paths: list[str] = []
+
+    for recorded_path in recorded_paths:
+        path = Path(str(recorded_path)).expanduser()
+        if not _is_within_allowed_roots(path, allowed_roots):
+            skipped_paths.append(str(path))
+            continue
+        if not path.exists():
+            continue
+        if path.is_dir():
+            shutil.rmtree(path)
+        else:
+            path.unlink()
+        removed_paths.append(str(path))
+
+    return _dedupe(removed_paths), _dedupe(skipped_paths)
+
+
+def _is_within_allowed_roots(path: Path, allowed_roots: list[Path]) -> bool:
+    try:
+        resolved_path = path.resolve()
+    except FileNotFoundError:
+        resolved_path = path.parent.resolve() / path.name
+
+    for root in allowed_roots:
+        try:
+            resolved_path.relative_to(root)
+        except ValueError:
+            continue
+        return True
+    return False

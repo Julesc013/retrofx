@@ -92,6 +92,30 @@ class PackagingInstallTests(unittest.TestCase):
             status = describe_install_state(env=env, cwd=REPO_ROOT)
             self.assertEqual(status["installed_bundles"], [])
 
+    def test_uninstall_refuses_bundle_dir_outside_managed_root(self) -> None:
+        with TemporaryDirectory() as tmpbundle, TemporaryDirectory() as tmphome:
+            bundle = build_dev_bundle(
+                pack_id="modern-minimal",
+                pack_profile_id="warm-night",
+                bundle_root=tmpbundle,
+                target_names=["alacritty"],
+            )
+            env = self._temp_home_env(tmphome)
+            install_payload = install_dev_bundle(bundle["bundle"]["output_dir"], env=env, now="2026-03-21T00:00:00Z")
+            foreign_dir = Path(tmphome) / "foreign-bundle-dir"
+            foreign_dir.mkdir(parents=True, exist_ok=True)
+            foreign_marker = foreign_dir / "keep.txt"
+            foreign_marker.write_text("keep me", encoding="utf-8")
+            record_path = Path(install_payload["install"]["record_path"])
+            record = json.loads(record_path.read_text(encoding="utf-8"))
+            record["install_targets"]["bundle_dir"] = str(foreign_dir)
+            record_path.write_text(json.dumps(record, indent=2), encoding="utf-8")
+
+            uninstall_payload = uninstall_dev_bundle("modern-minimal--warm-night", env=env)
+            self.assertFalse(uninstall_payload["ok"])
+            self.assertTrue(foreign_marker.exists())
+            self.assertEqual(uninstall_payload["errors"][0]["code"], "unowned-install-target")
+
     def test_install_paths_do_not_collide_with_1x(self) -> None:
         with TemporaryDirectory() as tmphome:
             env = self._temp_home_env(tmphome)

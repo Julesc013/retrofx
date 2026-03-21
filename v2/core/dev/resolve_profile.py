@@ -12,6 +12,7 @@ from v2.core.pipeline import IMPLEMENTATION_INFO
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
+        prog="retrofx-v2 resolve",
         description="Load, validate, normalize, and resolve a RetroFX 2.x profile in dev-only mode.",
     )
     add_profile_selection_args(parser)

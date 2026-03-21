@@ -15,6 +15,7 @@ from .manager import describe_install_state, install_dev_bundle, uninstall_dev_b
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
+        prog="retrofx-v2",
         description="Experimental RetroFX 2.x dev bundle/install helpers. These commands are user-local and do not replace the 1.x runtime.",
     )
     subparsers = parser.add_subparsers(dest="command", required=True)

@@ -107,6 +107,7 @@ def compile_profile_to_output(
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
+        prog="retrofx-v2 compile",
         description="Compile experimental RetroFX 2.x target artifacts, including bounded X11 render outputs, from a 2.x profile.",
     )
     add_profile_selection_args(parser)

@@ -31,6 +31,12 @@ That means:
 - changes should also update [IMPLEMENTED_STATUS.md](IMPLEMENTED_STATUS.md) and this document
 - new feature work should prefer extending these contracts cleanly rather than creating ad hoc side channels
 
+Current TWO-23 hardening notes:
+
+- `cleanup.data_paths` in activation state or manifests are only honored when they resolve inside the managed 2.x roots
+- install records are not trusted to remove bundle directories outside the managed 2.x bundle store
+- live-probed X11 targets are now kept separate from staged-only `export_only_targets` in the activation manifest
+
 ## Not A Public API Promise
 
 These contracts are not a promise that RetroFX 2.x is stable or production-ready.

@@ -5,7 +5,7 @@ Each phase should narrow uncertainty before more implementation surface is added
 
 ## Current Progress
 
-Status after TWO-22:
+Status after TWO-23:
 
 - 2.0-C has an experimental implementation foothold for load, validate, normalize, and resolve in `v2/core/`
 - 2.0-D has started with the first terminal/TUI compiler family under `v2/targets/terminal/`
@@ -21,7 +21,8 @@ Status after TWO-22:
 - 2.0-E now also includes the first bounded experimental apply/off workflow with current-state manifests and reversible staging under `v2/session/apply/`
 - TWO-20 now consolidates that surface behind a unified experimental `scripts/dev/retrofx-v2` dispatcher, a current-status matrix, and a stabilization handoff
 - TWO-21 now hardens the implemented branch surface with explicit interface contracts, contract tests, a docs truth audit, and a stabilization checklist
-- TWO-22 now executes the first real validation matrix, classifies alpha blockers, and records a readiness verdict of internal-use-yes but controlled-alpha-no
+- TWO-22 executes the first real validation matrix, classifies alpha blockers, and records the initial readiness verdict
+- TWO-23 remediates the recorded alpha blockers, validates the bounded explicit X11 probe on one real X11 plus `i3` host, hardens managed-root cleanup semantics, and moves the branch to controlled-internal-alpha yes but broader-testing no
 - broad live session orchestration, Wayland render, and broader target families remain future phases
 
 ## 2.0-A Product And Spec Design

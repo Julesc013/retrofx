@@ -11,7 +11,7 @@ Validation context:
 - actual host environment used for non-destructive baseline commands: repo-local dev on X11 with `i3`
 - simulated environments used where appropriate: Wayland plus `sway`, and TTY or headless
 - apply or install validation used temp HOME or isolated XDG roots under `/tmp`
-- explicit live X11 `picom` probe was not run manually in this pass to avoid mutating an active session during validation
+- explicit live X11 `picom` probe was run manually as a bounded 1.0-second validation step on the active X11 plus `i3` host using `passthrough-minimal.toml`
 
 Status legend:
 
@@ -24,12 +24,12 @@ Status legend:
 
 Current summary:
 
-- `pass`: 19
+- `pass`: 21
 - `degraded-pass`: 2
-- `partial`: 1
+- `partial`: 0
 - `fail`: 0
 - `blocked`: 0
-- `not-tested`: 1
+- `not-tested`: 0
 
 ## Matrix
 
@@ -52,16 +52,16 @@ Current summary:
 | X11 render preview for CRT-like profile | simulated X11 | `scripts/dev/retrofx-v2 preview-x11 v2/tests/fixtures/strict-green-crt.toml --out-root <temp>` | X11 preview artifacts and preview state emitted | `ok=true`, `implemented_mode=monochrome`, `probe.status=not-requested` | pass | Non-destructive render preview works for monochrome CRT mode. |
 | X11 render preview for palette profile | simulated X11 | `scripts/dev/retrofx-v2 preview-x11 v2/tests/fixtures/vga-like-palette.toml --out-root <temp>` | X11 preview artifacts and preview state emitted | `ok=true`, `implemented_mode=palette`, `probe.status=not-requested` | pass | Confirms bounded palette render compilation. |
 | X11 render preview for passthrough profile | simulated X11 | `scripts/dev/retrofx-v2 preview-x11 v2/tests/fixtures/passthrough-minimal.toml --out-root <temp>` | minimal passthrough artifacts emitted | `ok=true`, `implemented_mode=passthrough`, `probe.status=not-requested` | pass | Confirms minimal render path is stable. |
-| explicit live X11 `picom` probe in real session | active X11 session | `scripts/dev/retrofx-v2 preview-x11 <profile> --probe-picom` | short-lived explicit live probe | not executed manually in TWO-22 | not-tested | Skipped intentionally to avoid mutating an active session during a validation prompt. Automated test coverage for the probe logic already exists. |
+| explicit live X11 `picom` probe in real session | active X11 plus `i3` session | `scripts/dev/retrofx-v2 preview-x11 v2/tests/fixtures/passthrough-minimal.toml --probe-picom --probe-seconds 1.0 --out-root /tmp/retrofx-v2-two23-probe` | short-lived explicit live probe | `ok=true`, `probe.status=timed-out`, bounded probe launched against the generated config and wrote preview-state metadata | pass | This is the first manual real-session validation of the explicit TWO-17 probe path. The timeout is an expected bounded-success outcome for this probe design. |
 | bundle generation | repo-local dev | `scripts/dev/retrofx-v2 bundle --pack modern-minimal --profile-id warm-night --bundle-root <temp>` | deterministic bundle emitted | `ok=true`, bundle emitted under `<temp>/bundles/modern-minimal--warm-night` | pass | Pack-aware bundle generation now works through the unified surface. |
 | temp HOME install | isolated temp HOME | `scripts/dev/retrofx-v2 install <bundle-path>` | bundle copied into isolated `retrofx-v2-dev` footprint with install record | `ok=true`, bundle dir under `~/.local/share/retrofx-v2-dev/bundles/modern-minimal--warm-night` | pass | Install remains user-local and isolated from 1.x. |
 | temp HOME uninstall or cleanup | isolated temp HOME | `scripts/dev/retrofx-v2 uninstall modern-minimal--warm-night` | installed bundle removed, user config roots preserved | removed bundle and installation record; preserved `profiles/` and `packs/` config roots | pass | Uninstall ownership remains explicit and reversible. |
-| delegated help clarity through unified surface | repo-local dev | `scripts/dev/retrofx-v2 resolve --help` and `scripts/dev/retrofx-v2 bundle --help` | help should clearly present the `retrofx-v2` surface | help works, but usage headers still show `cli.py` rather than `retrofx-v2 ...` | partial | Functional but still ambiguous enough to keep on the stabilization agenda. |
-| full 2.x test suite | repo-local dev | `./v2/tests/test.sh` | full suite passes | `Ran 118 tests in 1.243s` and `OK` | pass | Automated coverage still matches the current branch state after TWO-22 changes. |
+| delegated help clarity through unified surface | repo-local dev | `scripts/dev/retrofx-v2 resolve --help` and `scripts/dev/retrofx-v2 bundle --help` | help should clearly present the `retrofx-v2` surface | usage headers now begin with `retrofx-v2 resolve` and `retrofx-v2 bundle` rather than `cli.py` | pass | TWO-23 sets explicit `prog` names on the delegated CLI modules. |
+| full 2.x test suite | repo-local dev | `./v2/tests/test.sh` | full suite passes | `Ran 122 tests in 1.425s` and `OK` | pass | Automated coverage still matches the current branch state after the TWO-23 remediation changes. |
 
 ## Interpretation
 
-The implemented 2.x surface now validates well enough for internal experimental use:
+The implemented 2.x surface now validates well enough for controlled internal alpha use:
 
 - core pipeline, packs, migration, compile, install, and bounded apply or off flows all passed
 - environment planning degraded honestly in non-X11 contexts
@@ -69,6 +69,6 @@ The implemented 2.x surface now validates well enough for internal experimental 
 
 The remaining gaps are about confidence and polish, not broad missing implementation:
 
-- the explicit live X11 probe still lacks manual real-session validation in this pass
-- delegated help still leaks underlying module names
-- broader legacy-profile and multi-host validation remains limited
+- explicit live X11 probing now has one real-host bounded validation run
+- delegated help now presents the unified `retrofx-v2` surface coherently
+- broader multi-host and migration-corpus validation remains limited, which still argues against wider testing

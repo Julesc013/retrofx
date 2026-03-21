@@ -18,8 +18,8 @@ It is a trust checklist for the experimental platform.
 - [x] The unified surface exposes only implemented commands.
 - [x] `status` reports implemented targets, current activation, environment, and limitations.
 - [x] The branch has a documented smoke path in [DEV_WORKFLOW.md](DEV_WORKFLOW.md).
-- [ ] Help output across delegated subcommands is polished enough that developers do not need to guess which surface to use.
-  Current TWO-22 truth: delegated help works, but some usage headers still show `cli.py`.
+- [x] Help output across delegated subcommands is polished enough that developers do not need to guess which surface to use.
+  TWO-23 truth: delegated help now uses explicit `retrofx-v2 ...` usage headers.
 
 ## Documentation Truth
 
@@ -35,7 +35,8 @@ It is a trust checklist for the experimental platform.
 - [x] Bundled and installed artifacts remain under a 2.x-owned user-local footprint.
 - [x] Bounded apply or off writes explicit manifests and current-state records.
 - [x] `off` clears only 2.x-owned active state and recorded preview roots.
-- [ ] The bounded X11 live probe has enough real-world validation across supported X11 hosts to trust its current limitations.
+- [x] The bounded X11 live probe has enough initial real-world validation to trust it for a narrow internal alpha cohort.
+  TWO-23 truth: one real X11 plus `i3` host has now exercised the explicit bounded probe successfully as a timeout-based success case.
 
 ## Ecosystem And Continuity
 
@@ -49,15 +50,15 @@ It is a trust checklist for the experimental platform.
 - [x] A populated validation matrix now exists in [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md).
 - [x] Representative resolve, compile, plan, install, and apply or off flows have been run under temp or isolated homes.
 - [x] The branch now has an explicit readiness verdict in [ALPHA_READINESS.md](ALPHA_READINESS.md).
-- [ ] Controlled-alpha readiness has been approved.
+- [x] Controlled-alpha readiness has been approved for a narrow internal cohort.
 
 ## Before The Next Maturity Step
 
 The next phase should focus on:
 
-- real-world validation under temp homes and isolated environments
+- multi-host validation under temp homes and isolated environments
 - regression hunting instead of new target-family sprawl
 - interface cleanup only where tests or docs expose drift
 - output determinism checks across the implemented target families
-- bounded runtime validation for the current X11 experimental path
+- real Wayland-host validation for the planning and staged-apply surfaces
 - documentation cleanup where design intent still reads like implemented reality

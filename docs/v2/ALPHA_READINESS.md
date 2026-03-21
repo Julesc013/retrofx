@@ -1,6 +1,6 @@
 # RetroFX 2.x Alpha Readiness
 
-This document records the TWO-22 readiness decision for the current 2.x branch.
+This document records the TWO-23 readiness decision for the current 2.x branch.
 
 Decision date: 2026-03-21
 
@@ -8,7 +8,7 @@ Decision date: 2026-03-21
 
 READY_FOR_INTERNAL_USE=yes
 
-READY_FOR_CONTROLLED_ALPHA=no
+READY_FOR_CONTROLLED_ALPHA=yes
 
 READY_FOR_BROADER_TESTING=no
 
@@ -16,28 +16,31 @@ NEEDS_MORE_STABILIZATION=yes
 
 ## Why
 
-The branch is ready for internal experimental use because:
+The branch is ready for internal experimental use and for a narrow controlled internal alpha because:
 
 - the unified dev surface works across resolve, plan, compile, migration, bundle, install, apply, off, and status flows
-- the validation matrix shows broad `pass` coverage across the implemented feature set
+- the validation matrix now shows broad `pass` coverage across the implemented feature set
 - non-X11 environments degrade honestly instead of pretending unsupported live behavior exists
 - bounded apply or off and install or uninstall flows behave correctly inside isolated temp homes
+- bounded apply or off and uninstall now enforce managed-root ownership during cleanup rather than trusting arbitrary recorded paths
+- the explicit live X11 `picom` probe has now been manually exercised on one real X11 plus `i3` host as a bounded timeout-based success case
 - the full 2.x test suite is green
+- delegated help now reports the unified `retrofx-v2` surface coherently rather than leaking `cli.py`
 
-The branch is not yet ready for a controlled alpha because:
+The branch is not yet ready for broader testing because:
 
-- the explicit live X11 probe was not manually exercised in TWO-22
-- validation remains too dependent on a single host plus simulated environments
-- delegated help still has enough ambiguity to weaken operator trust
+- validation remains too dependent on a single real host plus simulated environments
+- there is still no real Wayland-host validation pass
+- migration validation remains representative rather than broad
 
 ## Recommended Next Step
 
 The correct next phase is:
 
-1. Keep the branch available for internal experimental use only.
-2. Close the blockers in [ALPHA_BLOCKERS.md](ALPHA_BLOCKERS.md).
-3. Re-run [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md) on at least one more real environment.
-4. Reassess controlled-alpha readiness only after the live X11 probe and dev-surface clarity issues are addressed.
+1. Start a narrow controlled internal alpha on known-good internal hosts, with explicit emphasis on X11 plus `i3` validation first.
+2. Re-run [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md) on at least one more real environment, especially a real Wayland session.
+3. Expand the migration validation corpus before making compatibility claims beyond the current representative set.
+4. Reassess broader testing only after the multi-host evidence improves.
 
 ## What This Is Not
 

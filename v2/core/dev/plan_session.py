@@ -105,6 +105,7 @@ def plan_profile_session(
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
+        prog="retrofx-v2 plan",
         description="Plan an experimental RetroFX 2.x session preview from a 2.x profile without mutating the live session.",
     )
     add_profile_selection_args(parser)

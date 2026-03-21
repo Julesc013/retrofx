@@ -1,6 +1,6 @@
 # RetroFX 2.x Implemented Status
 
-This document is the current truth pass for the 2.x branch as of TWO-22.
+This document is the current truth pass for the 2.x branch as of TWO-23.
 It is intentionally blunt.
 
 1.x remains the production line.
@@ -20,10 +20,10 @@ It is intentionally blunt.
 | display policy outputs | yes | yes | no | Display policy is concrete, planned, exportable, and consumed by the bounded X11 render slice. |
 | pack system | yes | yes | no | Local pack manifests and curated built-in packs are real. Remote/community distribution is not. |
 | migration tooling | yes | yes | no | 1.x profile inspection and draft migration are real. Runtime compatibility is not. |
-| install or bundle flow | yes | yes | no | Repo-local bundles and isolated user-local experimental installs are real. |
-| X11 render or compiler | yes | yes | no | Shader, picom, runtime metadata, and explicit bounded preview exist for X11 only. |
+| install or bundle flow | yes | yes | no | Repo-local bundles and isolated user-local experimental installs are real, and uninstall now rejects paths outside the managed 2.x bundle store. |
+| X11 render or compiler | yes | yes | no | Shader, picom, runtime metadata, and explicit bounded preview exist for X11 only. The explicit probe now has one real X11 plus `i3` validation run. |
 | session planning | yes | yes | no | Environment detection and capability-aware planning are real and non-destructive. |
-| bounded apply or off | yes | yes | no | TWO-19 current activation, manifests, last-good, and `off` are real but intentionally narrow. |
+| bounded apply or off | yes | yes | no | TWO-19 current activation, manifests, last-good, and `off` are real but intentionally narrow, and cleanup now stays inside managed 2.x roots. |
 | global desktop integration | no | no | yes | Live GNOME, Plasma, Xfce, and cross-DE mutation are not implemented. |
 | live Wayland render | no | no | yes | Wayland render remains degraded or export-only. |
 | full compatibility mode | no | no | yes | Migration exists, but 1.x runtime compatibility does not. |
@@ -47,6 +47,7 @@ Still intentionally bounded:
 - live apply only exists as a narrow 2.x-owned activation path plus the explicit short-lived X11 probe
 - toolkit outputs are advisory exports, not live DE ownership
 - install and current activation remain separated
+- controlled alpha readiness is narrow and currently grounded most strongly in one real X11 plus `i3` validation host
 
 Not implemented:
 
@@ -66,5 +67,6 @@ Related truth docs:
 ## Validation Snapshot
 
 - internal experimental use: yes
-- controlled alpha: no
-- main reasons to hold alpha: explicit live X11 probe still lacks manual validation in this pass, and delegated help still needs polish
+- controlled alpha: yes, for a narrow internal cohort
+- broader testing: no
+- main reasons to avoid broader testing: real-host coverage is still narrow and migration validation breadth remains limited

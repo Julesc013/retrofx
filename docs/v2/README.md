@@ -29,7 +29,7 @@ It is broader than RetroFX 1.x, but it is still bounded by explicit capability d
 
 ## Current Implementation State
 
-As of TWO-22:
+As of TWO-23:
 
 - `v2/core/` contains an experimental dev-only scaffold for loading, validating, normalizing, and resolving 2.x profiles
 - `v2/tests/` contains isolated 2.x fixtures and tests for that scaffold
@@ -41,7 +41,7 @@ As of TWO-22:
 - `v2/core/dev/compile-targets <profile>` compiles those implemented targets into `v2/out/<profile-id>/...`
 - `v2/session/` now contains real environment detection and capability-aware session planning preview code
 - `v2/core/dev/plan-session <profile>` detects the environment, builds a preview plan, and can write a non-destructive preview bundle under `v2/out/<profile-id>/plan/`
-- `v2/session/dev/preview_x11_render.py` and `scripts/dev/retrofx-v2-preview-x11` now stage X11 render artifacts and can run an explicit short-lived `picom` probe in X11
+- `v2/session/dev/preview_x11_render.py` and `scripts/dev/retrofx-v2-preview-x11` now stage X11 render artifacts and can run an explicit short-lived `picom` probe in X11; that bounded probe now has one real X11 plus `i3` validation run
 - resolved typography defaults, stacks, and session-local font-policy artifacts now exist, but global font orchestration does not
 - resolved icon/cursor and desktop-style policy now compile into advisory toolkit artifacts, but live desktop integration does not
 - resolved display policy is now concrete, planned, exportable, and consumable by the bounded X11 render slice, but global display mutation does not exist
@@ -52,15 +52,15 @@ As of TWO-22:
 - `v2/compat/dev/inspect-1x-profile <path>` analyzes a 1.x profile, reports clean/degraded/manual mappings, and can emit a generated 2.x draft under `v2/out/migrations/<profile-id>/`
 - `v2/session/install/` now contains the first real experimental bundle/install slice for 2.x
 - `scripts/dev/retrofx-v2-bundle` now builds deterministic repo-local bundles under `v2/bundles/<bundle-id>/`
-- `v2/session/apply/` now contains the first bounded experimental apply/off slice with current-state manifests, last-good tracking, and event logs under the isolated `retrofx-v2-dev` footprint
+- `v2/session/apply/` now contains the first bounded experimental apply/off slice with current-state manifests, last-good tracking, event logs, and managed-root cleanup guards under the isolated `retrofx-v2-dev` footprint
 - `scripts/dev/retrofx-v2-apply`, `retrofx-v2-off`, and `retrofx-v2-status` now stage, inspect, and clear a bounded 2.x current activation without touching 1.x
-- `scripts/dev/retrofx-v2-install`, `retrofx-v2-status`, and `retrofx-v2-uninstall` still manage the separate user-local install footprint used by the apply layer
+- `scripts/dev/retrofx-v2-install`, `retrofx-v2-status`, and `retrofx-v2-uninstall` still manage the separate user-local install footprint used by the apply layer, and uninstall now refuses bundle targets outside the managed 2.x store
 - `scripts/dev/retrofx-v2` now provides a unified experimental dispatcher across resolve, plan, compile, packs, migration, install, apply, off, preview, and smoke workflows
 - [IMPLEMENTED_STATUS.md](IMPLEMENTED_STATUS.md) now provides the branch-level implemented-versus-planned truth matrix
 - [IMPLEMENTED_INTERFACES.md](IMPLEMENTED_INTERFACES.md) now lists the current code-backed internal or dev-facing interface contracts
 - `v2/core/interfaces/contracts.py` now provides a small code-side contract layer that the test suite enforces structurally
 - [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md) now records the first serious scenario-based validation pass against the implemented branch surface
-- [ALPHA_BLOCKERS.md](ALPHA_BLOCKERS.md) and [ALPHA_READINESS.md](ALPHA_READINESS.md) now record the current readiness decision: internal-use yes, controlled-alpha no
+- [ALPHA_BLOCKERS.md](ALPHA_BLOCKERS.md) and [ALPHA_READINESS.md](ALPHA_READINESS.md) now record the current readiness decision: internal-use yes, controlled-alpha yes for a narrow internal cohort, broader-testing no
 - [STABILIZATION_PLAN.md](STABILIZATION_PLAN.md) now defines the shift from architecture expansion to controlled stabilization
 - [STABILIZATION_CHECKLIST.md](STABILIZATION_CHECKLIST.md) now defines the trust gates for the next maturity step
 - that install flow is still dev-only, user-local, and non-destructive to 1.x

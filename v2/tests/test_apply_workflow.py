@@ -10,6 +10,7 @@ from tempfile import TemporaryDirectory
 import unittest
 
 from v2.session.apply import apply_dev_profile, describe_current_activation, off_dev_profile
+from v2.session.apply.state import CURRENT_STATE_SCHEMA, ensure_apply_layout, resolve_apply_layout
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 FIXTURES = REPO_ROOT / "v2" / "tests" / "fixtures"
@@ -68,8 +69,48 @@ class ApplyWorkflowTests(unittest.TestCase):
             self.assertTrue(payload["ok"])
             self.assertIn("x11-picom", payload["activation"]["live_applied_targets"])
             self.assertIn("x11-shader", payload["activation"]["live_applied_targets"])
+            self.assertNotIn("x11-shader", payload["activation"]["export_only_targets"])
+            self.assertNotIn("x11-picom", payload["activation"]["export_only_targets"])
             manifest = json.loads(Path(payload["activation"]["manifest_path"]).read_text(encoding="utf-8"))
             self.assertTrue(manifest["activation"]["used_x11_live_probe"])
+            self.assertNotIn("x11-shader", manifest["activation"]["export_only_targets"])
+            self.assertNotIn("x11-picom", manifest["activation"]["export_only_targets"])
+
+    def test_repeated_apply_with_probe_cleans_previous_preview_paths(self) -> None:
+        with TemporaryDirectory() as tmphome:
+            env = self._temp_home_env(tmphome)
+            x11_env = {
+                **env,
+                "DISPLAY": ":1",
+                "XDG_SESSION_TYPE": "x11",
+                "XDG_CURRENT_DESKTOP": "i3",
+                "I3SOCK": "/tmp/i3.sock",
+                "TERM": "xterm-256color",
+            }
+            first = apply_dev_profile(
+                FIXTURES / "strict-green-crt.toml",
+                env=x11_env,
+                cwd=REPO_ROOT,
+                stdin_isatty=False,
+                path_lookup=lambda name: "/tmp/fake-picom" if name == "picom" else None,
+                probe_x11=True,
+                probe_seconds=0.1,
+                command_runner=self._successful_runner,
+                now="2026-03-21T10:05:00Z",
+            )
+            preview_dir = Path(first["activation"]["preview_probe"]["output_dir"])
+            self.assertTrue(preview_dir.exists())
+
+            second = apply_dev_profile(
+                FIXTURES / "retro-desktop-explicit.toml",
+                env=x11_env,
+                cwd=REPO_ROOT,
+                stdin_isatty=False,
+                now="2026-03-21T10:06:00Z",
+            )
+            self.assertTrue(second["ok"])
+            self.assertFalse(preview_dir.exists())
+            self.assertIn(str(preview_dir), second["activation"]["replaced_cleanup_removed_paths"])
 
     def test_status_reporting_after_apply(self) -> None:
         with TemporaryDirectory() as tmphome:
@@ -151,6 +192,54 @@ class ApplyWorkflowTests(unittest.TestCase):
             self.assertTrue(payload["ok"])
             self.assertFalse(payload["active"])
             self.assertEqual(payload["removed_paths"], [])
+
+    def test_off_skips_cleanup_paths_outside_managed_roots(self) -> None:
+        with TemporaryDirectory() as tmphome:
+            env = self._temp_home_env(tmphome)
+            layout = resolve_apply_layout(env)
+            ensure_apply_layout(layout)
+            current_root = Path(str(layout["active_current_root"]))
+            current_root.mkdir(parents=True, exist_ok=True)
+            foreign_path = Path(tmphome) / "outside-managed-root.txt"
+            foreign_path.write_text("keep me", encoding="utf-8")
+            current_state_path = Path(str(layout["current_state_path"]))
+            current_state_payload = {
+                "schema": CURRENT_STATE_SCHEMA,
+                "active": True,
+                "profile": {"id": "synthetic", "name": "Synthetic"},
+                "pack": None,
+                "bundle": {"bundle_id": "synthetic"},
+                "activation": {
+                    "activation_id": "synthetic--20260321",
+                    "activated_at": "2026-03-21T10:31:00Z",
+                    "active_root": str(current_root),
+                    "activated_targets": [],
+                    "live_applied_targets": [],
+                    "export_only_targets": [],
+                    "degraded_targets": [],
+                    "used_x11_live_probe": False,
+                },
+                "manifest": {
+                    "manifest_path": str(Path(str(layout["manifests_root"])) / "synthetic.json"),
+                    "schema": "retrofx.activation-manifest/v2alpha1",
+                },
+                "cleanup": {
+                    "data_paths": [str(foreign_path)],
+                    "clear_current_state_path": True,
+                },
+                "warnings": [],
+                "layout": {
+                    "active_current_root": layout["active_current_root"],
+                    "current_state_path": layout["current_state_path"],
+                },
+            }
+            current_state_path.write_text(json.dumps(current_state_payload, indent=2), encoding="utf-8")
+
+            payload = off_dev_profile(env=env, now="2026-03-21T10:32:00Z")
+            self.assertTrue(payload["ok"])
+            self.assertTrue(foreign_path.exists())
+            self.assertIn(str(foreign_path), payload["skipped_cleanup_paths"])
+            self.assertNotIn(str(foreign_path), payload["removed_paths"])
 
     def test_1x_paths_are_untouched_by_apply_and_off(self) -> None:
         with TemporaryDirectory() as tmphome:

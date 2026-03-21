@@ -135,6 +135,24 @@ def uninstall_dev_bundle(
 
     removed_paths: list[str] = []
     bundle_dir = Path(str(record["install_targets"]["bundle_dir"]))
+    bundle_store_root = Path(str(layout["bundle_store_root"])).resolve()
+    if not _is_within_root(bundle_dir, bundle_store_root):
+        return {
+            "ok": False,
+            "stage": "uninstall",
+            "implementation": INSTALL_IMPLEMENTATION_INFO,
+            "errors": [
+                {
+                    "severity": "error",
+                    "code": "unowned-install-target",
+                    "message": (
+                        "The recorded install target is outside the managed 2.x bundle store and will not be removed."
+                    ),
+                }
+            ],
+            "bundle_id": bundle_id,
+            "record_path": str(Path(str(layout["installations_root"])) / f"{bundle_id}.json"),
+        }
     if bundle_dir.exists():
         shutil.rmtree(bundle_dir)
         removed_paths.append(str(bundle_dir))
@@ -255,3 +273,15 @@ def _toolchain_mode_for_cwd(current_workdir: Path) -> str:
 def _prune_empty_dir(path: Path) -> None:
     if path.is_dir() and not any(path.iterdir()):
         path.rmdir()
+
+
+def _is_within_root(path: Path, root: Path) -> bool:
+    try:
+        resolved_path = path.resolve()
+    except FileNotFoundError:
+        resolved_path = path.parent.resolve() / path.name
+    try:
+        resolved_path.relative_to(root)
+    except ValueError:
+        return False
+    return True

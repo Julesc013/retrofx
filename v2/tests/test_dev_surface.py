@@ -22,6 +22,17 @@ class UnifiedDevSurfaceTests(unittest.TestCase):
         self.assertIn("resolve", process.stdout)
         self.assertIn("smoke", process.stdout)
 
+    def test_delegated_help_uses_unified_prog_names(self) -> None:
+        for command, expected_usage in (
+            ("resolve", "usage: retrofx-v2 resolve"),
+            ("bundle", "usage: retrofx-v2 bundle"),
+            ("apply", "usage: retrofx-v2 apply"),
+        ):
+            process = self._run([str(ENTRYPOINT), command, "--help"])
+            self.assertEqual(process.returncode, 0, msg=process.stderr)
+            self.assertIn(expected_usage, process.stdout)
+            self.assertNotIn("usage: cli.py", process.stdout)
+
     def test_status_report_runs(self) -> None:
         with TemporaryDirectory() as tmphome:
             env = self._temp_env(tmphome)

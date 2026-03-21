@@ -10,6 +10,7 @@ from v2.compat import DEFAULT_MIGRATION_OUT_ROOT, inspect_legacy_profile
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
+        prog="retrofx-v2 migrate inspect-1x",
         description="Inspect a RetroFX 1.x profile and emit a deterministic 2.x migration report without changing the 1.x runtime.",
     )
     parser.add_argument("profile", help="Path to a RetroFX 1.x TOML profile.")

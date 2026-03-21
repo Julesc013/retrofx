@@ -185,7 +185,7 @@ IMPLEMENTED_STATUS_MATRIX = [
         "implemented": True,
         "experimental": True,
         "planned": False,
-        "notes": "Shader, picom, runtime metadata, and bounded preview are real for X11 only.",
+        "notes": "Shader, picom, runtime metadata, and the bounded explicit probe are real for X11 only. Real-host validation currently exists for one X11 plus i3 environment.",
     },
     {
         "area": "session planning",
@@ -199,7 +199,7 @@ IMPLEMENTED_STATUS_MATRIX = [
         "implemented": True,
         "experimental": True,
         "planned": False,
-        "notes": "The TWO-19 current-state activation path is real but limited to 2.x-owned staging plus explicit X11 probe use.",
+        "notes": "The TWO-19 current-state activation path is real but limited to 2.x-owned staging, explicit manifests, and managed-root cleanup only.",
     },
     {
         "area": "global desktop integration",
@@ -226,8 +226,8 @@ IMPLEMENTED_STATUS_MATRIX = [
 
 PLATFORM_IMPLEMENTATION_INFO = {
     "status": "experimental-dev-only",
-    "prompt": "TWO-21",
-    "surface": "unified-dev-platform-hardened",
+    "prompt": "TWO-23",
+    "surface": "unified-dev-platform-remediated",
     "entrypoint": str(UNIFIED_ENTRYPOINT),
     "implemented_targets": list_targets(),
     "families": list_target_families(),
@@ -305,16 +305,17 @@ def build_platform_status(
             "Toolkit exports are advisory; live desktop mutation remains future work.",
             "Wayland render remains unsupported for live runtime ownership.",
             "Compatibility work is inspection and draft migration only, not runtime parity.",
+            "Controlled internal alpha readiness is narrow; real-world validation is strongest on one X11 plus i3 host and simulated elsewhere.",
         ],
         "next_focus": {
-            "phase": "controlled-stabilization-and-validation",
+            "phase": "controlled-internal-alpha-validation",
             "doc": str(REPO_ROOT / "docs" / "v2" / "STABILIZATION_PLAN.md"),
             "checklist": str(REPO_ROOT / "docs" / "v2" / "STABILIZATION_CHECKLIST.md"),
             "goals": [
-                "real-world test passes against the implemented dev surface",
-                "interface hardening and cleanup instead of new feature sprawl",
-                "documentation truth pass across the existing branch surface",
-                "bounded runtime validation under temp or isolated homes",
+                "multi-host validation across at least one real Wayland environment and additional X11 hosts",
+                "regression hunting inside the already implemented surface instead of new feature sprawl",
+                "continued manifest, cleanup, and bundle ownership hardening where validation exposes weakness",
+                "documentation truth updates as the internal alpha cohort exercises the branch",
             ],
         },
         "note": "This report describes the implemented 2.x experimental platform as it exists now. It is not a production readiness claim.",

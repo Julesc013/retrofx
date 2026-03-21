@@ -142,6 +142,7 @@ def preview_x11_render_profile(
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
+        prog="retrofx-v2 preview-x11",
         description="Stage the experimental RetroFX 2.x X11 render artifacts and optionally run a bounded picom probe.",
     )
     add_profile_selection_args(parser)

@@ -13,6 +13,7 @@ from .manager import apply_dev_profile, describe_current_activation, off_dev_pro
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
+        prog="retrofx-v2",
         description="Experimental RetroFX 2.x bounded apply/off helpers. These commands are user-local, reversible, and do not replace the 1.x runtime.",
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
