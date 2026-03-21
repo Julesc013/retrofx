@@ -125,7 +125,7 @@ def normalize_profile(raw_profile: RawProfile) -> NormalizedProfile:
     identity = _normalize_identity(data.get("identity", {}))
     render = _normalize_render(data.get("render", {}), raw_profile, identity, report)
     color = _normalize_color(data.get("color", {}), identity, render, report)
-    typography = _normalize_typography(data.get("typography", {}))
+    typography = _normalize_typography(data.get("typography", {}), report)
     chrome = _normalize_chrome(data.get("chrome", {}))
     session = _normalize_session(data.get("session", {}))
 
@@ -379,7 +379,7 @@ def _monochrome_ansi_from_semantics(semantic: dict[str, str], bands: int) -> dic
     return {slot: _band_color(level) for slot, level in MONO_SLOT_LEVELS.items()}
 
 
-def _normalize_typography(raw_typography: Any) -> dict[str, Any]:
+def _normalize_typography(raw_typography: Any, report: NormalizationReport) -> dict[str, Any]:
     typography = raw_typography if isinstance(raw_typography, dict) else {}
 
     fallbacks = typography.get("terminal_fallbacks", [])
@@ -393,21 +393,85 @@ def _normalize_typography(raw_typography: Any) -> dict[str, Any]:
     aa = typography.get("aa", {})
     aa = aa if isinstance(aa, dict) else {}
 
-    terminal_primary = str(typography.get("terminal_primary", "")).strip()
+    terminal_primary = _normalize_font_role(
+        role_name="terminal_primary",
+        authored_value=typography.get("terminal_primary"),
+        default_value="monospace",
+        report=report,
+    )
+    console_font = _normalize_font_role(
+        role_name="console_font",
+        authored_value=typography.get("console_font"),
+        default_value=terminal_primary,
+        report=report,
+    )
+    ui_sans = _normalize_font_role(
+        role_name="ui_sans",
+        authored_value=typography.get("ui_sans"),
+        default_value="sans-serif",
+        report=report,
+    )
+    ui_mono = _normalize_font_role(
+        role_name="ui_mono",
+        authored_value=typography.get("ui_mono"),
+        default_value=terminal_primary,
+        report=report,
+    )
+    icon_font = _normalize_font_role(
+        role_name="icon_font",
+        authored_value=typography.get("icon_font"),
+        default_value="",
+        report=report,
+    )
+    terminal_fallbacks = [value for value in _dedupe(fallback_list) if value and value != terminal_primary]
+    terminal_stack = _dedupe([terminal_primary, *terminal_fallbacks])
+    ui_mono_stack = _dedupe([ui_mono, terminal_primary, *terminal_fallbacks])
+    report.derived_typography_roles.extend(
+        [
+            "terminal_stack",
+            "ui_mono_stack",
+            "fontconfig_aliases.monospace",
+            "fontconfig_aliases.sans-serif",
+        ]
+    )
+
     return {
-        "console_font": str(typography.get("console_font", "")).strip(),
+        "console_font": console_font,
         "terminal_primary": terminal_primary,
-        "terminal_fallbacks": _dedupe(fallback_list),
-        "ui_sans": str(typography.get("ui_sans", "")).strip(),
-        "ui_mono": str(typography.get("ui_mono", terminal_primary)).strip(),
-        "icon_font": str(typography.get("icon_font", "")).strip(),
+        "terminal_fallbacks": terminal_fallbacks,
+        "terminal_stack": terminal_stack,
+        "ui_sans": ui_sans,
+        "ui_mono": ui_mono,
+        "ui_mono_stack": ui_mono_stack,
+        "icon_font": icon_font,
         "emoji_policy": str(typography.get("emoji_policy", "inherit")).strip().lower() or "inherit",
         "aa": {
             "antialias": str(aa.get("antialias", "default")).strip().lower() or "default",
             "subpixel": str(aa.get("subpixel", "default")).strip().lower() or "default",
             "hinting": str(aa.get("hinting", "default")).strip().lower() or "default",
         },
+        "fontconfig_aliases": {
+            "monospace": ui_mono_stack,
+            "sans-serif": [ui_sans],
+        },
     }
+
+
+def _normalize_font_role(
+    *,
+    role_name: str,
+    authored_value: Any,
+    default_value: str,
+    report: NormalizationReport,
+) -> str:
+    normalized = str(authored_value or "").strip()
+    if normalized:
+        return normalized
+
+    if default_value:
+        report.derived_typography_roles.append(role_name)
+        report.notes.append(f"Defaulted `typography.{role_name}` to `{default_value}`.")
+    return default_value
 
 
 def _normalize_chrome(raw_chrome: Any) -> dict[str, Any]:

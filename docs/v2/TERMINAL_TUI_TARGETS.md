@@ -6,6 +6,7 @@ They are a major reason the platform exists at all: they provide broad value wit
 ## Current Implementation Status
 
 TWO-09 implements the first real terminal/TUI compilers under `v2/targets/terminal/`.
+TWO-12 extends that family so terminal targets now consume resolved typography roles more concretely.
 
 Implemented now:
 
@@ -28,6 +29,7 @@ Not implemented yet:
 - install ownership
 - TTY or `tuigreet` runtime integration
 - `btop` or `htop`-style targets
+- fallback-chain emission across every terminal target
 
 ## Family Contract
 
@@ -98,6 +100,7 @@ Emits:
 Implemented now:
 
 - deterministic Alacritty TOML theme artifact from resolved terminal colors and primary font family
+- typography is taken from the resolved profile, not from raw profile text
 
 Mode:
 
@@ -110,6 +113,7 @@ Cannot represent:
 - compositor render pipeline
 - global session behavior
 - most WM or DE chrome semantics
+- fallback chains or AA policy as direct Alacritty syntax in the current narrow implementation
 
 ## Kitty
 
@@ -137,6 +141,7 @@ Cannot represent:
 
 - compositor render transforms
 - global DE policy
+- fallback chains or full font rasterization policy in the current narrow implementation
 
 ## tmux
 
@@ -229,3 +234,7 @@ Cannot represent:
 - ANSI-centric palette bridging
 
 2.x carries those ideas forward, but makes them resolved-model target compilers rather than ad hoc export branches.
+
+Typography note:
+
+- TWO-12 adds a session-local `fontconfig` typography artifact under the toolkit family rather than pretending every terminal target can express all typography policy directly

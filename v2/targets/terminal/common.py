@@ -5,7 +5,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Mapping
 
-from v2.targets.common import has_non_default_display_policy, require_mapping, write_target_artifact
+from v2.targets.common import (
+    has_non_default_display_policy,
+    has_non_default_typography_aa,
+    require_mapping,
+    write_target_artifact,
+)
 
 ANSI_NAMES = {
     "0": "black",
@@ -40,9 +45,17 @@ class TerminalThemeContext:
     selection_fg: str
     terminal_ansi: dict[str, str]
     semantic: dict[str, str]
+    console_font: str
     terminal_primary: str
     terminal_fallbacks: list[str]
+    terminal_stack: list[str]
+    ui_sans: str
     ui_mono: str
+    icon_font: str
+    emoji_policy: str
+    aa_antialias: str
+    aa_subpixel: str
+    aa_hinting: str
     render_mode: str
     render_effects: dict[str, Any]
     render_display: dict[str, Any]
@@ -70,9 +83,17 @@ def build_terminal_theme_context(resolved_profile: Mapping[str, Any]) -> Termina
         selection_fg=str(semantic["selection_fg"]),
         terminal_ansi={str(slot): str(value) for slot, value in terminal_ansi.items()},
         semantic={str(key): str(value) for key, value in semantic.items()},
+        console_font=str(typography.get("console_font", "")),
         terminal_primary=str(typography.get("terminal_primary", "")),
         terminal_fallbacks=[str(value) for value in typography.get("terminal_fallbacks", [])],
+        terminal_stack=[str(value) for value in typography.get("terminal_stack", [])],
+        ui_sans=str(typography.get("ui_sans", "")),
         ui_mono=str(typography.get("ui_mono", "")),
+        icon_font=str(typography.get("icon_font", "")),
+        emoji_policy=str(typography.get("emoji_policy", "inherit")),
+        aa_antialias=str(typography.get("aa", {}).get("antialias", "default")),
+        aa_subpixel=str(typography.get("aa", {}).get("subpixel", "default")),
+        aa_hinting=str(typography.get("aa", {}).get("hinting", "default")),
         render_mode=str(render["mode"]),
         render_effects=dict(render.get("effects", {})),
         render_display=dict(render.get("display", {})),
@@ -89,6 +110,17 @@ def render_warning_for_terminal_family(context: TerminalThemeContext, supported_
 
     if has_non_default_display_policy(context.render_display):
         warnings.append("Render display-transform policy is ignored by terminal/TUI targets in TWO-09.")
+
+    if has_non_default_typography_aa(
+        {
+            "antialias": context.aa_antialias,
+            "subpixel": context.aa_subpixel,
+            "hinting": context.aa_hinting,
+        }
+    ):
+        warnings.append(
+            "Explicit typography AA policy is present in the resolved profile, but terminal targets only emit it when a concrete backend format supports it."
+        )
 
     if supported_target_classes and not set(context.requested_target_classes).intersection(supported_target_classes):
         warnings.append(

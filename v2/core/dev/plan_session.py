@@ -16,7 +16,7 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_OUT_ROOT = REPO_ROOT / "v2" / "out"
 IMPLEMENTATION_INFO = {
     "status": "experimental-dev-only",
-    "prompt": "TWO-11",
+    "prompt": "TWO-12",
     "surface": "session-planning-preview",
     "implemented_targets": list_targets(),
     "families": list_target_families(),
@@ -26,7 +26,7 @@ IMPLEMENTATION_INFO = {
         "session wrapper mutation",
         "artifact-plan driven lifecycle execution",
         "X11 render family",
-        "toolkit and login target families",
+        "global toolkit orchestration and login target families",
     ],
 }
 
@@ -83,6 +83,7 @@ def plan_profile_session(
             "requested_targets": plan["requested_targets"],
             "apply_mode": plan["session_policy"]["apply_mode"],
             "persistence": plan["session_policy"]["persistence"],
+            "typography": resolved_profile["semantics"]["typography"],
         },
         "environment": environment,
         "plan": plan,
@@ -132,6 +133,7 @@ def _write_preview_bundle(
         "profile": {
             "id": resolved_profile["identity"]["id"],
             "name": resolved_profile["identity"]["name"],
+            "typography": resolved_profile["semantics"]["typography"],
         },
         "environment": environment,
         "plan": plan,
@@ -167,6 +169,14 @@ def _render_summary_text(payload: Mapping[str, Any]) -> str:
         f"session_type: {environment['session_type']}",
         f"wm_or_de: {environment['wm_or_de']}",
         f"requested_targets: {', '.join(plan['requested_targets']) or '(none)'}",
+        f"terminal_primary: {payload['profile']['typography']['terminal_primary']}",
+        f"ui_sans: {payload['profile']['typography']['ui_sans']}",
+        (
+            "aa_policy: "
+            f"antialias={payload['profile']['typography']['aa']['antialias']}, "
+            f"subpixel={payload['profile']['typography']['aa']['subpixel']}, "
+            f"hinting={payload['profile']['typography']['aa']['hinting']}"
+        ),
         f"compile_targets: {', '.join(plan['compile_targets']) or '(none)'}",
         f"apply_preview_targets: {', '.join(plan['apply_preview_targets']) or '(none)'}",
         f"export_only_targets: {', '.join(plan['export_only_targets']) or '(none)'}",

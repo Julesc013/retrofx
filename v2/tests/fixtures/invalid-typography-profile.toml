@@ -1,0 +1,25 @@
+schema = "retrofx.profile/v2alpha1"
+
+[identity]
+id = "invalid-typography-profile"
+name = "Invalid Typography Profile"
+family = "terminal"
+strictness = "modernized-retro"
+
+[color.semantic]
+bg0 = "#101010"
+fg0 = "#f0f0f0"
+
+[typography]
+terminal_primary = "JetBrains Mono"
+terminal_fallbacks = ["DejaVu Sans Mono", 42]
+emoji_policy = "sparkles"
+
+[typography.aa]
+antialias = "maybe"
+subpixel = "rgb"
+hinting = "ultra"
+
+[session]
+targets = ["terminal"]
+apply_mode = "export-only"

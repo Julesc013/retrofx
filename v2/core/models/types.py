@@ -30,6 +30,7 @@ class NormalizationReport:
     derived_semantic_tokens: list[str] = field(default_factory=list)
     derived_terminal_slots: list[str] = field(default_factory=list)
     derived_tty_slots: list[str] = field(default_factory=list)
+    derived_typography_roles: list[str] = field(default_factory=list)
     path_normalizations: list[dict[str, Any]] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
 
@@ -73,4 +74,3 @@ class PipelineResult:
         if self.resolved_profile is not None:
             payload["resolved_profile"] = self.resolved_profile
         return payload
-

@@ -6,6 +6,20 @@ The canonical shape is:
 
 `resolved profile -> theme token set -> target-specific theme adapter inputs -> emitted theme artifacts`
 
+## Current Implementation Status
+
+Implemented now:
+
+- terminal/TUI theme compilation from resolved semantic colors and resolved typography roles
+- WM theme/config compilation from resolved semantic colors, chrome hints, and resolved UI font roles
+- session-local `fontconfig`-style typography export from the resolved typography policy
+
+Still future:
+
+- a standalone theme-token planning layer separate from direct adapter emission
+- richer toolkit targets such as GTK, Qt, icons, and cursors
+- capability-filtered theme planning backed by the full artifact planner
+
 ## What Theme Compilation Consumes
 
 Theme compilation consumes:
@@ -49,6 +63,12 @@ Target adapters then emit:
 - WM config fragments
 - toolkit export hints
 - icon or cursor selection exports
+
+Implemented now:
+
+- terminal theme files for `xresources`, `alacritty`, `kitty`, `tmux`, and `vim`
+- WM config fragments for `i3`, `sway`, and `waybar`
+- a session-local `fontconfig` typography policy fragment
 
 ## Defaults And Overrides
 
@@ -111,4 +131,3 @@ They can cooperate on the same profile, but neither should absorb the other.
 - session-local fontconfig generation
 
 2.x generalizes that into a formal theme subsystem instead of scattering appearance work across export branches and runtime logic.
-

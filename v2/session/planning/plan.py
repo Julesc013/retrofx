@@ -11,6 +11,10 @@ TARGET_RULES = {
         "preferred_session_types": {"tty", "x11", "wayland", "remote-ssh"},
         "apply_preview_session_types": set(),
     },
+    "fontconfig": {
+        "preferred_session_types": {"x11", "wayland", "remote-ssh"},
+        "apply_preview_session_types": set(),
+    },
     "kitty": {
         "preferred_session_types": {"tty", "x11", "wayland", "remote-ssh"},
         "apply_preview_session_types": set(),

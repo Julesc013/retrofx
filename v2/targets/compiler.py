@@ -7,14 +7,16 @@ from typing import Any, Mapping
 
 from v2.targets.interfaces import TargetCompileResult
 from v2.targets.terminal import TERMINAL_COMPILERS, list_terminal_targets
+from v2.targets.toolkit import TOOLKIT_COMPILERS, list_toolkit_targets
 from v2.targets.wm import WM_COMPILERS, list_wm_targets
 
 TARGET_COMPILERS = {
     **TERMINAL_COMPILERS,
+    **TOOLKIT_COMPILERS,
     **WM_COMPILERS,
 }
 
-if len(TARGET_COMPILERS) != len(TERMINAL_COMPILERS) + len(WM_COMPILERS):
+if len(TARGET_COMPILERS) != len(TERMINAL_COMPILERS) + len(TOOLKIT_COMPILERS) + len(WM_COMPILERS):
     raise RuntimeError("Duplicate target names were registered across target families.")
 
 
@@ -25,6 +27,7 @@ def list_targets() -> list[str]:
 def list_target_families() -> dict[str, list[str]]:
     return {
         "terminal-tui": list_terminal_targets(),
+        "toolkit": list_toolkit_targets(),
         "wm": list_wm_targets(),
     }
 

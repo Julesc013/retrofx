@@ -3,6 +3,26 @@
 Typography is a first-class part of RetroFX 2.x appearance policy.
 It is not a terminal-export afterthought.
 
+## Current Implementation Status
+
+TWO-12 implements the first real typography slice under `v2/`.
+
+Implemented now:
+
+- normalized typography defaults for `console_font`, `terminal_primary`, `ui_sans`, and `ui_mono`
+- resolved typography stacks for terminal and UI monospace roles
+- deterministic export-only typography emission for Alacritty and Kitty primary font settings
+- deterministic session-local `fontconfig`-style output under `v2/out/<profile-id>/fontconfig/`
+- typography visibility in the dev compile and session-planning entrypoints
+
+Not implemented yet:
+
+- live desktop font application
+- GTK or Qt font compilers
+- TTY console font application in the 2.x runtime
+- full fallback-chain emission for every terminal target
+- global emoji fallback orchestration
+
 ## Role-Based Font Design
 
 Typography is defined by roles, not by backend filenames.
@@ -16,6 +36,14 @@ Typography is defined by roles, not by backend filenames.
 | `ui_mono` | UI monospace family | editors, bars, code-facing UI |
 | `icon_font` | icon or symbol-capable font hint | bars, launchers, notifications |
 | `emoji_policy` | emoji handling preference | terminals, toolkit exports, GUI sessions |
+
+Current normalized defaults in the early implementation:
+
+- `terminal_primary` defaults to `monospace`
+- `console_font` defaults to `terminal_primary`
+- `ui_sans` defaults to `sans-serif`
+- `ui_mono` defaults to `terminal_primary`
+- `terminal_stack` and `ui_mono_stack` are derived deterministically from the resolved roles
 
 ## Anti-Aliasing Policy
 
@@ -63,6 +91,11 @@ Meaning:
 - session-wide hint or apply path
 - still user-scoped, not system-global by default
 
+Implemented now:
+
+- `v2/targets/toolkit/fontconfig.py` emits a deterministic session-local `fontconfig` fragment
+- the artifact is export-only and intended for later orchestration or manual inspection
+
 ### Target-Specific Terminal Configuration
 
 Best for:
@@ -74,6 +107,12 @@ Best for:
 Meaning:
 
 - target-local and often directly actionable
+
+Implemented now:
+
+- Alacritty emits `font.normal.family` from the resolved `terminal_primary`
+- Kitty emits `font_family` from the resolved `terminal_primary`
+- fallback chains are preserved in the resolved model, but not yet emitted by those targets
 
 ### Export-Only Hints
 
@@ -145,6 +184,8 @@ Typical tradeoff:
 - some targets can only export hints
 - session-local font policy is different from a terminal-specific font setting
 - typography support must remain capability-aware and explicit
+- the current `fontconfig` artifact is session-local and export-oriented, not a live global font switch
+- current terminal compilers emit the primary font role only; fallback-chain support remains partial
 
 ## Relation To 1.x
 
@@ -155,4 +196,3 @@ Typical tradeoff:
 - explicit AA policy
 
 2.x carries those ideas forward, but makes typography a formal theme subsystem instead of a sidecar attached to selected exports.
-

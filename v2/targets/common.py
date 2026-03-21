@@ -29,6 +29,16 @@ def has_non_default_display_policy(display: Mapping[str, Any]) -> bool:
     )
 
 
+def has_non_default_typography_aa(policy: Mapping[str, Any]) -> bool:
+    return any(
+        (
+            policy.get("antialias", "default") != "default",
+            policy.get("subpixel", "default") != "default",
+            policy.get("hinting", "default") != "default",
+        )
+    )
+
+
 def write_target_artifact(
     *,
     target_name: str,

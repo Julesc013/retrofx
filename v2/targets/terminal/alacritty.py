@@ -21,7 +21,9 @@ class AlacrittyCompiler:
         output_dir = profile_output_root / self.target_name
         warnings = render_warning_for_terminal_family(context, self.supported_target_classes)
         if context.terminal_fallbacks:
-            warnings.append("Alacritty output can express only the primary terminal font family; fallback chains are omitted.")
+            warnings.append(
+                "Alacritty output emits only the primary terminal font family in TWO-12; fallback chains remain a future enhancement."
+            )
 
         artifact = write_target_artifact(
             target_name=self.target_name,
@@ -40,15 +42,21 @@ class AlacrittyCompiler:
                 "semantics.color.semantic",
                 "semantics.color.terminal_ansi",
                 "semantics.typography.terminal_primary",
+                "semantics.typography.aa",
             ],
             ignored_sections=[
                 "semantics.render",
                 "semantics.chrome",
                 "semantics.session",
                 "semantics.typography.terminal_fallbacks",
+                "semantics.typography.console_font",
+                "semantics.typography.emoji_policy",
             ],
             warnings=warnings,
-            notes=["Deterministic Alacritty theme artifact from the resolved profile."],
+            notes=[
+                "Deterministic Alacritty theme artifact from the resolved profile.",
+                "Typography emission is limited to the primary terminal font family because Alacritty does not expose a portable fallback-chain setting here.",
+            ],
         )
 
     def _render(self, context: Any) -> str:
@@ -100,6 +108,8 @@ class AlacrittyCompiler:
                     f"family = {q(context.terminal_primary)}",
                 ]
             )
+            if context.ui_mono and context.ui_mono != context.terminal_primary:
+                lines.append(f"# resolved ui_mono = {context.ui_mono}")
 
         lines.append("")
         return "\n".join(lines)

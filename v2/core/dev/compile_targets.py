@@ -14,7 +14,7 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_OUT_ROOT = REPO_ROOT / "v2" / "out"
 IMPLEMENTATION_INFO = {
     "status": "experimental-dev-only",
-    "prompt": "TWO-10",
+    "prompt": "TWO-12",
     "families": list_target_families(),
     "implemented_targets": list_targets(),
     "mode": "export-only-dev",
@@ -24,7 +24,7 @@ IMPLEMENTATION_INFO = {
         "session orchestration",
         "apply/install/off behavior",
         "live WM reload or session integration",
-        "non-terminal/non-WM target families",
+        "global toolkit and desktop control",
     ],
 }
 
@@ -61,6 +61,7 @@ def compile_profile_to_output(
         "warnings": [warning.to_dict() for warning in pipeline_result.warnings],
         "errors": [],
         "profile_id": resolved_profile["identity"]["id"],
+        "resolved_typography": resolved_profile["semantics"]["typography"],
         "profile_output_root": compiled["profile_output_root"],
         "selected_targets": compiled["selected_targets"],
         "compiled_targets": compiled["compiled_targets"],
@@ -69,7 +70,7 @@ def compile_profile_to_output(
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Compile experimental RetroFX 2.x terminal/TUI and WM target artifacts from a 2.x profile.",
+        description="Compile experimental RetroFX 2.x terminal, WM, and typography-policy target artifacts from a 2.x profile.",
     )
     parser.add_argument("profile", help="Path to a RetroFX 2.x TOML profile.")
     parser.add_argument(

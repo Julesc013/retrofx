@@ -5,12 +5,13 @@ Each phase should narrow uncertainty before more implementation surface is added
 
 ## Current Progress
 
-Status after TWO-11:
+Status after TWO-12:
 
 - 2.0-C has an experimental implementation foothold for load, validate, normalize, and resolve in `v2/core/`
 - 2.0-D has started with the first terminal/TUI compiler family under `v2/targets/terminal/`
 - 2.0-D now also has the first WM theme/config compiler family under `v2/targets/wm/`
 - 2.0-E has begun narrowly with non-destructive environment detection and capability-aware planning preview under `v2/session/`
+- 2.0-F has begun narrowly with concrete typography resolution and export-only font-policy artifacts
 - live session orchestration and broader target families remain future phases
 
 ## 2.0-A Product And Spec Design
@@ -87,6 +88,7 @@ Current implementation note:
 
 - TWO-09 starts this phase narrowly with export-oriented terminal/TUI compilers
 - TWO-10 extends that same export-oriented slice into WM theme/config compilers for `i3`, `sway`, and `waybar`
+- TWO-12 deepens the terminal slice with resolved typography consumption
 - X11, TTY, `tuigreet`, install/apply, and session orchestration are still future work
 
 ## 2.0-E Session Orchestration Layer
@@ -127,6 +129,11 @@ Explicitly does not do:
 - pretend unsupported DE stacks are now fully orchestrated
 - bypass the capability model for "close enough" targets
 - over-centralize toolkit-specific logic in the core
+
+Current implementation note:
+
+- TWO-12 starts this phase narrowly with typography defaults in the resolved model, terminal font emission, and an export-only session-local `fontconfig` artifact
+- GTK, Qt, cursor, icon, and global desktop typography orchestration are still future work
 
 ## 2.0-G Packaging And Ecosystem
 

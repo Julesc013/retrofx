@@ -9,6 +9,7 @@ Implemented now:
 
 - the first real terminal/TUI compiler family under `terminal/`
 - the first real WM/compiler family under `wm/`
+- the first real toolkit-adjacent typography-policy export target under `toolkit/`
 - a lightweight shared adapter interface under `interfaces/`
 - a shared target registry that dispatches implemented families from the resolved profile
 
@@ -27,7 +28,7 @@ Planned sub-areas:
 - `tuigreet/`: greet/login presentation adapters
 - `x11/`: render-capable X11 adapters
 - `wm/`: WM and adjacent UI target adapters
-- `toolkit/`: future GTK, Qt, cursor, and icon export adapters
+- `toolkit/`: session-local typography policy exports now, broader GTK, Qt, cursor, and icon adapters later
 
 Do not implement here:
 
@@ -49,5 +50,5 @@ Core rule:
 
 Current implementation note:
 
-- TWO-09 and TWO-10 compilers consume the resolved profile only
+- TWO-09, TWO-10, and TWO-12 compilers consume the resolved profile only
 - capability-filtered target plans and artifact-plan inputs remain future work, so current compilers run only in explicit dev export mode

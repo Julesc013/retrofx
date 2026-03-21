@@ -3,6 +3,28 @@
 Toolkit and desktop export targets are important to the long-term platform, but they are not required to be the first implementation wave.
 This document exists so later toolkit work lands inside the same target-compiler contract instead of becoming ad hoc.
 
+## Current Implementation Status
+
+Most toolkit work remains future.
+The one narrow implemented exception is TWO-12's session-local `fontconfig` typography export target.
+
+Implemented now:
+
+- `fontconfig`-style export for resolved typography policy
+
+Still future:
+
+- GTK exports
+- Qt exports
+- cursor-theme selection targets
+- icon-theme selection targets
+- broader desktop export hints
+
+Guardrail:
+
+- the implemented `fontconfig` target does not imply GTK, Qt, GNOME, or Plasma ownership
+- it exists to prove typography-policy compilation, not to claim full desktop font orchestration
+
 ## Family Members
 
 Deferred or future toolkit-facing targets include:
@@ -124,4 +146,3 @@ Toolkit work must not become:
 - a reason to bypass the resolved profile and target-plan pipeline
 
 Future toolkit targets should arrive only when they can truthfully declare what they support.
-

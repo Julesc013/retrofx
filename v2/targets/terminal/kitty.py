@@ -20,7 +20,7 @@ class KittyCompiler:
         output_dir = profile_output_root / self.target_name
         warnings = render_warning_for_terminal_family(context, self.supported_target_classes)
         if context.terminal_fallbacks:
-            warnings.append("Kitty output uses only `font_family`; fallback chains remain a future enhancement.")
+            warnings.append("Kitty output uses only `font_family`; fallback chains remain a future enhancement in TWO-12.")
 
         artifact = write_target_artifact(
             target_name=self.target_name,
@@ -39,15 +39,21 @@ class KittyCompiler:
                 "semantics.color.semantic",
                 "semantics.color.terminal_ansi",
                 "semantics.typography.terminal_primary",
+                "semantics.typography.aa",
             ],
             ignored_sections=[
                 "semantics.render",
                 "semantics.chrome",
                 "semantics.session",
                 "semantics.typography.terminal_fallbacks",
+                "semantics.typography.console_font",
+                "semantics.typography.emoji_policy",
             ],
             warnings=warnings,
-            notes=["Deterministic Kitty theme artifact from the resolved profile."],
+            notes=[
+                "Deterministic Kitty theme artifact from the resolved profile.",
+                "Typography emission is currently limited to `font_family` because this dev-only target keeps the configuration narrow and portable.",
+            ],
         )
 
     def _render(self, context: Any) -> str:
@@ -63,6 +69,8 @@ class KittyCompiler:
         ]
         if context.terminal_primary:
             lines.append(f"font_family {context.terminal_primary}")
+        if context.ui_mono and context.ui_mono != context.terminal_primary:
+            lines.append(f"# resolved ui_mono {context.ui_mono}")
         for slot in range(16):
             lines.append(f"color{slot} {context.terminal_ansi[str(slot)]}")
         lines.append("")
