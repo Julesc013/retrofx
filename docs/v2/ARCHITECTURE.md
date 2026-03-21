@@ -8,9 +8,9 @@ Session orchestration owns lifecycle and recovery.
 ## Module Stack
 
 1. Packs provide curated profile inputs and metadata.
-2. Core turns source profiles into a resolved profile and artifact plan.
-3. Theme and Render interpret different output domains from the resolved profile.
-4. Targets and Adapters compile those domains into backend-specific artifacts.
+2. Core turns source profiles into a normalized profile, a resolved semantic model, and then a capability-filtered resolved profile with an artifact plan.
+3. Theme and Render interpret different output domains from the resolved semantic model.
+4. Targets and Adapters compile those domains from the resolved profile into backend-specific artifacts.
 5. Session applies, exports, installs, disables, or repairs those artifacts within declared scope.
 
 ## A. Core
@@ -23,7 +23,7 @@ It must stay boring, deterministic, and backend-agnostic.
 - parsing source profiles and pack metadata
 - schema validation
 - normalized profile model creation
-- resolved profile creation
+- resolved semantic model creation
 - token resolution
 - environment and backend capability intersection
 - artifact planning
@@ -73,7 +73,7 @@ Render owns optional appearance transforms that change how output is visually pr
 ### Render Rules
 
 - Render is optional by design.
-- A target without render support must still be able to consume the same resolved profile through theme-only compilation.
+- A target without render support must still be able to consume the same resolved semantic model through theme-only compilation.
 - Render modules describe intent and parameters; adapters decide whether they can host them.
 - No global Wayland or compositor-wide behavior is assumed without an explicit capability path.
 
@@ -151,11 +151,11 @@ RetroFX 2.x follows this conceptual sequence:
 3. `normalize`
    Convert accepted input into one canonical profile model.
 4. `resolve`
-   Resolve tokens, defaults, pack inheritance or composition, and explicit intent.
+   Resolve tokens, defaults, pack inheritance or composition, and explicit intent into the resolved semantic model.
 5. `capability filter`
-   Intersect requested intent with target and environment capabilities.
+   Intersect requested intent with target and environment capabilities to produce the final resolved profile and target plan.
 6. `compile targets`
-   Run target adapters to emit artifacts from the filtered plan.
+   Run target adapters to emit artifacts from the resolved profile and filtered plan.
 7. `apply/export`
    Either apply through session orchestration or emit explicit export-only artifacts.
 
@@ -166,4 +166,3 @@ RetroFX 2.x follows this conceptual sequence:
 - Target adapters compile from declared inputs; they do not reinterpret product scope locally.
 - Recovery and lifecycle state are first-class architecture, not bolt-on scripts.
 - Future prompts may extend adapters and packs, but should resist moving complexity into the core without a cross-target reason.
-

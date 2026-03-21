@@ -7,11 +7,14 @@ It is the design constitution for future `2.x` work, not a description of curren
 
 1. [PRODUCT.md](PRODUCT.md) for the product definition.
 2. [NON_GOALS.md](NON_GOALS.md) and [SCOPE.md](SCOPE.md) for boundaries.
-3. [CAPABILITY_MODEL.md](CAPABILITY_MODEL.md) and [TARGET_MATRIX.md](TARGET_MATRIX.md) for support truth.
-4. [TERMINOLOGY.md](TERMINOLOGY.md) for precise language.
-5. [ARCHITECTURE.md](ARCHITECTURE.md) and [PRINCIPLES.md](PRINCIPLES.md) for implementation guardrails.
-6. [ROADMAP.md](ROADMAP.md) for phased delivery.
-7. [RELATION_TO_1X.md](RELATION_TO_1X.md) for branch and migration discipline.
+3. [PROFILE_SCHEMA.md](PROFILE_SCHEMA.md), [TOKEN_CATALOG.md](TOKEN_CATALOG.md), and [VALIDATION_RULES.md](VALIDATION_RULES.md) for the 2.x profile language.
+4. [RESOLVED_MODEL.md](RESOLVED_MODEL.md) for the compiler-facing model.
+5. [CAPABILITY_MODEL.md](CAPABILITY_MODEL.md) and [TARGET_MATRIX.md](TARGET_MATRIX.md) for support truth.
+6. [EXAMPLES.md](EXAMPLES.md) and [MIGRATION.md](MIGRATION.md) for authoring and continuity.
+7. [TERMINOLOGY.md](TERMINOLOGY.md) for precise language.
+8. [ARCHITECTURE.md](ARCHITECTURE.md) and [PRINCIPLES.md](PRINCIPLES.md) for implementation guardrails.
+9. [ROADMAP.md](ROADMAP.md) for phased delivery.
+10. [RELATION_TO_1X.md](RELATION_TO_1X.md) for branch and migration discipline.
 
 ## Intent
 
