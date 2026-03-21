@@ -16,7 +16,7 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_OUT_ROOT = REPO_ROOT / "v2" / "out"
 IMPLEMENTATION_INFO = {
     "status": "experimental-dev-only",
-    "prompt": "TWO-17",
+    "prompt": "TWO-18",
     "surface": "session-planning-preview",
     "implemented_targets": list_targets(),
     "families": list_target_families(),
@@ -26,7 +26,7 @@ IMPLEMENTATION_INFO = {
         "session wrapper mutation",
         "artifact-plan driven lifecycle execution",
         "Wayland render family",
-        "global toolkit orchestration and login target families",
+        "live toolkit orchestration and login target families",
     ],
 }
 
@@ -93,6 +93,7 @@ def plan_profile_session(
             "apply_mode": plan["session_policy"]["apply_mode"],
             "persistence": plan["session_policy"]["persistence"],
             "typography": resolved_profile["semantics"]["typography"],
+            "chrome": resolved_profile["semantics"]["chrome"],
             "display_policy": resolved_profile["semantics"]["render"]["display"],
         },
         "environment": environment,
@@ -148,6 +149,7 @@ def _write_preview_bundle(
             "origin": resolved_profile["source"]["origin"],
             "pack": resolved_profile.get("pack"),
             "typography": resolved_profile["semantics"]["typography"],
+            "chrome": resolved_profile["semantics"]["chrome"],
             "display_policy": resolved_profile["semantics"]["render"]["display"],
         },
         "environment": environment,
@@ -189,6 +191,10 @@ def _render_summary_text(payload: Mapping[str, Any]) -> str:
         f"x11_render_status: {plan['x11_render']['overall_status']}",
         f"terminal_primary: {payload['profile']['typography']['terminal_primary']}",
         f"ui_sans: {payload['profile']['typography']['ui_sans']}",
+        f"icon_theme: {payload['profile']['chrome']['icon_theme'] or '(none)'}",
+        f"cursor_theme: {payload['profile']['chrome']['cursor_theme'] or '(none)'}",
+        f"cursor_size: {payload['profile']['chrome']['cursor_size']}",
+        f"toolkit_status: {plan['toolkit_style']['overall_status']}",
         (
             "aa_policy: "
             f"antialias={payload['profile']['typography']['aa']['antialias']}, "

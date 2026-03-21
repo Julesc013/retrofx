@@ -123,6 +123,11 @@ The theme subsystem should eventually provide:
 Those outputs are still side-effect free.
 File emission stays in target adapters.
 
+Current TWO-18 implementation note:
+
+- toolkit-facing target adapters now consume resolved semantic colors, typography roles, and icon or cursor policy to emit advisory GTK, Qt, and desktop-style artifacts
+- those outputs remain export-only and do not imply live desktop settings ownership
+
 ## What Later Prompts Should Build Here
 
 Future implementation prompts should build:

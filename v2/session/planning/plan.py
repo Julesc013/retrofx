@@ -6,6 +6,7 @@ from typing import Any, Mapping
 
 from v2.render import build_display_policy_summary, build_x11_render_summary
 from v2.targets import TARGET_COMPILERS, list_target_families, list_targets
+from v2.targets.toolkit.common import build_toolkit_style_summary
 
 TARGET_RULES = {
     "alacritty": {
@@ -13,6 +14,22 @@ TARGET_RULES = {
         "apply_preview_session_types": set(),
     },
     "fontconfig": {
+        "preferred_session_types": {"x11", "wayland", "remote-ssh"},
+        "apply_preview_session_types": set(),
+    },
+    "gtk-export": {
+        "preferred_session_types": {"x11", "wayland", "remote-ssh"},
+        "apply_preview_session_types": set(),
+    },
+    "qt-export": {
+        "preferred_session_types": {"x11", "wayland", "remote-ssh"},
+        "apply_preview_session_types": set(),
+    },
+    "icon-cursor": {
+        "preferred_session_types": {"x11", "wayland", "remote-ssh"},
+        "apply_preview_session_types": set(),
+    },
+    "desktop-style": {
         "preferred_session_types": {"x11", "wayland", "remote-ssh"},
         "apply_preview_session_types": set(),
     },
@@ -69,10 +86,6 @@ TARGET_RULES = {
 FUTURE_ONLY_HINTS = {
     "tty": "TTY target compilers are not implemented yet in 2.x.",
     "tuigreet": "Tuigreet/login target compilers are not implemented yet in 2.x.",
-    "gtk": "Toolkit export targets are not implemented yet in 2.x.",
-    "qt": "Toolkit export targets are not implemented yet in 2.x.",
-    "icons": "Icon-policy targets are not implemented yet in 2.x.",
-    "cursors": "Cursor-policy targets are not implemented yet in 2.x.",
     "notifications": "Notification targets are not implemented yet in 2.x.",
     "launcher": "Launcher targets are not implemented yet in 2.x.",
 }
@@ -85,6 +98,7 @@ def build_session_plan(resolved_profile: Mapping[str, Any], environment: Mapping
     render_mode = str(resolved_profile["semantics"]["render"]["mode"])
     display_policy = build_display_policy_summary(resolved_profile, environment)
     x11_render = build_x11_render_summary(resolved_profile, environment)
+    toolkit_style = build_toolkit_style_summary(resolved_profile, environment)
     implemented_families = list_target_families()
     implemented_targets = list_targets()
     implemented_target_classes = sorted(
@@ -104,7 +118,7 @@ def build_session_plan(resolved_profile: Mapping[str, Any], environment: Mapping
     skipped_targets: list[dict[str, Any]] = []
     warnings: list[str] = []
     notes: list[str] = [
-        "TWO-17 planning is preview-only and does not mutate the current session unless the explicit dev-only X11 live probe is requested.",
+        "TWO-18 planning is preview-only and does not mutate the current session unless the explicit dev-only X11 live probe is requested.",
         "Capability filtering currently reasons over implemented target families only.",
     ]
 
@@ -162,10 +176,11 @@ def build_session_plan(resolved_profile: Mapping[str, Any], environment: Mapping
     if display_policy["requested_fields"]:
         warnings.extend(display_policy["warnings"])
     warnings.extend(x11_render["warnings"])
+    warnings.extend(toolkit_style["warnings"])
 
     if apply_mode != "export-only":
         warnings.append(
-            f"`session.apply_mode = \"{apply_mode}\"` is previewed only; live apply/install orchestration is still not implemented beyond the dev-only X11 probe path."
+            f"`session.apply_mode = \"{apply_mode}\"` is previewed only; live apply/install orchestration is still not implemented beyond the dev-only X11 probe path and export-only toolkit artifacts."
         )
 
     environment_capabilities = _summarize_environment_capabilities(environment)
@@ -189,6 +204,7 @@ def build_session_plan(resolved_profile: Mapping[str, Any], environment: Mapping
         },
         "display_policy": display_policy,
         "x11_render": x11_render,
+        "toolkit_style": toolkit_style,
         "environment_capabilities": environment_capabilities,
         "family_plans": family_plan_summary,
         "target_entries": target_entries,
@@ -303,6 +319,7 @@ def _summarize_environment_capabilities(environment: Mapping[str, Any]) -> dict[
     return {
         "terminal_family_meaningful_now": session_type in {"tty", "x11", "wayland", "remote-ssh"},
         "wm_family_meaningful_now": session_type in {"x11", "wayland"},
+        "toolkit_family_meaningful_now": session_type in {"x11", "wayland", "remote-ssh"},
         "current_session_apply_preview_possible": session_type in {"x11", "wayland"},
         "x11_render_path_hint": {
             "environment_capable": session_type == "x11",

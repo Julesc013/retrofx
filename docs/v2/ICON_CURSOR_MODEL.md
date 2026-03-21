@@ -82,7 +82,10 @@ That is acceptable if the behavior is explicit.
 In the current authored schema:
 
 - icon-theme choice is carried by `chrome.icon_theme`
+- icon-theme variant is carried by `chrome.icon_variant`
 - cursor-theme choice is carried by `chrome.cursor_theme`
+- cursor size is carried by `chrome.cursor_size`
+- cursor variant is carried by `chrome.cursor_variant`
 
 That is acceptable for `v2alpha1`, but the logical model should remain:
 
@@ -98,6 +101,11 @@ Most relevant families:
 - toolkit or desktop export targets
 - WM-facing config targets
 - session helper targets when they own a truthful path
+
+Implemented now:
+
+- TWO-18 adds export-only toolkit artifacts that serialize icon and cursor policy explicitly under `v2/out/<profile-id>/icon-cursor/` and `v2/out/<profile-id>/desktop-style/`
+- these artifacts are intended for manual inspection or later session integration, not live DE mutation
 
 Least relevant families:
 

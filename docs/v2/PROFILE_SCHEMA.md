@@ -340,7 +340,10 @@ Current TWO-17 implementation note:
 | `chrome.launcher_style` | Style hint for launchers or application menus. |
 | `chrome.notification_style` | Style hint for notifications or popups. |
 | `chrome.icon_theme` | Preferred icon theme id or style hint. |
+| `chrome.icon_variant` | Optional icon-theme variant or density hint. |
 | `chrome.cursor_theme` | Preferred cursor theme id or style hint. |
+| `chrome.cursor_size` | Preferred cursor size hint for export-oriented toolkit targets. |
+| `chrome.cursor_variant` | Optional cursor style variant hint. |
 
 These are intentionally optional.
 Not all targets can use them, and many compile as hints for specific adapters rather than universal appearance controls.

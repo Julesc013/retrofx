@@ -141,7 +141,10 @@ Current TWO-17 implementation note:
 - `launcher_style`
 - `notification_style`
 - `icon_theme`
+- `icon_variant`
 - `cursor_theme`
+- `cursor_size`
+- `cursor_variant`
 
 ### 6. `semantics.session`
 

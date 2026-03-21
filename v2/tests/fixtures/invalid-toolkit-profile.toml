@@ -1,0 +1,22 @@
+schema = "retrofx.profile/v2alpha1"
+
+[identity]
+id = "invalid-toolkit-profile"
+name = "Invalid Toolkit Profile"
+family = "modern-minimal"
+
+[color.semantic]
+bg0 = "#111417"
+fg0 = "#f1f4f7"
+
+[chrome]
+icon_theme = 17
+icon_variant = false
+cursor_theme = "Bibata-Modern-Classic"
+cursor_size = "large"
+cursor_variant = 9
+
+[session]
+targets = ["gtk", "qt", "icons", "cursors"]
+apply_mode = "export-only"
+persistence = "export-only"

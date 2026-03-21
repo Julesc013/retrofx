@@ -8,7 +8,7 @@ Implemented now:
 
 - `resolve_profile.py`: load, validate, normalize, and resolve a 2.x profile fixture or file
 - `resolve-profile`: thin shell wrapper around the Python module
-- `compile_targets.py`: compile the implemented terminal/TUI, WM, typography-policy, bounded X11 render, and display-policy target families into `v2/out/<profile-id>/...`
+- `compile_targets.py`: compile the implemented terminal/TUI, WM, toolkit, typography-policy, bounded X11 render, and display-policy target families into `v2/out/<profile-id>/...`
 - `compile-targets`: thin shell wrapper around the compiler entrypoint
 - `plan_session.py`: detect the environment, build a capability-aware session plan, surface resolved typography and display policy, and optionally write a preview bundle
 - `plan-session`: thin shell wrapper around the session planner

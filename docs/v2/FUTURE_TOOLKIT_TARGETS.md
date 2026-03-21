@@ -5,35 +5,43 @@ This document exists so later toolkit work lands inside the same target-compiler
 
 ## Current Implementation Status
 
-Most toolkit work remains future.
-The one narrow implemented exception is TWO-12's session-local `fontconfig` typography export target.
+TWO-18 implements the first bounded desktop-facing toolkit slice under `v2/targets/toolkit/`.
 
 Implemented now:
 
 - `fontconfig`-style export for resolved typography policy
+- `gtk-export` advisory export artifacts
+- `qt-export` advisory export artifacts
+- `icon-cursor` policy artifacts
+- `desktop-style` aggregate export artifacts
 
 Still future:
 
-- GTK exports
-- Qt exports
-- cursor-theme selection targets
-- icon-theme selection targets
-- broader desktop export hints
+- live GNOME, Plasma, Xfce, or cross-DE settings mutation
+- full GTK theme generation
+- full Qt theme-engine integration
+- icon or cursor theme installation workflows
+- broader desktop or DE integration hooks
 
 Guardrail:
 
-- the implemented `fontconfig` target does not imply GTK, Qt, GNOME, or Plasma ownership
-- it exists to prove typography-policy compilation, not to claim full desktop font orchestration
+- implemented toolkit targets are export-only and advisory
+- they do not imply GNOME, Plasma, or global desktop ownership
+- they exist to prove resolved-profile-driven desktop-facing compilation, not live orchestration
 
 ## Family Members
 
-Deferred or future toolkit-facing targets include:
+Implemented or active toolkit-facing targets now include:
 
-- GTK exports
-- Qt exports
-- cursor-theme selection hints
-- icon-theme selection hints
-- desktop or DE export hints where truthful
+- GTK advisory exports
+- Qt advisory exports
+- cursor-theme and icon-theme policy exports
+- desktop-style aggregate hints
+
+Broader future targets still include:
+
+- desktop or DE integration fragments where truthful
+- install-owned toolkit apply paths where bounded and reversible
 
 ## GTK
 
@@ -46,6 +54,10 @@ Consumes:
 Emits:
 
 - GTK-oriented export artifacts
+
+Implemented now:
+
+- `gtk-export` emits a deterministic advisory file with GTK-facing font, icon, cursor, dark-preference, and palette hints
 
 Mode:
 
@@ -70,6 +82,10 @@ Emits:
 
 - Qt-oriented export artifacts
 
+Implemented now:
+
+- `qt-export` emits a deterministic advisory JSON artifact with Qt-facing palette, font, icon, and cursor hints
+
 Mode:
 
 - export-capable
@@ -92,6 +108,10 @@ Emits:
 
 - cursor theme selection exports or install assets
 
+Implemented now:
+
+- `icon-cursor` emits deterministic cursor policy artifacts for later session integration
+
 Mode:
 
 - export-capable
@@ -113,6 +133,10 @@ Emits:
 
 - icon-theme selection exports or install assets
 
+Implemented now:
+
+- `icon-cursor` emits deterministic icon policy artifacts for later session integration
+
 Mode:
 
 - export-capable
@@ -125,7 +149,12 @@ Limitations:
 
 ## Desktop Export Hints
 
-These are future targets for:
+These are now partially implemented for:
+
+- advisory desktop-style export bundles
+- environment-agnostic toolkit preference summaries
+
+They are still future for:
 
 - environment-scoped config hints
 - DE integration fragments

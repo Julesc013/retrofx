@@ -13,11 +13,14 @@ Implemented now:
 - terminal/TUI theme compilation from resolved semantic colors and resolved typography roles
 - WM theme/config compilation from resolved semantic colors, chrome hints, and resolved UI font roles
 - session-local `fontconfig`-style typography export from the resolved typography policy
+- GTK-facing advisory export artifacts
+- Qt-facing advisory export artifacts
+- icon and cursor policy artifacts
+- desktop-style aggregate export artifacts
 
 Still future:
 
 - a standalone theme-token planning layer separate from direct adapter emission
-- richer toolkit targets such as GTK, Qt, icons, and cursors
 - capability-filtered theme planning backed by the full artifact planner
 
 ## What Theme Compilation Consumes
@@ -69,6 +72,7 @@ Implemented now:
 - terminal theme files for `xresources`, `alacritty`, `kitty`, `tmux`, and `vim`
 - WM config fragments for `i3`, `sway`, and `waybar`
 - a session-local `fontconfig` typography policy fragment
+- toolkit-facing export artifacts for `gtk-export`, `qt-export`, `icon-cursor`, and `desktop-style`
 
 ## Defaults And Overrides
 

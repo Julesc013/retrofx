@@ -29,19 +29,21 @@ It is broader than RetroFX 1.x, but it is still bounded by explicit capability d
 
 ## Current Implementation State
 
-As of TWO-17:
+As of TWO-18:
 
 - `v2/core/` contains an experimental dev-only scaffold for loading, validating, normalizing, and resolving 2.x profiles
 - `v2/tests/` contains isolated 2.x fixtures and tests for that scaffold
 - `v2/targets/terminal/` contains the first real 2.x compiler family: `xresources`, `alacritty`, `kitty`, `tmux`, and `vim`
 - `v2/targets/wm/` now contains the second real 2.x compiler family: `i3`, `sway`, and `waybar`
 - `v2/targets/toolkit/` now contains the first real typography-policy export target: `fontconfig`
+- `v2/targets/toolkit/` now also contains bounded desktop-facing export targets: `gtk-export`, `qt-export`, `icon-cursor`, and `desktop-style`
 - `v2/targets/x11/` now contains a real bounded X11 render family: `x11-shader`, `x11-picom`, `x11-render-runtime`, plus `x11-display-policy`
 - `v2/core/dev/compile-targets <profile>` compiles those implemented targets into `v2/out/<profile-id>/...`
 - `v2/session/` now contains real environment detection and capability-aware session planning preview code
 - `v2/core/dev/plan-session <profile>` detects the environment, builds a preview plan, and can write a non-destructive preview bundle under `v2/out/<profile-id>/plan/`
 - `v2/session/dev/preview_x11_render.py` and `scripts/dev/retrofx-v2-preview-x11` now stage X11 render artifacts and can run an explicit short-lived `picom` probe in X11
 - resolved typography defaults, stacks, and session-local font-policy artifacts now exist, but global font orchestration does not
+- resolved icon/cursor and desktop-style policy now compile into advisory toolkit artifacts, but live desktop integration does not
 - resolved display policy is now concrete, planned, exportable, and consumable by the bounded X11 render slice, but global display mutation does not exist
 - `v2/packs/` now contains a real local pack system with `retrofx.pack/v2alpha1` manifests and curated built-in packs
 - `v2/core/dev/list-packs` and `v2/core/dev/show-pack` now inspect those local packs

@@ -5,7 +5,7 @@ Each phase should narrow uncertainty before more implementation surface is added
 
 ## Current Progress
 
-Status after TWO-17:
+Status after TWO-18:
 
 - 2.0-C has an experimental implementation foothold for load, validate, normalize, and resolve in `v2/core/`
 - 2.0-D has started with the first terminal/TUI compiler family under `v2/targets/terminal/`
@@ -14,6 +14,7 @@ Status after TWO-17:
 - 2.0-E has begun narrowly with non-destructive environment detection and capability-aware planning preview under `v2/session/`
 - 2.0-F has begun narrowly with concrete typography resolution and export-only font-policy artifacts
 - 2.0-F now also includes the first concrete display-policy resolution and export slice
+- 2.0-F now also includes the first bounded toolkit and desktop-facing export compilers for GTK, Qt, and icon or cursor policy
 - 2.0-G has now started narrowly with a local pack manifest format, curated built-in packs, and pack-aware dev resolution under `v2/packs/`
 - 2.0-G now also includes the first 1.x compatibility inspection and draft migration slice under `v2/compat/`
 - 2.0-G now also includes deterministic dev bundles plus experimental user-local install, uninstall, and status helpers under `v2/session/install/` and `scripts/dev/`
@@ -143,7 +144,8 @@ Current implementation note:
 
 - TWO-12 starts this phase narrowly with typography defaults in the resolved model, terminal font emission, and an export-only session-local `fontconfig` artifact
 - TWO-13 adds advisory display-policy resolution and export for future X11/render consumers
-- GTK, Qt, cursor, icon, live display control, and global desktop typography orchestration are still future work
+- TWO-18 adds advisory GTK, Qt, icon-cursor, and desktop-style exports without claiming live desktop ownership
+- live display control and global desktop orchestration are still future work
 
 ## 2.0-G Packaging And Ecosystem
 

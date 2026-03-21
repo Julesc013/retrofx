@@ -6,10 +6,18 @@ from pathlib import Path
 from typing import Any, Mapping
 
 from v2.targets.interfaces import TargetCompileResult
+from v2.targets.toolkit.desktop_style import DesktopStyleCompiler
 from v2.targets.toolkit.fontconfig import FontconfigCompiler
+from v2.targets.toolkit.gtk import GtkExportCompiler
+from v2.targets.toolkit.icon_cursor import IconCursorCompiler
+from v2.targets.toolkit.qt import QtExportCompiler
 
 TOOLKIT_COMPILERS = {
+    "desktop-style": DesktopStyleCompiler(),
     "fontconfig": FontconfigCompiler(),
+    "gtk-export": GtkExportCompiler(),
+    "icon-cursor": IconCursorCompiler(),
+    "qt-export": QtExportCompiler(),
 }
 
 

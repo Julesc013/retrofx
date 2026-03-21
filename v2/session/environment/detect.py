@@ -120,6 +120,7 @@ def detect_environment(
         "capability_hints": {
             "terminal_outputs_meaningful": session_type in {"tty", "x11", "wayland", "remote-ssh"},
             "wm_outputs_meaningful": session_type in {"x11", "wayland"},
+            "toolkit_outputs_meaningful": session_type in {"x11", "wayland", "remote-ssh"},
             "x11_render_path_environment": {
                 "session_capable": session_type == "x11",
                 "picom_available": executables["picom"],

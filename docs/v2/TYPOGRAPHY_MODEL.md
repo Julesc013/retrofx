@@ -13,15 +13,20 @@ Implemented now:
 - resolved typography stacks for terminal and UI monospace roles
 - deterministic export-only typography emission for Alacritty and Kitty primary font settings
 - deterministic session-local `fontconfig`-style output under `v2/out/<profile-id>/fontconfig/`
+- deterministic advisory GTK, Qt, and desktop-style exports now consume `ui_sans`, `ui_mono`, and AA policy where relevant
 - typography visibility in the dev compile and session-planning entrypoints
 
 Not implemented yet:
 
 - live desktop font application
-- GTK or Qt font compilers
 - TTY console font application in the 2.x runtime
 - full fallback-chain emission for every terminal target
 - global emoji fallback orchestration
+
+Clarification:
+
+- TWO-18 adds GTK and Qt-facing export artifacts that carry typography hints
+- those exports are advisory and do not imply live toolkit font ownership
 
 ## Role-Based Font Design
 

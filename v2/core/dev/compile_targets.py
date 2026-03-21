@@ -11,12 +11,13 @@ from v2.core.dev.profile_input import add_profile_selection_args, run_selected_p
 from v2.render import build_display_policy_summary, build_x11_render_summary
 from v2.session.environment import detect_environment
 from v2.targets import compile_resolved_profile_targets, list_target_families, list_targets
+from v2.targets.toolkit.common import build_toolkit_style_summary
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_OUT_ROOT = REPO_ROOT / "v2" / "out"
 IMPLEMENTATION_INFO = {
     "status": "experimental-dev-only",
-    "prompt": "TWO-17",
+    "prompt": "TWO-18",
     "families": list_target_families(),
     "implemented_targets": list_targets(),
     "mode": "export-only-dev",
@@ -26,6 +27,7 @@ IMPLEMENTATION_INFO = {
         "session orchestration",
         "apply/install/off behavior",
         "live WM reload, broad session integration, or global display mutation",
+        "live GNOME or Plasma settings mutation",
         "global toolkit and desktop control",
     ],
 }
@@ -67,6 +69,7 @@ def compile_profile_to_output(
     environment = detect_environment(env=env, cwd=cwd, stdin_isatty=stdin_isatty, path_lookup=path_lookup)
     display_policy = build_display_policy_summary(resolved_profile, environment)
     x11_render = build_x11_render_summary(resolved_profile, environment)
+    toolkit_style = build_toolkit_style_summary(resolved_profile, environment)
     compiled = compile_resolved_profile_targets(
         resolved_profile,
         chosen_out_root,
@@ -75,6 +78,7 @@ def compile_profile_to_output(
             "environment": environment,
             "display_policy": display_policy,
             "x11_render": x11_render,
+            "toolkit_style": toolkit_style,
         },
     )
     return {
@@ -89,10 +93,12 @@ def compile_profile_to_output(
         "pack": resolved_profile.get("pack"),
         "environment": environment,
         "resolved_typography": resolved_profile["semantics"]["typography"],
+        "resolved_chrome": resolved_profile["semantics"]["chrome"],
         "resolved_render": resolved_profile["semantics"]["render"],
         "resolved_display_policy": resolved_profile["semantics"]["render"]["display"],
         "display_policy": display_policy,
         "x11_render": x11_render,
+        "toolkit_style": toolkit_style,
         "profile_output_root": compiled["profile_output_root"],
         "selected_targets": compiled["selected_targets"],
         "compiled_targets": compiled["compiled_targets"],

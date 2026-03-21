@@ -28,7 +28,12 @@ Governing docs:
 Implemented now:
 
 - `fontconfig`: deterministic export-only session-local typography policy output
+- `gtk-export`: deterministic GTK-facing advisory export artifact
+- `qt-export`: deterministic Qt-facing advisory export artifact
+- `icon-cursor`: deterministic icon and cursor policy artifact
+- `desktop-style`: deterministic aggregate desktop-style export bundle
 
 Later prompts should implement:
 
 - truthful export-first toolkit targets that fit the same adapter contract as the rest of the platform without overstating desktop ownership
+- bounded install or session-integration layers that consume these artifacts without claiming universal DE ownership

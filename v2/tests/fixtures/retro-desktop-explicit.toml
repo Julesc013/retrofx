@@ -1,0 +1,37 @@
+schema = "retrofx.profile/v2alpha1"
+
+[identity]
+id = "retro-desktop-explicit"
+name = "Retro Desktop Explicit"
+family = "crt"
+strictness = "modernized-retro"
+
+[color.semantic]
+bg0 = "#09100c"
+fg0 = "#d7f8c6"
+accent_primary = "#7dff70"
+selection_bg = "#7dff70"
+selection_fg = "#09100c"
+
+[typography]
+terminal_primary = "CozetteVector"
+ui_sans = "IBM Plex Sans"
+ui_mono = "Iosevka Fixed"
+
+[typography.aa]
+antialias = "on"
+subpixel = "rgb"
+hinting = "slight"
+
+[chrome]
+icon_theme = "Papirus-Dark"
+icon_variant = "retro-green"
+cursor_theme = "Bibata-Modern-Ice"
+cursor_size = 26
+cursor_variant = "ice"
+bar_style = "boxed"
+
+[session]
+targets = ["gtk", "qt", "icons", "cursors", "wm"]
+apply_mode = "export-only"
+persistence = "export-only"

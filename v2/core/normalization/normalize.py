@@ -483,7 +483,10 @@ def _normalize_chrome(raw_chrome: Any) -> dict[str, Any]:
         "launcher_style": str(chrome.get("launcher_style", "minimal")).strip().lower() or "minimal",
         "notification_style": str(chrome.get("notification_style", "minimal")).strip().lower() or "minimal",
         "icon_theme": str(chrome.get("icon_theme", "")).strip(),
+        "icon_variant": str(chrome.get("icon_variant", "")).strip(),
         "cursor_theme": str(chrome.get("cursor_theme", "")).strip(),
+        "cursor_size": _normalize_int(chrome.get("cursor_size"), 24),
+        "cursor_variant": str(chrome.get("cursor_variant", "")).strip(),
     }
 
 

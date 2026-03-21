@@ -97,8 +97,9 @@ class SessionPlanningTests(unittest.TestCase):
         )
         self.assertTrue(payload["ok"])
         self.assertIn("sway", payload["plan"]["apply_preview_targets"])
-        self.assertIn("gtk", [entry["requested_target_class"] for entry in payload["plan"]["skipped_targets"] if entry["kind"] == "requested-target-class"])
-        self.assertIn("qt", [entry["requested_target_class"] for entry in payload["plan"]["skipped_targets"] if entry["kind"] == "requested-target-class"])
+        self.assertIn("gtk-export", payload["plan"]["compile_targets"])
+        self.assertIn("qt-export", payload["plan"]["compile_targets"])
+        self.assertEqual(payload["plan"]["toolkit_style"]["overall_status"], "export-only-advisory")
 
     def test_deterministic_plan_output_for_same_input(self) -> None:
         env = {
@@ -137,9 +138,8 @@ class SessionPlanningTests(unittest.TestCase):
         )
         self.assertTrue(payload["ok"])
         self.assertIn("i3", payload["plan"]["degraded_targets"])
-        skipped_classes = [entry["requested_target_class"] for entry in payload["plan"]["skipped_targets"] if entry["kind"] == "requested-target-class"]
-        self.assertIn("gtk", skipped_classes)
-        self.assertIn("qt", skipped_classes)
+        self.assertIn("gtk-export", payload["plan"]["degraded_targets"])
+        self.assertIn("qt-export", payload["plan"]["degraded_targets"])
 
     def test_plan_preview_bundle_is_written(self) -> None:
         with TemporaryDirectory() as tmpdir:

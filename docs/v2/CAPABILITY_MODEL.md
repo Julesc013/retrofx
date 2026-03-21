@@ -14,11 +14,12 @@ Nothing may silently skip this model.
 
 ## Current Implementation Status
 
-As of TWO-17:
+As of TWO-18:
 
 - `v2/session/planning/plan.py` implements the first real capability-aware planning slice
 - it intersects the resolved profile, detected environment, and currently implemented target families
 - the planner now also interprets resolved display policy and bounded X11 render capability as explicit structured outputs
+- the planner now also reports toolkit-style policy and export-only toolkit targets explicitly
 - the current planner is still narrow: it reasons only about implemented targets and remains preview-only
 - artifact-plan-driven lifecycle execution is still future work
 

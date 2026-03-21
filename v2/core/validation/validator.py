@@ -80,7 +80,17 @@ RENDER_QUANTIZATION_KEYS = {"bands"}
 RENDER_PALETTE_KEYS = {"kind", "size", "source"}
 RENDER_EFFECT_KEYS = {"blur", "dither", "scanlines", "flicker", "vignette", "hotcore"}
 RENDER_DISPLAY_KEYS = {"gamma", "contrast", "temperature", "black_lift", "blue_light_reduction", "tint_bias"}
-CHROME_KEYS = {"gaps", "bar_style", "launcher_style", "notification_style", "icon_theme", "cursor_theme"}
+CHROME_KEYS = {
+    "gaps",
+    "bar_style",
+    "launcher_style",
+    "notification_style",
+    "icon_theme",
+    "icon_variant",
+    "cursor_theme",
+    "cursor_size",
+    "cursor_variant",
+}
 SESSION_KEYS = {"targets", "apply_mode", "persistence"}
 
 
@@ -401,9 +411,11 @@ def _validate_chrome(chrome: Mapping[str, Any], errors: list[Issue]) -> None:
         _validate_enum("chrome.launcher_style", chrome["launcher_style"], ALLOWED_LAUNCHER_STYLE, errors)
     if "notification_style" in chrome:
         _validate_enum("chrome.notification_style", chrome["notification_style"], ALLOWED_NOTIFICATION_STYLE, errors)
-    for key in ("icon_theme", "cursor_theme"):
+    for key in ("icon_theme", "icon_variant", "cursor_theme", "cursor_variant"):
         if key in chrome and not isinstance(chrome[key], str):
             errors.append(_error(f"chrome.{key}", "invalid-chrome-string", f"`chrome.{key}` must be a string when provided."))
+    if "cursor_size" in chrome:
+        _validate_int_range("chrome.cursor_size", chrome["cursor_size"], 8, 128, errors)
 
 
 def _validate_session(session: Mapping[str, Any], errors: list[Issue], warnings: list[Issue]) -> None:

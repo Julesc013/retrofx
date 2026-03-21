@@ -198,6 +198,12 @@ What it compiles:
 - cursor and icon theme hints
 - desktop-policy hint outputs
 
+Current implementation status:
+
+- as of TWO-18 this is now a real implemented 2.x family beyond the earlier `fontconfig` typography slice
+- implemented dev-only compilers currently cover `fontconfig`, `gtk-export`, `qt-export`, `icon-cursor`, and `desktop-style`
+- outputs are written under `v2/out/<profile-id>/<target>/`
+
 Typical mode:
 
 - mostly export-only in early 2.x
@@ -217,6 +223,7 @@ Common limitations:
 
 - does not imply DE-wide ownership
 - often cannot claim full apply or repair semantics
+- current implementation is advisory only and does not mutate live GNOME, Plasma, or other desktop settings
 
 ## 7. Session/Integration Helper Family
 
