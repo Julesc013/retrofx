@@ -17,6 +17,7 @@ These are rules, not suggestions.
 10. The compatibility layer may call into 2.x modules, but core 2.x modules must not depend on `compat/`.
 11. Packs are data inputs, not hidden imperative logic.
 12. 1.x shell code is not treated as a utility library for 2.x core planning.
+13. Target compilers consume the resolved profile, capability-filtered target plan, and artifact-planning context; they never consume raw profile TOML directly.
 
 ## Module Ownership
 
