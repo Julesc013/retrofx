@@ -1,6 +1,6 @@
 # RetroFX 2.x Public Beta Readiness
 
-This document answers the public-surface question for the current 2.x branch after the TWO-32 candidate-preparation pass.
+This document answers the public-surface question for the current 2.x branch after the TWO-33 execution pass.
 
 It is not a public release note.
 It does not authorize automatic publication.
@@ -33,12 +33,13 @@ It still does not mean:
 - global desktop ownership
 - broad migration compatibility promises
 
-## Why The Answer Is Now Yes
+## Why The Answer Is Still Yes
 
 - the externally visible tester surface is now the narrower `retrofx-v2-techbeta` wrapper rather than the broader internal developer surface
 - the technical-beta package now carries a copied runnable toolchain instead of assuming a repo checkout
 - bounded apply or off remains user-local and reversible, and is explicitly gated to X11-oriented environments
 - migration and the explicit X11 probe are no longer overexposed; they remain on the internal developer surface
+- TWO-33 executed the candidate workflow end-to-end and did not uncover a public-surface blocker for the narrowed technical-beta line
 
 ## What Remains Narrow
 
@@ -52,4 +53,4 @@ It still does not mean:
 - continue internal alpha: yes
 - continue non-public pre-beta: no
 - limited public technical beta: yes
-- next step: local candidate packaging, local candidate tag preparation, and disciplined advanced-tester circulation without automatic publication
+- next step: continued limited technical-beta circulation, structured outside-style evidence capture, and broader-beta reassessment only after the current evidence base grows

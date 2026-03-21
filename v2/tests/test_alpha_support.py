@@ -133,6 +133,14 @@ class AlphaSupportTests(unittest.TestCase):
             "docs/v2/TECHNICAL_BETA_CANDIDATE_NOTES.md": ["TECHNICAL_BETA_CANDIDATE_READY=yes", "2.0.0-techbeta.1", "X11"],
             "docs/v2/TECHNICAL_BETA_CANDIDATE_SUMMARY.md": ["TECHNICAL_BETA_CANDIDATE_READY=yes", "v2.0.0-techbeta.1", "technical-beta"],
             "docs/v2/TECHNICAL_BETA_RELEASE_CHECKLIST.md": ["public-beta-blocker", "status", "technical-beta package"],
+            "docs/v2/TECHNICAL_BETA_EXECUTION_PLAN.md": ["resolve", "apply", "migration inspection"],
+            "docs/v2/TECHNICAL_BETA_ENVIRONMENT_REPORT_TEMPLATE.md": ["Candidate version or commit", "Session type", "Diagnostics bundle path"],
+            "docs/v2/TECHNICAL_BETA_FEEDBACK_TEMPLATE.md": ["technical-beta-blocker", "Result class", "Diagnostics bundle path"],
+            "docs/v2/TECHNICAL_BETA_ISSUE_TEMPLATE.md": ["technical-beta-blocker", "Commands run", "Diagnostics bundle path"],
+            "docs/v2/TECHNICAL_BETA_TRIAGE.md": ["technical-beta-blocker", "environment-specific", "broader beta stabilization"],
+            "docs/v2/TECHNICAL_BETA_MATRIX.md": ["technical-beta wrapper help and status", "degraded-pass", "Ran 143 tests"],
+            "docs/v2/TECHNICAL_BETA_BLOCKERS.md": ["None open for continued limited technical-beta circulation", "READY_FOR_LIMITED_TECHNICAL_BETA_CONTINUATION=yes", "advanced outside testers"],
+            "docs/v2/TECHNICAL_BETA_READINESS.md": ["READY_FOR_LIMITED_TECHNICAL_BETA_CONTINUATION=yes", "READY_FOR_BROADER_BETA_STABILIZATION=no", "NEEDS_ANOTHER_TECHNICAL_BETA_REMEDIATION_CYCLE=no"],
             "docs/v2/NEXT_STAGE_VERDICT.md": ["READY_FOR_INTERNAL_ALPHA_CONTINUATION", "READY_FOR_BROADER_ALPHA", "READY_FOR_LIMITED_PUBLIC_TECHNICAL_BETA=yes"],
         }
         for relative_path, expected_strings in doc_expectations.items():
