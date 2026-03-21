@@ -13,8 +13,9 @@ It is the design constitution for future `2.x` work, not a description of curren
 6. [EXAMPLES.md](EXAMPLES.md) and [MIGRATION.md](MIGRATION.md) for authoring and continuity.
 7. [TERMINOLOGY.md](TERMINOLOGY.md) for precise language.
 8. [ARCHITECTURE.md](ARCHITECTURE.md) and [PRINCIPLES.md](PRINCIPLES.md) for implementation guardrails.
-9. [ROADMAP.md](ROADMAP.md) for phased delivery.
-10. [RELATION_TO_1X.md](RELATION_TO_1X.md) for branch and migration discipline.
+9. [REPO_LAYOUT.md](REPO_LAYOUT.md), [MODULE_BOUNDARIES.md](MODULE_BOUNDARIES.md), [COMPATIBILITY_SHELL.md](COMPATIBILITY_SHELL.md), and [IMPLEMENTATION_SEQUENCE.md](IMPLEMENTATION_SEQUENCE.md) for repository structure and execution discipline.
+10. [ROADMAP.md](ROADMAP.md) for phased delivery.
+11. [RELATION_TO_1X.md](RELATION_TO_1X.md) for branch and migration discipline.
 
 ## Intent
 
