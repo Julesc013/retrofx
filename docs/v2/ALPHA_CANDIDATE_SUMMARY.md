@@ -31,10 +31,12 @@ This is the concise operator summary for the first local or internal 2.x alpha c
 - Wayland render remains degraded or export-only
 - toolkit outputs remain advisory
 - real-host validation breadth remains narrow
+- broader alpha is not approved
 
 ## Next Human Steps
 
 1. Confirm [ALPHA_RELEASE_CHECKLIST.md](ALPHA_RELEASE_CHECKLIST.md) passes on a clean committed tree.
 2. Generate the package with `scripts/dev/retrofx-v2 package-alpha --pack modern-minimal --profile-id warm-night`.
 3. Run the temp-HOME install, diagnostics, and uninstall flow.
-4. If the candidate still passes, create or keep the local-only annotated tag `v2.0.0-alpha.internal.1`.
+4. Keep the candidate positioned as internal-alpha only until the broader-alpha gates are satisfied.
+5. If the candidate still passes, create or keep the local-only annotated tag `v2.0.0-alpha.internal.1`.

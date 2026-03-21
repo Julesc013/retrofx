@@ -116,6 +116,9 @@ class AlphaSupportTests(unittest.TestCase):
             "docs/v2/ALPHA_ISSUE_TEMPLATE.md": ["alpha-blocker", "Commands:", "diagnostics directory"],
             "docs/v2/POST_ALPHA_DECISION_RULES.md": ["Continue Alpha As-Is", "Enter Alpha Remediation", "Expand The Tester Set"],
             "docs/v2/ALPHA_CANDIDATE_SUMMARY.md": ["ALPHA_CANDIDATE_READY=yes", "v2.0.0-alpha.internal.1", "package-alpha"],
+            "docs/v2/BROADER_ALPHA_READINESS.md": ["READY_FOR_BROADER_ALPHA=no", "READY_FOR_PRE_BETA_STABILIZATION=no", "internal alpha only"],
+            "docs/v2/PRE_BETA_GATES.md": ["broader alpha", "pre-beta", "deterministic"],
+            "docs/v2/NEXT_STAGE_VERDICT.md": ["READY_FOR_INTERNAL_ALPHA_CONTINUATION", "READY_FOR_BROADER_ALPHA", "READY_FOR_PRE_BETA_STABILIZATION"],
         }
         for relative_path, expected_strings in doc_expectations.items():
             content = (REPO_ROOT / relative_path).read_text(encoding="utf-8")

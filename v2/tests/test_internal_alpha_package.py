@@ -54,8 +54,14 @@ class InternalAlphaPackageTests(unittest.TestCase):
             self.assertIn("ready_for_internal_alpha_continuation", manifest["release_status"])
             self.assertIn("ready_for_local_alpha_tag_candidate", manifest["release_status"])
             self.assertIn("alpha_candidate_ready", manifest["release_status"])
+            self.assertIn("ready_for_controlled_internal_alpha", manifest["release_status"])
+            self.assertIn("ready_for_broader_alpha", manifest["release_status"])
+            self.assertIn("ready_for_pre_beta_stabilization", manifest["release_status"])
             self.assertIn("local_tag_name", manifest["release_status"])
             self.assertIn("local_tag_points_at_head", manifest["release_status"])
+            self.assertFalse(manifest["release_status"]["ready_for_controlled_alpha"])
+            self.assertFalse(manifest["release_status"]["ready_for_broader_alpha"])
+            self.assertFalse(manifest["release_status"]["ready_for_pre_beta_stabilization"])
             self.assertEqual(manifest["distribution"]["scope"], "internal-non-public")
             self.assertEqual(manifest["bundle"]["relative_dir"], "bundle")
             self.assertIn("terminal-tui", manifest["supported_target_families"])
@@ -63,6 +69,7 @@ class InternalAlphaPackageTests(unittest.TestCase):
             self.assertIn("docs/INTERNAL_ALPHA_RUNBOOK.md", manifest["included_docs"])
             self.assertIn("docs/ALPHA_CANDIDATE_NOTES.md", manifest["included_docs"])
             self.assertIn("docs/ALPHA_CANDIDATE_SUMMARY.md", manifest["included_docs"])
+            self.assertIn("docs/BROADER_ALPHA_READINESS.md", manifest["included_docs"])
             self.assertTrue(manifest["metadata_artifacts"])
 
     def test_packaged_bundle_installs_into_temp_home(self) -> None:

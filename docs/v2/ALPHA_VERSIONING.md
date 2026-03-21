@@ -9,7 +9,7 @@ RetroFX 2.x now has an explicit non-public experimental version policy for inter
 
 - current 2.x experimental version: `2.0.0-alpha.internal.1`
 - current status label: `internal-alpha`
-- current packaging prompt milestone: `TWO-27`
+- current packaging prompt milestone: `TWO-28`
 - current local/internal candidate tag name: `v2.0.0-alpha.internal.1`
 - code-side source of truth: `v2/dev/release.py`
 
@@ -67,4 +67,4 @@ Example:
 
 That means the branch can be circulated internally without promoting the status label to anything public-facing.
 
-For TWO-27, that same internal version is the prepared local or internal alpha-candidate version, provided the release checklist is run on a clean committed tree and the final validation subset still passes.
+For TWO-28, that same internal version remains the prepared local or internal alpha-candidate version, while broader alpha remains explicitly blocked by evidence rather than by missing versioning.

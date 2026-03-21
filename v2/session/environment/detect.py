@@ -85,6 +85,10 @@ def detect_environment(
 
     if session_type == "unknown-headless":
         warnings.append("No trustworthy live session could be inferred; planning will stay conservative.")
+    if session_type == "wayland" and wm_or_de in {"gnome", "plasma", "unknown"}:
+        warnings.append(
+            f"Wayland `{wm_or_de}` sessions are not part of the currently validated live-preview set; keep 2.x usage here to planning, export, package, and diagnostics flows."
+        )
 
     executables = {
         "picom": bool(lookup("picom")),
@@ -119,8 +123,9 @@ def detect_environment(
         "executables": executables,
         "capability_hints": {
             "terminal_outputs_meaningful": session_type in {"tty", "x11", "wayland", "remote-ssh"},
-            "wm_outputs_meaningful": session_type in {"x11", "wayland"},
+            "wm_outputs_meaningful": session_type in {"x11", "wayland"} and wm_or_de in {"i3", "sway"},
             "toolkit_outputs_meaningful": session_type in {"x11", "wayland", "remote-ssh"},
+            "wayland_export_only_desktop": session_type == "wayland" and wm_or_de in {"gnome", "plasma", "unknown"},
             "x11_render_path_environment": {
                 "session_capable": session_type == "x11",
                 "picom_available": executables["picom"],

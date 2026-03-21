@@ -1,6 +1,6 @@
 # RetroFX 2.x Alpha Readiness
 
-This document records the TWO-27 readiness decision for the current 2.x branch.
+This document records the TWO-28 readiness decision for the current 2.x branch.
 
 Decision date: 2026-03-21
 
@@ -10,11 +10,19 @@ READY_FOR_INTERNAL_USE=yes
 
 READY_FOR_INTERNAL_ALPHA_CONTINUATION=yes
 
-READY_FOR_CONTROLLED_ALPHA=yes
+READY_FOR_CONTROLLED_INTERNAL_ALPHA=yes
+
+READY_FOR_CONTROLLED_ALPHA=no
 
 READY_FOR_LOCAL_ALPHA_TAG_CANDIDATE=yes
 
 ALPHA_CANDIDATE_READY=yes
+
+READY_FOR_BROADER_ALPHA=no
+
+READY_FOR_CONTROLLED_EXTERNAL_ALPHA=no
+
+READY_FOR_PRE_BETA_STABILIZATION=no
 
 READY_FOR_BROADER_TESTING=no
 
@@ -40,23 +48,27 @@ The branch is ready for internal experimental use and for a narrow controlled in
 - TWO-27 now exposes the local candidate tag name directly in release-status metadata instead of leaving it implicit in prose
 - the TWO-27 final local validation subset now passes across full-suite tests, unified help or status, representative resolve or plan or compile, bounded apply or off, repo-local package generation, temp-HOME install or diagnostics or uninstall, and an explicit bounded X11 preview probe
 - there are no current `alpha-blocker` or `high` findings left open in the remediation backlog
+- TWO-28 now explicitly fences non-sway Wayland desktop sessions as export-oriented validation environments instead of leaving broader-alpha interpretation ambiguous
+- TWO-28 now narrows machine-readable release-status and package metadata so they no longer imply broader-alpha approval
 
-The branch is not yet ready for broader testing because:
+The branch is not ready for broader alpha, controlled external alpha, or pre-beta stabilization because:
 
 - validation remains too dependent on a single real host plus simulated environments
 - there is still no real Wayland-host validation pass
+- non-sway Wayland desktops remain export-oriented validation paths rather than trusted live-preview targets
 - migration validation remains representative rather than broad
+- the current package shape is still repo-checkout dependent and intentionally internal-only
 
 ## Recommended Next Step
 
 The correct next phase is:
 
-1. Treat the current branch as acceptable for a local or internal alpha-candidate snapshot only after the working tree is clean, [ALPHA_RELEASE_CHECKLIST.md](ALPHA_RELEASE_CHECKLIST.md) passes, and the candidate version remains `2.0.0-alpha.internal.1`.
+1. Treat the current branch as acceptable for local or internal alpha use only after the working tree is clean, [ALPHA_RELEASE_CHECKLIST.md](ALPHA_RELEASE_CHECKLIST.md) passes, and the candidate version remains `2.0.0-alpha.internal.1`.
 2. Continue the narrow controlled internal alpha on known-good internal hosts, with explicit emphasis on X11 plus `i3` validation first.
-3. Re-run [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md) on at least one more real environment, especially a real Wayland session.
-4. Expand the migration validation corpus before making compatibility claims beyond the current representative set.
-5. Use [INTERNAL_ALPHA_RUNBOOK.md](INTERNAL_ALPHA_RUNBOOK.md), [CONTROLLED_ALPHA_PLAN.md](CONTROLLED_ALPHA_PLAN.md), [ALPHA_CANDIDATE_NOTES.md](ALPHA_CANDIDATE_NOTES.md), and the `diagnostics` plus `package-alpha` flows as the standard internal circulation path.
-6. Use the repo-local `v2/releases/internal-alpha/` package root and the local tag candidate name `v2.0.0-alpha.internal.1` only for non-public internal circulation.
+3. Use [BROADER_ALPHA_MATRIX.md](BROADER_ALPHA_MATRIX.md), [BROADER_ALPHA_READINESS.md](BROADER_ALPHA_READINESS.md), [PRE_BETA_GATES.md](PRE_BETA_GATES.md), and [NEXT_STAGE_VERDICT.md](NEXT_STAGE_VERDICT.md) as the gate set before any broader-alpha discussion.
+4. Re-run the matrix on at least one real Wayland host and one additional real X11 host.
+5. Expand the migration validation corpus before making compatibility claims beyond the current representative set.
+6. Keep `scripts/dev/retrofx-v2 preview-x11` and `package-alpha` positioned as internal-only surfaces until the broader-alpha gates are satisfied.
 7. Reassess broader testing only after the multi-host evidence improves.
 
 ## What This Is Not

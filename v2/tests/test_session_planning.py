@@ -195,6 +195,27 @@ class SessionPlanningTests(unittest.TestCase):
             self.assertEqual(payload["stage"], "session-plan")
             self.assertIsNotNone(payload["preview_bundle"])
 
+    def test_wayland_gnome_like_plan_is_explicitly_export_only(self) -> None:
+        payload = plan_profile_session(
+            FIXTURES / "warm-night-theme-only.toml",
+            env={
+                "WAYLAND_DISPLAY": "wayland-0",
+                "XDG_SESSION_TYPE": "wayland",
+                "XDG_CURRENT_DESKTOP": "GNOME",
+                "GNOME_DESKTOP_SESSION_ID": "this",
+                "RETROFX_V2_FORCE_WM_OR_DE": "gnome",
+                "TERM": "xterm-256color",
+            },
+            cwd=REPO_ROOT,
+            stdin_isatty=False,
+        )
+        self.assertTrue(payload["ok"])
+        self.assertEqual(payload["environment"]["wm_or_de"], "gnome")
+        self.assertFalse(payload["environment"]["capability_hints"]["wm_outputs_meaningful"])
+        self.assertTrue(payload["environment"]["capability_hints"]["wayland_export_only_desktop"])
+        self.assertEqual(payload["plan"]["apply_preview_targets"], [])
+        self.assertIn("Wayland `gnome` sessions are not part of the currently validated broader-alpha set; treat GUI-facing outputs here as export-oriented validation only.", payload["plan"]["warnings"])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -26,7 +26,7 @@ STATUS_LADDER = (
 
 CURRENT_EXPERIMENTAL_VERSION = "2.0.0-alpha.internal.1"
 CURRENT_STATUS_LABEL = "internal-alpha"
-CURRENT_PROMPT = "TWO-27"
+CURRENT_PROMPT = "TWO-28"
 CURRENT_DISTRIBUTION_SCOPE = "internal-non-public"
 CURRENT_COHORT = "controlled-internal"
 
@@ -58,11 +58,20 @@ def build_experimental_release_metadata(
         "production_line": "1.x",
         "ready_for_internal_use": True,
         "ready_for_internal_alpha_continuation": True,
-        "ready_for_controlled_alpha": True,
+        "ready_for_controlled_internal_alpha": True,
+        "ready_for_controlled_alpha": False,
         "ready_for_local_alpha_tag_candidate": True,
         "alpha_candidate_ready": True,
+        "ready_for_broader_alpha": False,
+        "ready_for_controlled_external_alpha": False,
+        "ready_for_pre_beta_stabilization": False,
         "ready_for_broader_testing": False,
         "needs_more_stabilization": True,
+        "broader_alpha_blockers": [
+            "validation remains too dependent on one real X11+i3 host and simulated non-X11 environments",
+            "no real Wayland-host validation pass exists yet",
+            "migration validation remains representative rather than broad",
+        ],
         "local_tag_name": local_tag_name,
         "local_tag_points_at_head": _git_tag_points_at_head(local_tag_name),
         "source_revision": _git_output(["rev-parse", "HEAD"]),

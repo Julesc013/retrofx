@@ -1,13 +1,16 @@
 # RetroFX 2.x Alpha Blockers
 
-This document lists the remaining blockers and residual risks for calling the current branch controlled-alpha ready and suitable for a disciplined local or internal alpha candidate.
+This document lists the remaining blockers and residual risks for the current 2.x branch.
+
+Controlled internal alpha remains acceptable.
+Broader alpha does not.
 
 It is not a future wish list.
 It is a concrete blocker list derived from [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md).
 
 ## Current Alpha-Blocker Status
 
-There are no current `alpha-blocker` items after the TWO-27 final local candidate validation pass.
+There are no current `alpha-blocker` items for the supported internal-alpha surface after the TWO-28 hardening pass.
 
 Resolved in TWO-23:
 
@@ -30,36 +33,43 @@ Resolved in TWO-27:
 
 ## Current High-Severity Status
 
-There are no current open `high` items after TWO-27 preparation.
+There are no current open `high` items in the supported internal-alpha surface after TWO-28 hardening.
 
 ## Medium
 
-### 1. Validation is still narrow compared with broader testing needs
+### 1. Validation is still narrow compared with broader-alpha needs
 
 - Severity: `medium`
-- Evidence: TWO-23 now includes one real X11 host validation run plus simulated Wayland and TTY flows, but still not a second real host or a real Wayland compositor session
-- Why it matters: this no longer blocks a narrow internal alpha cohort, but it still blocks broader testing claims
-- Recommended next step: run the validation matrix on at least one additional real environment, ideally one real Wayland session and one more X11 host
+- Evidence: the strongest real-host evidence is still one X11 plus `i3` host, with broader environment coverage still relying on simulation or forced classification
+- Why it matters: this no longer blocks narrow internal alpha use, but it still blocks broader-alpha and pre-beta claims
+- Recommended next step: run the broader-alpha matrix on at least one additional real environment, ideally one real Wayland session and one more X11 host
 
-### 2. Legacy migration validation is still representative rather than broad
+### 2. Real Wayland-host validation is still absent
 
 - Severity: `medium`
-- Evidence: TWO-22 exercised a real 1.x profile and the automated suite covers several more, but there is still no wider curated migration corpus review
-- Why it matters: migration remains explicitly dev-only, but confidence in the diagnostics is still narrower than alpha-grade tooling should have
-- Recommended next step: expand the validated legacy profile corpus and record the outcomes in the validation matrix
+- Evidence: TWO-28 now explicitly fences GNOME-like and Plasma-like Wayland sessions as export-oriented validation paths, but that fencing is still based on simulated or forced planning rather than real-host runs
+- Why it matters: honest fencing is better than silent overclaiming, but it still means broader-alpha evidence is incomplete
+- Recommended next step: run the supported checklist on a real Wayland host and update the broader-alpha matrix with the result
+
+### 3. Legacy migration validation is still representative rather than broad
+
+- Severity: `medium`
+- Evidence: current migration validation still centers on a representative subset of legacy profiles rather than a wider curated corpus
+- Why it matters: migration remains explicitly dev-only, but broader-alpha positioning needs a wider truth sample before the branch can claim stronger continuity evidence
+- Recommended next step: expand the validated legacy profile corpus and record the outcomes in the matrices
 
 ## Low
 
-### 3. Controlled-alpha positioning is now acceptable but still requires a narrow cohort definition
+### 4. Internal-alpha package and diagnostics surfaces still assume internal context
 
 - Severity: `low`
-- Evidence: TWO-23 makes the docs and status output more explicit, but the branch still has many experimental surfaces with different maturity levels
-- Why it matters: internal testers can work with this, but anything beyond a small internal alpha cohort would benefit from even tighter “safe to try” versus “observe only” labeling
-- Recommended next step: keep the internal alpha cohort narrow and continue simplifying readiness language as validation broadens
+- Evidence: package, diagnostics, and release metadata are now honest about internal-only use, but they still assume a repo checkout and an internal operator who understands the current surface
+- Why it matters: this does not block internal alpha, but it still argues against broader external circulation
+- Recommended next step: keep package and diagnostics flows positioned as internal-only until broader-alpha gates are satisfied
 
 ## Not Blockers
 
-These are intentionally incomplete but do not block controlled alpha on their own because the branch already documents them honestly:
+These are intentionally incomplete but do not block continued internal alpha on their own because the branch already documents them honestly:
 
 - live Wayland render
 - global desktop integration

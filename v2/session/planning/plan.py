@@ -173,6 +173,10 @@ def build_session_plan(resolved_profile: Mapping[str, Any], environment: Mapping
         warnings.append(
             "Resolved render intent is present and TWO-17 can now emit bounded X11 render artifacts, but live preview remains explicit and experimental."
         )
+    if environment["session_type"] == "wayland" and environment["wm_or_de"] in {"gnome", "plasma", "unknown"}:
+        warnings.append(
+            f"Wayland `{environment['wm_or_de']}` sessions are not part of the currently validated broader-alpha set; treat GUI-facing outputs here as export-oriented validation only."
+        )
     if display_policy["requested_fields"]:
         warnings.extend(display_policy["warnings"])
     warnings.extend(x11_render["warnings"])

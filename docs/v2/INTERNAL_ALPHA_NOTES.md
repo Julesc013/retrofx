@@ -22,6 +22,7 @@ This is the non-public branch note for internal 2.x testers.
 - staged apply or off under temp HOME or isolated XDG roots
 - install or uninstall under the `retrofx-v2-dev` footprint
 - migration inspection for representative legacy profiles
+- internal-alpha package generation and diagnostics capture for repo-checkout-based internal testing
 
 ## Intentionally Missing
 
@@ -46,6 +47,7 @@ Best current fit:
 - repo checkout available
 - X11 plus `i3` is the strongest validated live-preview environment
 - Wayland is currently best exercised through planning and export-oriented validation
+- Wayland GNOME, Plasma, and unknown desktops should be treated as export-oriented validation environments only
 - temp HOME or isolated XDG roots are strongly preferred for apply or install testing
 
 ## Safety Caveats
@@ -69,6 +71,8 @@ Best current fit:
 
 - controlled internal alpha is acceptable, but broader testing is still premature
 - validation remains strongest on one real X11 host plus simulated non-X11 environments
+- non-sway Wayland desktops remain explicitly fenced as export-oriented validation paths rather than trusted live-preview targets
 - package generation is reproducible, but still repo-checkout dependent
 - bundle and install metadata are explicit, but not public-release contracts
 - internal alpha now depends on disciplined use of the diagnostics and feedback templates rather than ad hoc reports
+- package-alpha is still an internal-alpha package flow, not a broader-alpha distribution surface

@@ -59,7 +59,7 @@ COMMAND_SUMMARY = [
         "command": "preview-x11",
         "category": "render",
         "implemented": True,
-        "description": "Stage bounded X11 render artifacts and optionally run an explicit short-lived picom probe when X11 support is detected.",
+        "description": "Stage bounded X11 render artifacts and optionally run an explicit short-lived picom probe. This remains internal-only and is validated most strongly on X11+i3-like hosts.",
     },
     {
         "command": "packs list",
@@ -89,7 +89,7 @@ COMMAND_SUMMARY = [
         "command": "package-alpha",
         "category": "release",
         "implemented": True,
-        "description": "Build a reproducible non-public internal-alpha package around one deterministic 2.x bundle plus runbook docs.",
+        "description": "Build a reproducible non-public internal-alpha package around one deterministic 2.x bundle plus runbook docs. This is not a broader-alpha or public package surface.",
     },
     {
         "command": "diagnostics",
@@ -241,7 +241,7 @@ IMPLEMENTED_STATUS_MATRIX = [
 
 PLATFORM_IMPLEMENTATION_INFO = {
     "status": "experimental-dev-only",
-    "prompt": "TWO-27",
+    "prompt": "TWO-28",
     "surface": "unified-dev-platform-internal-alpha",
     "entrypoint": str(UNIFIED_ENTRYPOINT),
     "implemented_targets": list_targets(),
@@ -330,14 +330,15 @@ def build_platform_status(
             "Compatibility work is inspection and draft migration only, not runtime parity.",
             "Controlled internal alpha readiness is narrow; real-world validation is strongest on one X11 plus i3 host and simulated elsewhere.",
             "The local alpha candidate remains repo-checkout dependent and is not a standalone copied toolchain.",
+            "Broader non-public alpha is still not approved; non-sway Wayland desktops remain export-oriented validation environments only.",
         ],
         "next_focus": {
-            "phase": "local-internal-alpha-candidate-prepared",
+            "phase": "broader-alpha-hardening-still-required",
             "doc": str(REPO_ROOT / "docs" / "v2" / "STABILIZATION_PLAN.md"),
             "checklist": str(REPO_ROOT / "docs" / "v2" / "STABILIZATION_CHECKLIST.md"),
             "goals": [
-                "exercise the local internal alpha candidate package and runbook across a narrow controlled cohort",
                 "expand validation beyond one real X11 plus i3 host and simulated Wayland or tty environments",
+                "keep broader-alpha claims fenced off until at least one real Wayland host and another real environment are validated",
                 "continue regression hunting inside the already implemented surface instead of new feature sprawl",
                 "keep manifest, cleanup, and ownership metadata aligned with what internal testers actually use",
             ],

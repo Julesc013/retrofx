@@ -14,6 +14,7 @@ It is not a promise that 2.x should replace 1.x.
 - circulation scope: local and internal only
 - release path: repo-checkout-dependent internal-alpha package plus unified dev surface
 - candidate approval: approved for local or internal-only circulation when [ALPHA_RELEASE_CHECKLIST.md](ALPHA_RELEASE_CHECKLIST.md) passes on a clean committed tree
+- broader-alpha approval: not approved
 
 ## Implemented In This Candidate
 
@@ -54,6 +55,7 @@ It is not a promise that 2.x should replace 1.x.
 ## Known Limitations
 
 - broader testing is still not approved
+- broader-alpha positioning remains blocked by missing real Wayland-host evidence and narrow multi-host coverage
 - real Wayland-host validation is still absent
 - public packaging and standalone copied-toolchain distribution do not exist
 - 1.x remains the only production line

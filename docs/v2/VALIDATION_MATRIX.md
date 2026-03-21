@@ -2,6 +2,8 @@
 
 This document records the first serious validation pass for the current 2.x experimental platform.
 
+For the broader-alpha gate, also read [BROADER_ALPHA_MATRIX.md](BROADER_ALPHA_MATRIX.md).
+
 Validated on: 2026-03-21
 
 Validation context:
@@ -60,7 +62,7 @@ Current summary:
 | temp HOME install | isolated temp HOME | `scripts/dev/retrofx-v2 install <bundle-path>` | bundle copied into isolated `retrofx-v2-dev` footprint with install record | `ok=true`, bundle dir under `~/.local/share/retrofx-v2-dev/bundles/modern-minimal--warm-night` | pass | Install remains user-local and isolated from 1.x. |
 | temp HOME uninstall or cleanup | isolated temp HOME | `scripts/dev/retrofx-v2 uninstall modern-minimal--warm-night` | installed bundle removed, user config roots preserved | removed bundle and installation record; preserved `profiles/` and `packs/` config roots | pass | Uninstall ownership remains explicit and reversible. |
 | delegated help clarity through unified surface | repo-local dev | `scripts/dev/retrofx-v2 resolve --help` and `scripts/dev/retrofx-v2 bundle --help` | help should clearly present the `retrofx-v2` surface | usage headers now begin with `retrofx-v2 resolve` and `retrofx-v2 bundle` rather than `cli.py` | pass | TWO-23 sets explicit `prog` names on the delegated CLI modules. |
-| full 2.x test suite | repo-local dev | `./v2/tests/test.sh` | full suite passes | `Ran 134 tests in 1.990s` and `OK` | pass | Automated coverage still matches the current branch state after the TWO-27 candidate-preparation changes. |
+| full 2.x test suite | repo-local dev | `./v2/tests/test.sh` | full suite passes | `Ran 135 tests in 1.970s` and `OK` | pass | Automated coverage still matches the current branch state after the TWO-28 broader-alpha hardening changes. |
 
 ## Interpretation
 
