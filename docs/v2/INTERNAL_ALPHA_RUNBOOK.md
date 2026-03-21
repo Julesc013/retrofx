@@ -163,6 +163,7 @@ Record:
 - expected result
 - actual result
 - whether it was pass, degraded-pass, partial, fail, blocked, or not-tested
+- note that current diagnostics also capture source-control state plus installed bundle or package evidence when present
 
 Update or compare against:
 

@@ -1,6 +1,6 @@
 # RetroFX 2.x Alpha Blockers
 
-This document lists the remaining blockers and residual risks for calling the current branch "controlled alpha-ready."
+This document lists the remaining blockers and residual risks for calling the current branch controlled-alpha ready and suitable for a local internal alpha candidate.
 
 It is not a future wish list.
 It is a concrete blocker list derived from [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md).
@@ -14,6 +14,16 @@ Resolved in TWO-23:
 - the explicit bounded X11 `picom` probe was run manually on a real X11 plus `i3` host
 - the unified delegated help surface now reports `retrofx-v2 ...` usage headers rather than leaking `cli.py`
 - bounded apply or off and uninstall now refuse cleanup targets outside the managed 2.x roots, with regression coverage
+
+Resolved in TWO-26:
+
+- diagnostics capture now records a truthful self-inventory including `capture-manifest.json`
+- diagnostics capture now records repo source-control state for reproduction on repo-checkout-based internal alpha runs
+- diagnostics capture now records installed bundle inventory plus installed and packaged manifest evidence for the selected profile
+
+## Current High-Severity Status
+
+There are no current open `high` items after TWO-26 remediation.
 
 ## Medium
 

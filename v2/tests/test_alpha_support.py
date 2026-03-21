@@ -32,6 +32,7 @@ class AlphaSupportTests(unittest.TestCase):
             self.assertTrue(payload["ok"])
             capture_dir = Path(payload["capture"]["output_dir"])
             self.assertTrue((capture_dir / "capture-manifest.json").is_file())
+            self.assertTrue((capture_dir / "source-control.json").is_file())
             self.assertTrue((capture_dir / "platform-status.json").is_file())
             self.assertTrue((capture_dir / "environment.json").is_file())
             self.assertTrue((capture_dir / "install-state.json").is_file())
@@ -39,6 +40,17 @@ class AlphaSupportTests(unittest.TestCase):
             self.assertTrue((capture_dir / "profile" / "resolved-profile.json").is_file())
             self.assertTrue((capture_dir / "profile" / "session-plan.json").is_file())
             self.assertTrue((capture_dir / "profile" / "output-inventory.json").is_file())
+            self.assertTrue((capture_dir / "profile" / "install-bundle-inventory.json").is_file())
+            manifest = json.loads((capture_dir / "capture-manifest.json").read_text(encoding="utf-8"))
+            self.assertIn("capture-manifest.json", manifest["artifacts"])
+            self.assertIn("source-control.json", manifest["artifacts"])
+            self.assertTrue(manifest["included_sections"]["source_control"])
+            source_control = json.loads((capture_dir / "source-control.json").read_text(encoding="utf-8"))
+            self.assertIn("working_tree_clean", source_control)
+            install_bundle_inventory = json.loads(
+                (capture_dir / "profile" / "install-bundle-inventory.json").read_text(encoding="utf-8")
+            )
+            self.assertFalse(install_bundle_inventory["present"])
 
     def test_diagnostics_capture_observes_packaged_install_state(self) -> None:
         with TemporaryDirectory() as tmppackages, TemporaryDirectory() as tmpdiag, TemporaryDirectory() as tmphome:
@@ -68,6 +80,14 @@ class AlphaSupportTests(unittest.TestCase):
             self.assertEqual(len(installed), 1)
             self.assertEqual(installed[0]["bundle_id"], "modern-minimal--warm-night")
             self.assertEqual(installed[0]["release_status"], "internal-alpha")
+            capture_dir = Path(payload["capture"]["output_dir"])
+            install_bundle_inventory = json.loads(
+                (capture_dir / "profile" / "install-bundle-inventory.json").read_text(encoding="utf-8")
+            )
+            self.assertTrue(install_bundle_inventory["present"])
+            self.assertEqual(install_bundle_inventory["bundle_id"], "modern-minimal--warm-night")
+            self.assertTrue((capture_dir / "profile" / "install-bundle-manifest.json").is_file())
+            self.assertTrue((capture_dir / "profile" / "source-package-manifest.json").is_file())
 
     def test_diagnostics_capture_does_not_create_1x_paths(self) -> None:
         with TemporaryDirectory() as tmpout, TemporaryDirectory() as tmphome:

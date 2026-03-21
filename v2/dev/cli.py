@@ -54,7 +54,7 @@ def main(argv: list[str] | None = None) -> int:
     _add_passthrough_command(subparsers, "off", "Clear the bounded TWO-19 experimental activation without touching 1.x.")
     _add_passthrough_command(subparsers, "bundle", "Build one deterministic TWO-16 dev bundle.")
     _add_passthrough_command(subparsers, "package-alpha", "Build one reproducible TWO-24 internal-alpha package around a deterministic 2.x bundle.")
-    _add_passthrough_command(subparsers, "diagnostics", "Capture a local TWO-25 diagnostics directory for controlled internal alpha testing.")
+    _add_passthrough_command(subparsers, "diagnostics", "Capture a local TWO-26 diagnostics directory for controlled internal alpha testing.")
     _add_passthrough_command(subparsers, "install", "Install one dev bundle into the isolated user-local 2.x footprint.")
     _add_passthrough_command(subparsers, "uninstall", "Remove one installed dev bundle from the isolated user-local 2.x footprint.")
 

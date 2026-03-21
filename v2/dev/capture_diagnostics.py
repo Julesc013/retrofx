@@ -13,10 +13,10 @@ from v2.session import build_session_plan, detect_environment
 from v2.session.apply import describe_current_activation
 from v2.session.apply.state import load_current_state, resolve_apply_layout
 from v2.session.install import describe_install_state
-from v2.session.install.layout import REPO_ROOT
-from v2.session.install.state import current_timestamp
+from v2.session.install.layout import REPO_ROOT, resolve_install_layout
+from v2.session.install.state import current_timestamp, list_install_records
 
-from .release import build_experimental_release_metadata
+from .release import build_experimental_release_metadata, build_source_control_summary
 from .status import build_platform_status
 
 DEFAULT_DIAGNOSTICS_ROOT = REPO_ROOT / "v2" / "out" / "diagnostics"
@@ -24,7 +24,7 @@ DEFAULT_ARTIFACT_ROOT = REPO_ROOT / "v2" / "out"
 
 IMPLEMENTATION_INFO = {
     "status": "experimental-dev-only",
-    "prompt": "TWO-25",
+    "prompt": "TWO-26",
     "surface": "controlled-alpha-diagnostics",
     "mode": "local-file-based-evidence-capture",
     "not_implemented": [
@@ -60,12 +60,15 @@ def capture_diagnostics(
     platform_status = build_platform_status(env=env, cwd=cwd, stdin_isatty=stdin_isatty, path_lookup=path_lookup)
     environment = detect_environment(env=env, cwd=cwd, stdin_isatty=stdin_isatty, path_lookup=path_lookup)
     install_state = describe_install_state(env=env, cwd=cwd)
+    install_records = list_install_records(resolve_install_layout(env))
     activation_status = describe_current_activation(env=env, cwd=cwd)
     apply_layout = resolve_apply_layout(env)
     current_state = load_current_state(apply_layout)
+    source_control = build_source_control_summary()
 
     artifacts: list[dict[str, Any]] = []
     artifacts.append(_write_json_artifact(output_dir, "release-status.json", release_status))
+    artifacts.append(_write_json_artifact(output_dir, "source-control.json", source_control))
     artifacts.append(_write_json_artifact(output_dir, "platform-status.json", platform_status))
     artifacts.append(_write_json_artifact(output_dir, "environment.json", environment))
     artifacts.append(_write_json_artifact(output_dir, "install-state.json", install_state))
@@ -83,6 +86,7 @@ def capture_diagnostics(
                 pack_id=pack_id,
                 pack_profile_id=pack_profile_id,
                 artifact_root=Path(artifact_root) if artifact_root is not None else DEFAULT_ARTIFACT_ROOT,
+                install_records=install_records,
                 env=env,
                 cwd=cwd,
                 stdin_isatty=stdin_isatty,
@@ -118,7 +122,9 @@ def capture_diagnostics(
         "output_dir": str(output_dir),
         "implementation": IMPLEMENTATION_INFO,
         "source_tree": str(REPO_ROOT),
+        "source_control": source_control,
         "included_sections": {
+            "source_control": True,
             "platform_status": True,
             "environment": True,
             "install_state": True,
@@ -127,7 +133,7 @@ def capture_diagnostics(
             "state_files": bool(state_artifacts),
         },
         "profile": profile_section,
-        "artifacts": [artifact["relative_path"] for artifact in artifacts],
+        "artifacts": ["capture-manifest.json", *[artifact["relative_path"] for artifact in artifacts]],
         "notes": [
             "This capture is local-only and intentionally limited to obvious 2.x debugging material.",
             "It does not gather unrelated user files, shell history, or network telemetry.",
@@ -198,6 +204,7 @@ def _capture_profile_artifacts(
     pack_id: str | None,
     pack_profile_id: str | None,
     artifact_root: Path,
+    install_records: list[Mapping[str, Any]],
     env: Mapping[str, str] | None,
     cwd: str | Path | None,
     stdin_isatty: bool | None,
@@ -252,9 +259,26 @@ def _capture_profile_artifacts(
         "artifact_root": str(artifact_root),
         "profile_output_dir": str(profile_output_dir),
         "present": profile_output_dir.is_dir(),
+        "inventory_mode": "repo-out-root",
         "files": _inventory_tree(profile_output_dir) if profile_output_dir.is_dir() else [],
     }
     artifacts.append(_write_json_artifact(output_dir, "profile/output-inventory.json", inventory_payload))
+
+    install_bundle_payload = _build_install_bundle_inventory(
+        install_records,
+        profile_id=profile_id,
+        pack_id=pack_id,
+    )
+    artifacts.append(_write_json_artifact(output_dir, "profile/install-bundle-inventory.json", install_bundle_payload))
+    if install_bundle_payload["present"]:
+        bundle_manifest_path = Path(str(install_bundle_payload["manifest_path"]))
+        if bundle_manifest_path.is_file():
+            artifacts.append(_copy_text_artifact(output_dir, "profile/install-bundle-manifest.json", bundle_manifest_path))
+        package_manifest_path = install_bundle_payload.get("package_manifest_path")
+        if package_manifest_path and Path(str(package_manifest_path)).is_file():
+            artifacts.append(
+                _copy_text_artifact(output_dir, "profile/source-package-manifest.json", Path(str(package_manifest_path)))
+            )
 
     return (
         {
@@ -264,6 +288,7 @@ def _capture_profile_artifacts(
             "origin": resolved_profile["source"]["origin"],
             "pack": resolved_profile.get("pack"),
             "output_inventory_present": inventory_payload["present"],
+            "install_bundle_inventory_present": install_bundle_payload["present"],
         },
         artifacts,
     )
@@ -306,6 +331,69 @@ def _capture_state_artifacts(
 
 def _inventory_tree(root: Path) -> list[str]:
     return sorted(str(path.relative_to(root)) for path in root.rglob("*") if path.is_file())
+
+
+def _build_install_bundle_inventory(
+    install_records: list[Mapping[str, Any]],
+    *,
+    profile_id: str,
+    pack_id: str | None,
+) -> dict[str, Any]:
+    chosen_record = _select_install_record(install_records, profile_id=profile_id, pack_id=pack_id)
+    if chosen_record is None:
+        return {
+            "present": False,
+            "profile_id": profile_id,
+            "pack_id": pack_id,
+            "bundle_id": None,
+            "bundle_dir": None,
+            "manifest_path": None,
+            "package_manifest_path": None,
+            "inventory_mode": "installed-bundle",
+            "files": [],
+        }
+
+    bundle_dir = Path(str(chosen_record["install_targets"]["bundle_dir"]))
+    manifest_path = bundle_dir / "manifest.json"
+    source_bundle_dir = Path(str(chosen_record["source_bundle"]["source_path"]))
+    package_manifest_path = source_bundle_dir.parent / "package-manifest.json"
+    return {
+        "present": bundle_dir.is_dir(),
+        "profile_id": profile_id,
+        "pack_id": pack_id,
+        "bundle_id": chosen_record["bundle_id"],
+        "bundle_dir": str(bundle_dir),
+        "manifest_path": str(manifest_path),
+        "manifest_present": manifest_path.is_file(),
+        "package_manifest_path": str(package_manifest_path) if package_manifest_path.is_file() else None,
+        "installed_at": chosen_record.get("installed_at"),
+        "release_version": chosen_record.get("experimental_release", {}).get("version"),
+        "release_status": chosen_record.get("experimental_release", {}).get("status_label"),
+        "inventory_mode": "installed-bundle",
+        "files": _inventory_tree(bundle_dir) if bundle_dir.is_dir() else [],
+    }
+
+
+def _select_install_record(
+    install_records: list[Mapping[str, Any]],
+    *,
+    profile_id: str,
+    pack_id: str | None,
+) -> Mapping[str, Any] | None:
+    matches = []
+    for record in install_records:
+        record_profile = record.get("profile", {})
+        record_pack = record.get("pack", {})
+        if str(record_profile.get("id")) != profile_id:
+            continue
+        if pack_id is not None and str(record_pack.get("id")) != pack_id:
+            continue
+        matches.append(record)
+
+    if not matches:
+        return None
+    matches.sort(key=lambda item: str(item.get("installed_at", "")))
+    return matches[-1]
 
 
 def _capture_slug(*, timestamp: str, label: str | None) -> str:

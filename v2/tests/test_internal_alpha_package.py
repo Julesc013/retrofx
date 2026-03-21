@@ -33,6 +33,9 @@ class InternalAlphaPackageTests(unittest.TestCase):
             self.assertTrue((package_dir / "docs" / "INTERNAL_ALPHA_NOTES.md").is_file())
             self.assertTrue((package_dir / "docs" / "CONTROLLED_ALPHA_PLAN.md").is_file())
             self.assertTrue((package_dir / "docs" / "ALPHA_TRIAGE.md").is_file())
+            self.assertTrue((package_dir / "docs" / "ALPHA_REMEDIATION_BACKLOG.md").is_file())
+            self.assertTrue((package_dir / "docs" / "ALPHA_CANDIDATE_NOTES.md").is_file())
+            self.assertTrue((package_dir / "docs" / "ALPHA_RELEASE_CHECKLIST.md").is_file())
 
     def test_package_manifest_contains_required_internal_alpha_fields(self) -> None:
         with TemporaryDirectory() as tmppackages:
@@ -45,11 +48,16 @@ class InternalAlphaPackageTests(unittest.TestCase):
             self.assertEqual(manifest["schema"], "retrofx.internal-alpha-package/v2alpha1")
             self.assertEqual(manifest["release_status"]["version"], CURRENT_EXPERIMENTAL_VERSION)
             self.assertEqual(manifest["release_status"]["status_label"], CURRENT_STATUS_LABEL)
+            self.assertIn("source_control", manifest["release_status"])
+            self.assertIn("working_tree_clean", manifest["release_status"])
+            self.assertIn("ready_for_internal_alpha_continuation", manifest["release_status"])
+            self.assertIn("ready_for_local_alpha_tag_candidate", manifest["release_status"])
             self.assertEqual(manifest["distribution"]["scope"], "internal-non-public")
             self.assertEqual(manifest["bundle"]["relative_dir"], "bundle")
             self.assertIn("terminal-tui", manifest["supported_target_families"])
             self.assertIn("scripts/dev/retrofx-v2 status", manifest["recommended_smoke_flow"])
             self.assertIn("docs/INTERNAL_ALPHA_RUNBOOK.md", manifest["included_docs"])
+            self.assertIn("docs/ALPHA_CANDIDATE_NOTES.md", manifest["included_docs"])
             self.assertTrue(manifest["metadata_artifacts"])
 
     def test_packaged_bundle_installs_into_temp_home(self) -> None:

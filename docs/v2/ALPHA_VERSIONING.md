@@ -9,7 +9,7 @@ RetroFX 2.x now has an explicit non-public experimental version policy for inter
 
 - current 2.x experimental version: `2.0.0-alpha.internal.1`
 - current status label: `internal-alpha`
-- current packaging prompt milestone: `TWO-25`
+- current packaging prompt milestone: `TWO-26`
 
 ## Format
 
@@ -64,3 +64,5 @@ Example:
 - readiness decision: controlled internal alpha is acceptable for a narrow cohort
 
 That means the branch can be circulated internally without promoting the status label to anything public-facing.
+
+For TWO-26, that same internal version is now also acceptable as the basis for a local-only alpha candidate snapshot, provided the release checklist is run on a clean committed tree.

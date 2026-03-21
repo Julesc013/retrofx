@@ -36,6 +36,19 @@ Expand the internal tester cohort only when:
 - at least one additional real host has passed the core checklist
 - diagnostics and templates are being used consistently
 
+## Prepare A Local Alpha Tag Candidate
+
+Prepare a local or internal-only alpha candidate when:
+
+- no `alpha-blocker` remains
+- no open `high` remediation item remains
+- the working tree can be made clean on the candidate commit
+- the local package, install, diagnostics, and uninstall flow all pass together
+- [ALPHA_RELEASE_CHECKLIST.md](ALPHA_RELEASE_CHECKLIST.md) and [ALPHA_CANDIDATE_NOTES.md](ALPHA_CANDIDATE_NOTES.md) match the current branch truth
+
+This still does not imply a public release.
+It is only a disciplined local snapshot for continued internal use.
+
 ## Declare Readiness For Broader Alpha
 
 Only consider broader alpha when:
@@ -60,6 +73,8 @@ Before making a post-alpha branch decision, review:
 
 - [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md)
 - [ALPHA_BLOCKERS.md](ALPHA_BLOCKERS.md)
+- [ALPHA_REMEDIATION_BACKLOG.md](ALPHA_REMEDIATION_BACKLOG.md)
 - [ALPHA_READINESS.md](ALPHA_READINESS.md)
 - [ALPHA_TRIAGE.md](ALPHA_TRIAGE.md)
+- [ALPHA_RELEASE_CHECKLIST.md](ALPHA_RELEASE_CHECKLIST.md)
 - the collected diagnostics directories from the current alpha round

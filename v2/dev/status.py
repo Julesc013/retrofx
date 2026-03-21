@@ -13,7 +13,7 @@ from v2.session.environment import detect_environment
 from v2.session.install import describe_install_state
 from v2.targets import list_target_families, list_targets
 
-from .release import build_experimental_release_metadata
+from .release import build_experimental_release_metadata, build_source_control_summary
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 UNIFIED_ENTRYPOINT = REPO_ROOT / "scripts" / "dev" / "retrofx-v2"
@@ -241,7 +241,7 @@ IMPLEMENTED_STATUS_MATRIX = [
 
 PLATFORM_IMPLEMENTATION_INFO = {
     "status": "experimental-dev-only",
-    "prompt": "TWO-25",
+    "prompt": "TWO-26",
     "surface": "unified-dev-platform-internal-alpha",
     "entrypoint": str(UNIFIED_ENTRYPOINT),
     "implemented_targets": list_targets(),
@@ -273,6 +273,7 @@ def build_platform_status(
         "stage": "platform-status",
         "implementation": PLATFORM_IMPLEMENTATION_INFO,
         "release_status": build_experimental_release_metadata(),
+        "source_control": build_source_control_summary(),
         "developer_start_here": {
             "entrypoint": str(UNIFIED_ENTRYPOINT),
             "first_commands": [

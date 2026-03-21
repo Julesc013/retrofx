@@ -56,6 +56,7 @@ Best current fit:
 - toolkit outputs are advisory artifacts, not live DE ownership
 - internal-alpha packages are not standalone toolchains
 - diagnostics capture is local-file based and intentionally does not collect unrelated user files or network telemetry
+- diagnostics now capture source-control state plus installed bundle or package evidence when that context exists
 
 ## How 2.x Differs From 1.x
 

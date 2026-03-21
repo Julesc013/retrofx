@@ -21,6 +21,7 @@ It is a trust checklist for the experimental platform.
 - [x] The branch has an internal-alpha runbook and non-public notes in [INTERNAL_ALPHA_RUNBOOK.md](INTERNAL_ALPHA_RUNBOOK.md) and [INTERNAL_ALPHA_NOTES.md](INTERNAL_ALPHA_NOTES.md).
 - [x] The branch now has a controlled-alpha plan, execution checklist, triage rules, and post-alpha decision rules.
 - [x] A local diagnostics capture flow exists for internal alpha evidence collection.
+- [x] The branch now has a remediation backlog and local alpha-candidate notes plus checklist docs.
 - [x] Help output across delegated subcommands is polished enough that developers do not need to guess which surface to use.
   TWO-23 truth: delegated help now uses explicit `retrofx-v2 ...` usage headers.
 

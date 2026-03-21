@@ -65,10 +65,11 @@ Meaning:
 
 ## Current Truth
 
-As of TWO-24:
+As of TWO-26:
 
 - current branch status label: `internal-alpha`
-- readiness: narrow controlled internal alpha use is acceptable
+- readiness: narrow controlled internal alpha continuation is acceptable
+- local alpha candidate: acceptable for local or internal-only use after the checklist pass
 - broader testing: not ready yet
 
 That distinction is deliberate.

@@ -1,6 +1,6 @@
 # RetroFX 2.x Implemented Status
 
-This document is the current truth pass for the 2.x branch as of TWO-25.
+This document is the current truth pass for the 2.x branch as of TWO-26.
 It is intentionally blunt.
 
 1.x remains the production line.
@@ -51,7 +51,7 @@ Still intentionally bounded:
 - install and current activation remain separated, but unified `status` now reports both surfaces together
 - controlled alpha readiness is narrow and currently grounded most strongly in one real X11 plus `i3` validation host
 - internal-alpha packages are reproducible and self-describing, but they still assume a repo checkout rather than a standalone copied toolchain
-- controlled alpha now has a real operational layer, but evidence quality still depends on testers actually using the diagnostics and template docs
+- controlled alpha now has a real operational layer, and diagnostics now capture source-control state plus installed bundle or package evidence for the selected profile
 
 Not implemented:
 
@@ -72,5 +72,6 @@ Related truth docs:
 
 - internal experimental use: yes
 - controlled alpha: yes, for a narrow internal cohort
+- local alpha tag candidate: yes, for local or internal-only use after a clean-tree checklist pass
 - broader testing: no
 - main reasons to avoid broader testing: real-host coverage is still narrow and migration validation breadth remains limited
