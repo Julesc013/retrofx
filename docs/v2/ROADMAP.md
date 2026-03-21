@@ -5,7 +5,7 @@ Each phase should narrow uncertainty before more implementation surface is added
 
 ## Current Progress
 
-Status after TWO-19:
+Status after TWO-20:
 
 - 2.0-C has an experimental implementation foothold for load, validate, normalize, and resolve in `v2/core/`
 - 2.0-D has started with the first terminal/TUI compiler family under `v2/targets/terminal/`
@@ -19,6 +19,7 @@ Status after TWO-19:
 - 2.0-G now also includes the first 1.x compatibility inspection and draft migration slice under `v2/compat/`
 - 2.0-G now also includes deterministic dev bundles plus experimental user-local install, uninstall, and status helpers under `v2/session/install/` and `scripts/dev/`
 - 2.0-E now also includes the first bounded experimental apply/off workflow with current-state manifests and reversible staging under `v2/session/apply/`
+- TWO-20 now consolidates that surface behind a unified experimental `scripts/dev/retrofx-v2` dispatcher, a current-status matrix, and a stabilization handoff
 - broad live session orchestration, Wayland render, and broader target families remain future phases
 
 ## 2.0-A Product And Spec Design

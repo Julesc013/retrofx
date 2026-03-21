@@ -1,7 +1,7 @@
 # RetroFX 2.x Design Docs
 
-This directory defines the RetroFX 2.x product and architecture before implementation begins.
-It is the design constitution for future `2.x` work, not a description of current `1.x` behavior.
+This directory defines the RetroFX 2.x product and architecture and tracks the current experimental branch truth.
+It is still not a description of current `1.x` runtime behavior.
 
 ## Read Order
 
@@ -17,9 +17,9 @@ It is the design constitution for future `2.x` work, not a description of curren
 10. [CORE_PIPELINE.md](CORE_PIPELINE.md), [NORMALIZATION_RULES.md](NORMALIZATION_RULES.md), [CAPABILITY_FILTERING.md](CAPABILITY_FILTERING.md), [ARTIFACT_PLANNING.md](ARTIFACT_PLANNING.md), and [COMPILATION_FLOW.md](COMPILATION_FLOW.md) for the core engine design.
 11. [TARGET_COMPILER_CONTRACT.md](TARGET_COMPILER_CONTRACT.md), [ADAPTER_INTERFACE.md](ADAPTER_INTERFACE.md), [TARGET_CAPABILITY_DECLARATIONS.md](TARGET_CAPABILITY_DECLARATIONS.md), and [EXPORT_VS_APPLY.md](EXPORT_VS_APPLY.md) for the target layer contract.
 12. [TARGET_FAMILIES.md](TARGET_FAMILIES.md), [TERMINAL_TUI_TARGETS.md](TERMINAL_TUI_TARGETS.md), [X11_TARGETS.md](X11_TARGETS.md), [WM_TARGETS.md](WM_TARGETS.md), and [FUTURE_TOOLKIT_TARGETS.md](FUTURE_TOOLKIT_TARGETS.md) for target-family design.
-13. [SESSION_SYSTEM.md](SESSION_SYSTEM.md), [APPLY_MODES.md](APPLY_MODES.md), [ENVIRONMENT_MODEL.md](ENVIRONMENT_MODEL.md), [INSTALL_MODEL.md](INSTALL_MODEL.md), [DISTRIBUTION_MODEL.md](DISTRIBUTION_MODEL.md), [DEV_WORKFLOW.md](DEV_WORKFLOW.md), [UNINSTALL_MODEL.md](UNINSTALL_MODEL.md), [RELEASE_SHAPE.md](RELEASE_SHAPE.md), [STATE_AND_RECOVERY.md](STATE_AND_RECOVERY.md), [SESSION_INTEGRATIONS.md](SESSION_INTEGRATIONS.md), and [SIDE_EFFECT_POLICY.md](SIDE_EFFECT_POLICY.md) for lifecycle, orchestration, recovery, and experimental distribution behavior.
+13. [SESSION_SYSTEM.md](SESSION_SYSTEM.md), [APPLY_MODES.md](APPLY_MODES.md), [ENVIRONMENT_MODEL.md](ENVIRONMENT_MODEL.md), [INSTALL_MODEL.md](INSTALL_MODEL.md), [DISTRIBUTION_MODEL.md](DISTRIBUTION_MODEL.md), [UNINSTALL_MODEL.md](UNINSTALL_MODEL.md), [RELEASE_SHAPE.md](RELEASE_SHAPE.md), [STATE_AND_RECOVERY.md](STATE_AND_RECOVERY.md), [SESSION_INTEGRATIONS.md](SESSION_INTEGRATIONS.md), and [SIDE_EFFECT_POLICY.md](SIDE_EFFECT_POLICY.md) for lifecycle, orchestration, recovery, and experimental distribution behavior.
 14. [REPO_LAYOUT.md](REPO_LAYOUT.md), [MODULE_BOUNDARIES.md](MODULE_BOUNDARIES.md), [COMPATIBILITY_SHELL.md](COMPATIBILITY_SHELL.md), and [IMPLEMENTATION_SEQUENCE.md](IMPLEMENTATION_SEQUENCE.md) for repository structure and execution discipline.
-15. [ROADMAP.md](ROADMAP.md) for phased delivery.
+15. [IMPLEMENTED_STATUS.md](IMPLEMENTED_STATUS.md), [DEV_WORKFLOW.md](DEV_WORKFLOW.md), [ROADMAP.md](ROADMAP.md), and [STABILIZATION_PLAN.md](STABILIZATION_PLAN.md) for current branch truth, developer entrypoints, phased delivery, and the next stabilization handoff.
 16. [RELATION_TO_1X.md](RELATION_TO_1X.md) for branch and migration discipline.
 
 ## Intent
@@ -29,7 +29,7 @@ It is broader than RetroFX 1.x, but it is still bounded by explicit capability d
 
 ## Current Implementation State
 
-As of TWO-19:
+As of TWO-20:
 
 - `v2/core/` contains an experimental dev-only scaffold for loading, validating, normalizing, and resolving 2.x profiles
 - `v2/tests/` contains isolated 2.x fixtures and tests for that scaffold
@@ -55,6 +55,17 @@ As of TWO-19:
 - `v2/session/apply/` now contains the first bounded experimental apply/off slice with current-state manifests, last-good tracking, and event logs under the isolated `retrofx-v2-dev` footprint
 - `scripts/dev/retrofx-v2-apply`, `retrofx-v2-off`, and `retrofx-v2-status` now stage, inspect, and clear a bounded 2.x current activation without touching 1.x
 - `scripts/dev/retrofx-v2-install`, `retrofx-v2-status`, and `retrofx-v2-uninstall` still manage the separate user-local install footprint used by the apply layer
+- `scripts/dev/retrofx-v2` now provides a unified experimental dispatcher across resolve, plan, compile, packs, migration, install, apply, off, preview, and smoke workflows
+- [IMPLEMENTED_STATUS.md](IMPLEMENTED_STATUS.md) now provides the branch-level implemented-versus-planned truth matrix
+- [STABILIZATION_PLAN.md](STABILIZATION_PLAN.md) now defines the shift from architecture expansion to controlled stabilization
 - that install flow is still dev-only, user-local, and non-destructive to 1.x
 - stable live apply across broad targets, session-default switching, public packaging, Wayland render, and full session orchestration are still future work
 - the working product line remains 1.x; no default CLI migration has happened
+
+## Developer First Step
+
+If you are reviewing or exercising the 2.x branch, start with:
+
+1. `scripts/dev/retrofx-v2 status`
+2. `scripts/dev/retrofx-v2 smoke v2/tests/fixtures/strict-green-crt.toml`
+3. `scripts/dev/retrofx-v2 smoke --pack modern-minimal --profile-id warm-night`

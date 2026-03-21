@@ -6,6 +6,7 @@ Purpose:
 
 Implemented now:
 
+- `scripts/dev/retrofx-v2`: unified dispatcher across the implemented experimental 2.x developer commands
 - `resolve_profile.py`: load, validate, normalize, and resolve a 2.x profile fixture or file
 - `resolve-profile`: thin shell wrapper around the Python module
 - `compile_targets.py`: compile the implemented terminal/TUI, WM, toolkit, typography-policy, bounded X11 render, and display-policy target families into `v2/out/<profile-id>/...`

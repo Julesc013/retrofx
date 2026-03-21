@@ -8,7 +8,7 @@ This tree exists so later prompts implement 2.x in the right places instead of e
 
 ## Current State
 
-As of TWO-19:
+As of TWO-20:
 
 - `v2/core/` contains an experimental stdlib-only Python scaffold for loading, validating, normalizing, and resolving 2.x profile documents
 - `v2/tests/` contains isolated fixtures and tests for that scaffold
@@ -31,6 +31,8 @@ As of TWO-19:
 - `scripts/dev/retrofx-v2-install` and `retrofx-v2-uninstall` now manage that separate experimental install footprint
 - `v2/session/apply/` now contains the first bounded experimental apply/off slice with current-state manifests, last-good state, and event logs
 - `scripts/dev/retrofx-v2-apply`, `retrofx-v2-off`, and `retrofx-v2-status` now manage a bounded current activation inside the isolated `retrofx-v2-dev` footprint
+- `v2/dev/` now provides a unified experimental branch surface for platform status, smoke flows, and top-level command dispatch
+- `scripts/dev/retrofx-v2` now dispatches to the implemented 2.x developer workflows from one place
 - public packaging, broad live session orchestration, and production command delegation still do not exist
 
 Python is used only for the early 2.x internal scaffold because `tomllib` gives deterministic TOML parsing with no extra dependency burden.
@@ -42,6 +44,7 @@ This choice does not change the 1.x runtime or make Python the default user-faci
 - `schema/`: schema contracts, validation helpers, and migration maps
 - `theme/`: semantic theme and typography policy helpers
 - `render/`: render policy and transform planning
+- `dev/`: unified experimental developer dispatcher, status, and smoke helpers
 - `session/`: planning, bounded apply/off state ownership, install-state ownership, and future repair orchestration
 - `targets/`: target adapters and backend-specific emission
 - `packs/`: pack metadata, family definitions, and pack-local assets

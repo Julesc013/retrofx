@@ -16,6 +16,7 @@ Implemented now:
 - local pack-manifest discovery and pack-aware resolution tests
 - 1.x compatibility inspection and draft migration tests
 - experimental bundle, install, status, and uninstall tests using temp HOME/XDG roots
+- unified TWO-20 dev-surface tests for the consolidated `retrofx-v2` dispatcher and smoke path
 - a small shell runner for 2.x-only tests
 
 Do implement here later:
