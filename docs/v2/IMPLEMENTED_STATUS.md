@@ -1,6 +1,6 @@
 # RetroFX 2.x Implemented Status
 
-This document is the current truth pass for the 2.x branch as of TWO-21.
+This document is the current truth pass for the 2.x branch as of TWO-22.
 It is intentionally blunt.
 
 1.x remains the production line.
@@ -60,3 +60,11 @@ Related truth docs:
 
 - [IMPLEMENTED_INTERFACES.md](IMPLEMENTED_INTERFACES.md) for the currently enforced code-side boundaries
 - [STABILIZATION_CHECKLIST.md](STABILIZATION_CHECKLIST.md) for the next trust gates
+- [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md) for the first serious scenario-by-scenario validation pass
+- [ALPHA_BLOCKERS.md](ALPHA_BLOCKERS.md) and [ALPHA_READINESS.md](ALPHA_READINESS.md) for the current readiness decision
+
+## Validation Snapshot
+
+- internal experimental use: yes
+- controlled alpha: no
+- main reasons to hold alpha: explicit live X11 probe still lacks manual validation in this pass, and delegated help still needs polish

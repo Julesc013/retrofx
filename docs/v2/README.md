@@ -19,7 +19,7 @@ It is still not a description of current `1.x` runtime behavior.
 12. [TARGET_FAMILIES.md](TARGET_FAMILIES.md), [TERMINAL_TUI_TARGETS.md](TERMINAL_TUI_TARGETS.md), [X11_TARGETS.md](X11_TARGETS.md), [WM_TARGETS.md](WM_TARGETS.md), and [FUTURE_TOOLKIT_TARGETS.md](FUTURE_TOOLKIT_TARGETS.md) for target-family design.
 13. [SESSION_SYSTEM.md](SESSION_SYSTEM.md), [APPLY_MODES.md](APPLY_MODES.md), [ENVIRONMENT_MODEL.md](ENVIRONMENT_MODEL.md), [INSTALL_MODEL.md](INSTALL_MODEL.md), [DISTRIBUTION_MODEL.md](DISTRIBUTION_MODEL.md), [UNINSTALL_MODEL.md](UNINSTALL_MODEL.md), [RELEASE_SHAPE.md](RELEASE_SHAPE.md), [STATE_AND_RECOVERY.md](STATE_AND_RECOVERY.md), [SESSION_INTEGRATIONS.md](SESSION_INTEGRATIONS.md), and [SIDE_EFFECT_POLICY.md](SIDE_EFFECT_POLICY.md) for lifecycle, orchestration, recovery, and experimental distribution behavior.
 14. [REPO_LAYOUT.md](REPO_LAYOUT.md), [MODULE_BOUNDARIES.md](MODULE_BOUNDARIES.md), [COMPATIBILITY_SHELL.md](COMPATIBILITY_SHELL.md), and [IMPLEMENTATION_SEQUENCE.md](IMPLEMENTATION_SEQUENCE.md) for repository structure and execution discipline.
-15. [IMPLEMENTED_STATUS.md](IMPLEMENTED_STATUS.md), [IMPLEMENTED_INTERFACES.md](IMPLEMENTED_INTERFACES.md), [DEV_WORKFLOW.md](DEV_WORKFLOW.md), [ROADMAP.md](ROADMAP.md), [STABILIZATION_PLAN.md](STABILIZATION_PLAN.md), and [STABILIZATION_CHECKLIST.md](STABILIZATION_CHECKLIST.md) for current branch truth, interface contracts, developer entrypoints, phased delivery, and the stabilization handoff.
+15. [IMPLEMENTED_STATUS.md](IMPLEMENTED_STATUS.md), [IMPLEMENTED_INTERFACES.md](IMPLEMENTED_INTERFACES.md), [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md), [ALPHA_BLOCKERS.md](ALPHA_BLOCKERS.md), [ALPHA_READINESS.md](ALPHA_READINESS.md), [DEV_WORKFLOW.md](DEV_WORKFLOW.md), [ROADMAP.md](ROADMAP.md), [STABILIZATION_PLAN.md](STABILIZATION_PLAN.md), and [STABILIZATION_CHECKLIST.md](STABILIZATION_CHECKLIST.md) for current branch truth, interface contracts, validation evidence, readiness decisions, developer entrypoints, phased delivery, and the stabilization handoff.
 16. [RELATION_TO_1X.md](RELATION_TO_1X.md) for branch and migration discipline.
 
 ## Intent
@@ -29,7 +29,7 @@ It is broader than RetroFX 1.x, but it is still bounded by explicit capability d
 
 ## Current Implementation State
 
-As of TWO-21:
+As of TWO-22:
 
 - `v2/core/` contains an experimental dev-only scaffold for loading, validating, normalizing, and resolving 2.x profiles
 - `v2/tests/` contains isolated 2.x fixtures and tests for that scaffold
@@ -59,6 +59,8 @@ As of TWO-21:
 - [IMPLEMENTED_STATUS.md](IMPLEMENTED_STATUS.md) now provides the branch-level implemented-versus-planned truth matrix
 - [IMPLEMENTED_INTERFACES.md](IMPLEMENTED_INTERFACES.md) now lists the current code-backed internal or dev-facing interface contracts
 - `v2/core/interfaces/contracts.py` now provides a small code-side contract layer that the test suite enforces structurally
+- [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md) now records the first serious scenario-based validation pass against the implemented branch surface
+- [ALPHA_BLOCKERS.md](ALPHA_BLOCKERS.md) and [ALPHA_READINESS.md](ALPHA_READINESS.md) now record the current readiness decision: internal-use yes, controlled-alpha no
 - [STABILIZATION_PLAN.md](STABILIZATION_PLAN.md) now defines the shift from architecture expansion to controlled stabilization
 - [STABILIZATION_CHECKLIST.md](STABILIZATION_CHECKLIST.md) now defines the trust gates for the next maturity step
 - that install flow is still dev-only, user-local, and non-destructive to 1.x

@@ -24,9 +24,9 @@ from .status import build_platform_status
 
 def main(argv: list[str] | None = None) -> int:
     argv = list(argv) if argv is not None else sys.argv[1:]
-    delegated_help = _handle_delegated_help(argv)
-    if delegated_help is not None:
-        return delegated_help
+    delegated = _dispatch_passthrough_command(argv)
+    if delegated is not None:
+        return delegated
 
     parser = argparse.ArgumentParser(
         prog="retrofx-v2",
@@ -161,29 +161,29 @@ def _normalize_passthrough(values: list[str]) -> list[str]:
     return values
 
 
-def _handle_delegated_help(argv: list[str]) -> int | None:
-    if len(argv) < 2 or argv[1] not in {"-h", "--help"}:
+def _dispatch_passthrough_command(argv: list[str]) -> int | None:
+    if not argv:
         return None
 
     command = argv[0]
     if command == "resolve":
-        return core_resolve.main(["--help"])
+        return core_resolve.main(argv[1:])
     if command == "compile":
-        return core_compile.main(["--help"])
+        return core_compile.main(argv[1:])
     if command == "plan":
-        return core_plan.main(["--help"])
+        return core_plan.main(argv[1:])
     if command == "preview-x11":
-        return preview_x11.main(["--help"])
+        return preview_x11.main(argv[1:])
     if command == "apply":
-        return apply_cli.main(["apply", "--help"])
+        return apply_cli.main(["apply", *argv[1:]])
     if command == "off":
-        return apply_cli.main(["off", "--help"])
+        return apply_cli.main(["off", *argv[1:]])
     if command == "bundle":
-        return install_cli.main(["bundle", "--help"])
+        return install_cli.main(["bundle", *argv[1:]])
     if command == "install":
-        return install_cli.main(["install", "--help"])
+        return install_cli.main(["install", *argv[1:]])
     if command == "uninstall":
-        return install_cli.main(["uninstall", "--help"])
+        return install_cli.main(["uninstall", *argv[1:]])
     return None
 
 

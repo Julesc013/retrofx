@@ -19,6 +19,7 @@ It is a trust checklist for the experimental platform.
 - [x] `status` reports implemented targets, current activation, environment, and limitations.
 - [x] The branch has a documented smoke path in [DEV_WORKFLOW.md](DEV_WORKFLOW.md).
 - [ ] Help output across delegated subcommands is polished enough that developers do not need to guess which surface to use.
+  Current TWO-22 truth: delegated help works, but some usage headers still show `cli.py`.
 
 ## Documentation Truth
 
@@ -42,6 +43,13 @@ It is a trust checklist for the experimental platform.
 - [x] 1.x migration inspection works for the currently supported subset.
 - [x] Install, uninstall, and status metadata are explicit.
 - [ ] Migration coverage and diagnostics have been exercised against a wider representative set of legacy profiles.
+
+## Validation Evidence
+
+- [x] A populated validation matrix now exists in [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md).
+- [x] Representative resolve, compile, plan, install, and apply or off flows have been run under temp or isolated homes.
+- [x] The branch now has an explicit readiness verdict in [ALPHA_READINESS.md](ALPHA_READINESS.md).
+- [ ] Controlled-alpha readiness has been approved.
 
 ## Before The Next Maturity Step
 

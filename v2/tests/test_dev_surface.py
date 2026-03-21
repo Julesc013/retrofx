@@ -95,6 +95,26 @@ class UnifiedDevSurfaceTests(unittest.TestCase):
         self.assertIn("resolved-profile", interface_names)
         self.assertIn("session-plan", interface_names)
 
+    def test_option_only_pack_selector_reaches_bundle_subcommand(self) -> None:
+        with TemporaryDirectory() as tmpbundle:
+            process = self._run(
+                [
+                    str(ENTRYPOINT),
+                    "bundle",
+                    "--pack",
+                    "modern-minimal",
+                    "--profile-id",
+                    "warm-night",
+                    "--bundle-root",
+                    tmpbundle,
+                ]
+            )
+            self.assertEqual(process.returncode, 0, msg=process.stderr)
+            payload = json.loads(process.stdout)
+            self.assertTrue(payload["ok"])
+            self.assertEqual(payload["stage"], "bundle")
+            self.assertEqual(payload["profile"]["id"], "warm-night")
+
     def test_smoke_workflow_runs_non_destructively(self) -> None:
         with TemporaryDirectory() as tmphome, TemporaryDirectory() as tmpout:
             env = self._temp_env(tmphome)
