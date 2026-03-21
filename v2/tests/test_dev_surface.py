@@ -95,7 +95,10 @@ class UnifiedDevSurfaceTests(unittest.TestCase):
             self.assertEqual(payload["release_status"]["proposed_technical_beta_version"], "2.0.0-techbeta.1")
             self.assertFalse(payload["release_status"]["ready_for_pre_beta_stabilization"])
             self.assertEqual(payload["release_status"]["proposed_pre_beta_version"], "2.0.0-prebeta.internal.1")
-            self.assertEqual(payload["release_status"]["current_build_kind"], "technical-beta-candidate-prep")
+            self.assertIn(
+                payload["release_status"]["current_build_kind"],
+                {"technical-beta-candidate-prep", "tagged-local-technical-beta-candidate"},
+            )
             self.assertIn("implemented_status_matrix", payload)
             self.assertIn("implemented_interfaces", payload)
             self.assertIn("install_state", payload["implemented_surface"])

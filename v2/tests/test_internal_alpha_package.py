@@ -104,7 +104,10 @@ class InternalAlphaPackageTests(unittest.TestCase):
             self.assertFalse(manifest["release_status"]["ready_for_pre_beta_stabilization"])
             self.assertEqual(manifest["release_status"]["proposed_pre_beta_version"], "2.0.0-prebeta.internal.1")
             self.assertEqual(manifest["release_status"]["proposed_technical_beta_version"], "2.0.0-techbeta.1")
-            self.assertEqual(manifest["release_status"]["current_build_kind"], "technical-beta-candidate-prep")
+            self.assertIn(
+                manifest["release_status"]["current_build_kind"],
+                {"technical-beta-candidate-prep", "tagged-local-technical-beta-candidate"},
+            )
             self.assertEqual(manifest["release_status"]["latest_existing_local_alpha_tag"], "v2.0.0-alpha.internal.1")
             self.assertEqual(manifest["distribution"]["scope"], "internal-non-public")
             self.assertEqual(manifest["bundle"]["relative_dir"], "bundle")

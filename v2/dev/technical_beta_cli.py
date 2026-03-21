@@ -17,12 +17,19 @@ from v2.session.apply import cli as apply_cli
 from v2.session.install import cli as install_cli
 
 from . import capture_diagnostics as dev_diagnostics
+from .release import build_technical_beta_candidate_metadata
 from .smoke import run_smoke_workflow
 from .technical_beta import (
+    TECHNICAL_BETA_IMPLEMENTATION_INFO,
     build_technical_beta_status,
     is_supported_technical_beta_apply_environment,
     technical_beta_apply_environment_error,
 )
+
+TECHNICAL_BETA_DIAGNOSTICS_IMPLEMENTATION_INFO = {
+    **TECHNICAL_BETA_IMPLEMENTATION_INFO,
+    "surface": "technical-beta-diagnostics",
+}
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -105,7 +112,12 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "bundle":
         return install_cli.main(["bundle", *_normalize_passthrough(args.args)])
     if args.command == "diagnostics":
-        return dev_diagnostics.main(_normalize_passthrough(args.args))
+        return dev_diagnostics.main(
+            _normalize_passthrough(args.args),
+            release_status=build_technical_beta_candidate_metadata(),
+            platform_status_builder=build_technical_beta_status,
+            implementation_info=TECHNICAL_BETA_DIAGNOSTICS_IMPLEMENTATION_INFO,
+        )
     if args.command == "install":
         return install_cli.main(["install", *_normalize_passthrough(args.args)])
     if args.command == "uninstall":
@@ -172,7 +184,12 @@ def _dispatch_passthrough_command(argv: list[str]) -> int | None:
     if command == "bundle":
         return install_cli.main(["bundle", *argv[1:]])
     if command == "diagnostics":
-        return dev_diagnostics.main(argv[1:])
+        return dev_diagnostics.main(
+            argv[1:],
+            release_status=build_technical_beta_candidate_metadata(),
+            platform_status_builder=build_technical_beta_status,
+            implementation_info=TECHNICAL_BETA_DIAGNOSTICS_IMPLEMENTATION_INFO,
+        )
     if command == "install":
         return install_cli.main(["install", *argv[1:]])
     if command == "uninstall":

@@ -49,15 +49,20 @@ def capture_diagnostics(
     stdin_isatty: bool | None = None,
     path_lookup: Callable[[str], str | None] | None = None,
     now: str | None = None,
+    release_status: Mapping[str, Any] | None = None,
+    platform_status_builder: Callable[..., dict[str, Any]] | None = None,
+    implementation_info: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    release_status = build_experimental_release_metadata()
+    chosen_release_status = dict(release_status) if release_status is not None else build_experimental_release_metadata()
+    chosen_platform_status_builder = platform_status_builder or build_platform_status
+    chosen_implementation_info = dict(implementation_info) if implementation_info is not None else dict(IMPLEMENTATION_INFO)
     timestamp = current_timestamp(env=env, now=now)
     slug = _capture_slug(timestamp=timestamp, label=label)
     chosen_output_root = Path(output_root) if output_root is not None else DEFAULT_DIAGNOSTICS_ROOT
     output_dir = chosen_output_root / slug
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    platform_status = build_platform_status(env=env, cwd=cwd, stdin_isatty=stdin_isatty, path_lookup=path_lookup)
+    platform_status = chosen_platform_status_builder(env=env, cwd=cwd, stdin_isatty=stdin_isatty, path_lookup=path_lookup)
     environment = detect_environment(env=env, cwd=cwd, stdin_isatty=stdin_isatty, path_lookup=path_lookup)
     install_state = describe_install_state(env=env, cwd=cwd)
     install_records = list_install_records(resolve_install_layout(env))
@@ -67,7 +72,7 @@ def capture_diagnostics(
     source_control = build_source_control_summary()
 
     artifacts: list[dict[str, Any]] = []
-    artifacts.append(_write_json_artifact(output_dir, "release-status.json", release_status))
+    artifacts.append(_write_json_artifact(output_dir, "release-status.json", chosen_release_status))
     artifacts.append(_write_json_artifact(output_dir, "source-control.json", source_control))
     artifacts.append(_write_json_artifact(output_dir, "platform-status.json", platform_status))
     artifacts.append(_write_json_artifact(output_dir, "environment.json", environment))
@@ -96,8 +101,8 @@ def capture_diagnostics(
             error_payload = {
                 "ok": False,
                 "stage": "load",
-                "implementation": IMPLEMENTATION_INFO,
-                "release_status": release_status,
+                "implementation": chosen_implementation_info,
+                "release_status": chosen_release_status,
                 "warnings": [],
                 "errors": [
                     {
@@ -117,10 +122,10 @@ def capture_diagnostics(
         "schema": "retrofx.diagnostics-capture/v2alpha1",
         "captured_at": timestamp,
         "capture_id": slug,
-        "release_status": release_status,
+        "release_status": chosen_release_status,
         "label": label,
         "output_dir": str(output_dir),
-        "implementation": IMPLEMENTATION_INFO,
+        "implementation": chosen_implementation_info,
         "source_tree": str(REPO_ROOT),
         "source_control": source_control,
         "included_sections": {
@@ -146,8 +151,8 @@ def capture_diagnostics(
     return {
         "ok": True,
         "stage": "diagnostics",
-        "implementation": IMPLEMENTATION_INFO,
-        "release_status": release_status,
+        "implementation": chosen_implementation_info,
+        "release_status": chosen_release_status,
         "capture": {
             "capture_id": slug,
             "output_dir": str(output_dir),
@@ -163,7 +168,13 @@ def capture_diagnostics(
     }
 
 
-def main(argv: list[str] | None = None) -> int:
+def main(
+    argv: list[str] | None = None,
+    *,
+    release_status: Mapping[str, Any] | None = None,
+    platform_status_builder: Callable[..., dict[str, Any]] | None = None,
+    implementation_info: Mapping[str, Any] | None = None,
+) -> int:
     parser = argparse.ArgumentParser(
         prog="retrofx-v2 diagnostics",
         description="Capture a local 2.x diagnostics directory for controlled internal alpha or limited technical-beta testing.",
@@ -192,6 +203,9 @@ def main(argv: list[str] | None = None) -> int:
         output_root=args.output_root,
         artifact_root=args.artifact_root,
         label=args.label,
+        release_status=release_status,
+        platform_status_builder=platform_status_builder,
+        implementation_info=implementation_info,
     )
     print(json.dumps(payload, indent=2, sort_keys=False))
     return 0 if payload["ok"] else 1

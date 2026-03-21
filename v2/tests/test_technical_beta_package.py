@@ -126,7 +126,11 @@ class TechnicalBetaPackageTests(unittest.TestCase):
             )
             self.assertEqual(diagnostics_process.returncode, 0, msg=diagnostics_process.stderr)
             diagnostics_payload = json.loads(diagnostics_process.stdout)
-            self.assertTrue((Path(diagnostics_payload["capture"]["output_dir"]) / "capture-manifest.json").is_file())
+            capture_dir = Path(diagnostics_payload["capture"]["output_dir"])
+            self.assertEqual(diagnostics_payload["release_status"]["status_label"], "technical-beta")
+            self.assertTrue((capture_dir / "capture-manifest.json").is_file())
+            platform_status = json.loads((capture_dir / "platform-status.json").read_text(encoding="utf-8"))
+            self.assertEqual(platform_status["release_status"]["status_label"], "technical-beta")
 
             uninstall_process = self._run(
                 [str(package_dir / "bin" / "retrofx-v2-techbeta"), "uninstall", "modern-minimal--warm-night"],
