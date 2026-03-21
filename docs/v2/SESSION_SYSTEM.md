@@ -13,13 +13,14 @@ It is a first-class subsystem with explicit ownership and safety rules.
 
 ## Current Implementation Status
 
-As of TWO-13:
+As of TWO-16:
 
 - `v2/session/environment/` implements best-effort environment detection for the dev scaffold
 - `v2/session/planning/` implements non-destructive capability-aware planning against the resolved profile and implemented target families
 - `v2/core/dev/plan-session` exposes that planning layer as a dev-only preview surface
 - planner output now includes structured display-policy interpretation in addition to target-family decisions
-- live apply, install, rollback, repair, and integration execution are still not implemented
+- `v2/session/install/` now also contains a separate experimental user-local bundle/install slice for `retrofx-v2-dev`
+- live apply, session-default install orchestration, rollback, repair, and integration execution are still not implemented
 
 ## What The Session System Is Responsible For
 
@@ -85,10 +86,11 @@ The session subsystem should eventually produce:
 - integration-hook records
 - warnings about skipped, degraded, or partial lifecycle outcomes
 
-Current TWO-13 truth:
+Current TWO-16 truth:
 
 - the implemented planner produces environment records, per-target preview decisions, display-policy interpretation, degradation warnings, and optional preview bundles
-- it does not yet produce active-state, install-state, or recovery records
+- it does not yet produce active-state or recovery records
+- experimental install-state records now exist, but only through the separate TWO-16 bundle/install helpers rather than through session execution
 
 ## Relation To Target Compilation
 

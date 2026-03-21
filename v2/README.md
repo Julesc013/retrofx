@@ -8,7 +8,7 @@ This tree exists so later prompts implement 2.x in the right places instead of e
 
 ## Current State
 
-As of TWO-15:
+As of TWO-16:
 
 - `v2/core/` contains an experimental stdlib-only Python scaffold for loading, validating, normalizing, and resolving 2.x profile documents
 - `v2/tests/` contains isolated fixtures and tests for that scaffold
@@ -26,7 +26,10 @@ As of TWO-15:
 - the existing dev resolve, compile, and plan entrypoints can now resolve profiles from local packs via `--pack` and `--profile-id`
 - `v2/compat/` now contains the first real 1.x compatibility and draft migration slice
 - `v2/compat/dev/inspect-1x-profile` inspects supported 1.x profiles and can emit generated 2.x drafts under `v2/out/migrations/`
-- live session orchestration and production command delegation still do not exist
+- `v2/session/install/` now contains the first real experimental bundle/install slice for 2.x
+- `scripts/dev/retrofx-v2-bundle` now stages deterministic repo-local bundles under `v2/bundles/`
+- `scripts/dev/retrofx-v2-install`, `retrofx-v2-status`, and `retrofx-v2-uninstall` now manage an isolated `retrofx-v2-dev` user-local footprint
+- live session orchestration, public packaging, and production command delegation still do not exist
 
 Python is used only for the early 2.x internal scaffold because `tomllib` gives deterministic TOML parsing with no extra dependency burden.
 This choice does not change the 1.x runtime or make Python the default user-facing path.
@@ -37,7 +40,7 @@ This choice does not change the 1.x runtime or make Python the default user-faci
 - `schema/`: schema contracts, validation helpers, and migration maps
 - `theme/`: semantic theme and typography policy helpers
 - `render/`: render policy and transform planning
-- `session/`: apply, export, install, off, and repair orchestration
+- `session/`: planning, install-state ownership, and future apply/off/repair orchestration
 - `targets/`: target adapters and backend-specific emission
 - `packs/`: pack metadata, family definitions, and pack-local assets
 - `compat/`: legacy profile intake, migration helpers, and future dispatcher shims

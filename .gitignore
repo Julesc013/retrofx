@@ -2,6 +2,7 @@
 active/
 state/
 v2/out/
+v2/bundles/
 
 # Temporary/editor noise
 *~

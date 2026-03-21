@@ -5,7 +5,7 @@ Each phase should narrow uncertainty before more implementation surface is added
 
 ## Current Progress
 
-Status after TWO-15:
+Status after TWO-16:
 
 - 2.0-C has an experimental implementation foothold for load, validate, normalize, and resolve in `v2/core/`
 - 2.0-D has started with the first terminal/TUI compiler family under `v2/targets/terminal/`
@@ -16,6 +16,7 @@ Status after TWO-15:
 - 2.0-F now also includes the first concrete display-policy resolution and export slice
 - 2.0-G has now started narrowly with a local pack manifest format, curated built-in packs, and pack-aware dev resolution under `v2/packs/`
 - 2.0-G now also includes the first 1.x compatibility inspection and draft migration slice under `v2/compat/`
+- 2.0-G now also includes deterministic dev bundles plus experimental user-local install, uninstall, and status helpers under `v2/session/install/` and `scripts/dev/`
 - live session orchestration and broader target families remain future phases
 
 ## 2.0-A Product And Spec Design
@@ -162,7 +163,8 @@ Current implementation note:
 
 - TWO-14 starts this phase narrowly with local `retrofx.pack/v2alpha1` manifests, curated built-in packs, and pack-aware dev-only resolution and inspection
 - TWO-15 extends the same phase with dev-only 1.x profile inspection and generated 2.x draft migration artifacts
-- remote/community distribution, pack install workflows, and broader preview ecosystems are still future work
+- TWO-16 extends the same phase with deterministic dev bundles, an isolated `retrofx-v2-dev` user-local install footprint, and explicit uninstall/status metadata
+- remote/community distribution, standalone toolchain packaging, pack install workflows, and broader preview ecosystems are still future work
 
 ## Roadmap Discipline
 

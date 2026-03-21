@@ -49,6 +49,8 @@ Current implementation truth:
 - that pack layer is intentionally separate from 1.x pack/runtime behavior and does not replace 1.x workflows
 - 2.x now also has a dev-only 1.x profile inspection and draft migration slice under `v2/compat/`
 - that compatibility slice is review-oriented and does not replace the 1.x CLI or runtime
+- 2.x now also has a dev-only user-local install slice under `retrofx-v2-dev` XDG roots
+- that install slice is explicitly isolated from the 1.x install paths and does not reuse `~/.config/retrofx` or `~/.local/bin/retrofx`
 
 ## What 2.x Replaces
 

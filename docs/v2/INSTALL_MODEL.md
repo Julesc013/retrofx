@@ -1,150 +1,151 @@
 # RetroFX 2.x Install Model
 
-RetroFX 2.x must define "install" precisely.
-Install is not just "copy some files" and it is not the same as current-session apply.
+RetroFX 2.x now has its first real install slice, but it is still explicitly experimental.
+Install in TWO-16 means:
 
-## Definition
+- build a deterministic dev bundle from a resolved 2.x profile
+- copy that bundle into a managed user-local 2.x footprint
+- write install-state metadata so uninstall and status can be explicit
 
-In 2.x, install means:
+It does not mean:
 
-- writing RetroFX-managed user-local assets and metadata into a declared install footprint
-- recording ownership so those assets can later be repaired, updated, or uninstalled safely
+- replacing the 1.x installer
+- taking over the `retrofx` command
+- mutating `/etc`
+- enabling live session-default switching
 
-Install must remain reversible and user-local by default.
+## Current Implementation Status
 
-## Key Distinctions
+As of TWO-16:
 
-| Concern | Meaning In 2.x |
+- repo-local dev mode is real and runs directly from the repository
+- repo-local bundle generation is real under `v2/bundles/<bundle-id>/`
+- experimental user-local install is real under isolated `retrofx-v2-dev` XDG roots
+- uninstall and status are real for that experimental user-local footprint
+- standalone copied toolchain installs, distro packages, and public release channels are still future work
+
+## Concrete Modes
+
+### Repo-Local Dev Mode
+
+Characteristics:
+
+- commands run from the repository checkout
+- compiled artifacts remain under `v2/out/`
+- bundles remain under `v2/bundles/`
+- no user-local install is required
+
+Current entrypoints:
+
+- `v2/core/dev/resolve-profile`
+- `v2/core/dev/compile-targets`
+- `v2/core/dev/plan-session`
+- `scripts/dev/retrofx-v2-bundle`
+- `scripts/dev/retrofx-v2-install`
+- `scripts/dev/retrofx-v2-status`
+- `scripts/dev/retrofx-v2-uninstall`
+
+### Installed Dev Mode
+
+Characteristics in the first TWO-16 slice:
+
+- uses a managed user-local 2.x footprint
+- remains isolated from 1.x paths
+- is still driven by repo-local experimental tooling
+- owns copied bundles and install-state metadata only
+
+Current roots:
+
+| Purpose | Default path |
 | --- | --- |
-| repo-local use | run from the source tree without claiming a managed install footprint |
-| user-local install | managed copy or managed runtime footprint under user-owned paths |
-| target-specific installed assets | files a target needs for future managed use |
-| session integration artifacts | wrappers, launch helpers, snippets, or desktop entries owned by install state |
-| pack assets | copied pack-local assets needed by installed profiles |
-| runtime-generated state | current-state descriptors, apply results, recovery baselines, transient active ownership |
-| exports | generated outputs that do not imply install ownership unless explicitly installed |
+| config root | `~/.config/retrofx-v2-dev` |
+| data root | `~/.local/share/retrofx-v2-dev` |
+| state root | `~/.local/state/retrofx-v2-dev` |
+| reserved launcher path | `~/.local/bin/retrofx-v2-dev` |
 
-## What Install Owns
+Current managed subpaths:
 
-Install should own only assets that RetroFX can later:
+- `~/.local/share/retrofx-v2-dev/bundles/<bundle-id>/`
+- `~/.local/state/retrofx-v2-dev/installations/<bundle-id>.json`
+- `~/.local/state/retrofx-v2-dev/install-state.json`
 
-- identify
-- validate
-- repair
-- remove or replace safely
+Reserved but not yet actively managed:
 
-Examples of install-owned data:
+- `~/.config/retrofx-v2-dev/profiles/`
+- `~/.config/retrofx-v2-dev/packs/`
+- `~/.local/bin/retrofx-v2-dev`
 
-- managed user-local RetroFX home
-- managed wrappers or launch helpers
-- install-owned target artifacts
-- copied pack-local assets needed by installed profiles
-- install manifests and ownership records
+### Future Public Distribution
 
-## What Install Must Never Own
+Not implemented now:
 
-Install must not claim ownership of:
+- copied standalone toolchain installs
+- distro packaging
+- signed release assets
+- public package registries or remote galleries
 
-- global system configuration by default
-- arbitrary user files outside a declared managed footprint
-- unmanaged WM or DE config trees
-- the current live session merely because files were installed
-- arbitrary exported files left in ad hoc destinations
+Future distribution work must build on the bundle and install-state primitives introduced here instead of inventing a second ownership model.
 
-If RetroFX cannot uninstall or repair a path predictably, install should not claim it as managed.
+## What Install Owns Now
 
-## Repo-Local Use Versus User-Local Install
+The first install slice owns only assets that live inside the managed `retrofx-v2-dev` footprint and are recorded in install-state metadata.
 
-### Repo-Local Use
+Current install-owned assets:
 
-Characteristics:
+- copied dev bundle contents under the managed data root
+- per-bundle install records
+- the install index file
 
-- development or testing oriented
-- no claim that the repository itself is an installed product footprint
-- runtime state may still exist, but install ownership is separate
+Current install does not claim ownership of:
 
-### User-Local Install
+- the 1.x runtime tree
+- `~/.config/retrofx`
+- `~/.local/bin/retrofx`
+- arbitrary WM or DE config trees
+- export files written outside the managed 2.x footprint
 
-Characteristics:
+## Install Versus Export
 
-- explicit managed home
-- explicit manifest ownership
-- explicit update, repair, and uninstall expectations
+Export-only and install are still different:
 
-This mirrors the useful 1.x distinction while giving 2.x a cleaner ownership model.
+- export-only produces inspectable artifacts but claims no lifecycle ownership
+- bundle generation packages those artifacts into a deterministic distribution unit
+- install copies that bundle into a managed user-local footprint and records ownership
 
-## Install Versus Current-Session Apply
+That separation is deliberate.
+It allows 2.x to become installable without quietly turning every export into managed state.
 
-Install and apply are different.
+## Install Versus Apply
 
-`apply-now` means:
+Install in TWO-16 is still non-live:
 
-- make scoped current-session changes
-- write active-session state and recovery records
+- it does not reload a terminal
+- it does not touch a live WM session
+- it does not enable a session default
+- it does not execute session orchestration
 
-`install-for-session` or `install-as-default` means:
+It prepares a managed footprint only.
 
-- write managed assets for future use
-- record install ownership
-- optionally wire explicit integration hooks
+## Ownership And Reversibility
 
-Install may prepare a future session without changing the current one at all.
+Install remains safe by following these rules:
 
-## Pack Assets
+- user-local only
+- no root required
+- no writes to `/etc`
+- explicit bundle ids
+- explicit per-bundle install records
+- uninstall driven by those records
 
-Pack-local assets should become install-owned only when:
+This keeps the 2.x install slice aligned with the same safety philosophy that made 1.x trustworthy, without reusing the 1.x path layout.
 
-- a managed installed profile depends on them
-- RetroFX copies them into a managed destination
-- install records track them explicitly
+## Current Limitations
 
-2.x should carry forward the 1.x safety idea that installed profiles must not depend on volatile pack source locations.
+The first install slice is intentionally narrow:
 
-## Exports Versus Installed Assets
+- it installs bundles, not live sessions
+- it does not yet install a standalone 2.x toolchain
+- it does not yet own desktop integration hooks
+- it does not yet perform repair or upgrade orchestration
 
-An export is not automatically an installed asset.
-
-Examples:
-
-- a generated `kitty` config dropped into an export directory is still just an export
-- a generated Xsession helper under a managed install path can be an installed asset
-
-The difference is ownership and lifecycle, not file syntax.
-
-## Uninstall Concept
-
-Future uninstall behavior should operate from install manifests and ownership records.
-
-Conceptually uninstall should:
-
-- remove install-owned assets
-- remove install-owned integration hooks
-- preserve or optionally back up user-owned profile data when policy says to do so
-- avoid touching export-only outputs that were never install-owned
-
-Uninstall must not rely on broad path deletion or guessing from filenames.
-
-## Reversibility And Safety
-
-Install should remain safe by following these rules:
-
-- user-local by default
-- explicit ownership records
-- no silent takeover of unmanaged paths
-- clean separation from current-session state
-- uninstall driven by manifests, not heuristics
-
-## Carry-Forward From 1.x
-
-2.x intentionally carries forward these 1.x lessons:
-
-- repo-local and installed modes should stay distinct
-- install-asset health should be reported separately from runtime health
-- pack assets may need relocation into user-managed space
-- uninstall should preserve user-owned data when requested
-
-2.x improves the model by:
-
-- separating install ownership from active-session state
-- making integration hooks explicit install artifacts
-- making install manifest ownership a planned subsystem instead of a scattered implementation detail
+Those are future steps, not hidden promises.
