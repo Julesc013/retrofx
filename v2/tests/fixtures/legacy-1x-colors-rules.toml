@@ -1,0 +1,44 @@
+name = "Legacy Colors + Rules"
+version = 1
+description = "Legacy profile with explicit colors and unsupported rules."
+tags = ["crt", "custom", "session-local"]
+author = "Compat Test"
+license = "CC0-1.0"
+
+[mode]
+type = "monochrome"
+
+[monochrome]
+bands = 8
+phosphor = "custom"
+custom_rgb = "90,200,255"
+hotcore = true
+
+[effects]
+blur_strength = 2
+scanlines = true
+flicker = false
+dither = "ordered"
+vignette = true
+transparency = "rules"
+
+[scope]
+x11 = true
+tty = false
+tuigreet = false
+
+[fonts]
+terminal = "Iosevka"
+terminal_fallback = ["DejaVu Sans Mono", "Noto Color Emoji"]
+ui = "IBM Plex Sans"
+
+[font_aa]
+antialias = "on"
+subpixel = "rgb"
+
+[colors]
+background = "#081018"
+foreground = "#dff3ff"
+
+[rules]
+window_opacity = 0.88

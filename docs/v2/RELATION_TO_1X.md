@@ -47,6 +47,8 @@ Current implementation truth:
 
 - 2.x now has a dev-only local pack manifest layer and built-in curated packs under `v2/packs/`
 - that pack layer is intentionally separate from 1.x pack/runtime behavior and does not replace 1.x workflows
+- 2.x now also has a dev-only 1.x profile inspection and draft migration slice under `v2/compat/`
+- that compatibility slice is review-oriented and does not replace the 1.x CLI or runtime
 
 ## What 2.x Replaces
 
@@ -66,6 +68,7 @@ It means 1.x is not the right long-term container for the broader platform.
 - 1.x profiles may not map directly to the eventual 2.x schema.
 - 2.x may need compatibility import or migration tooling rather than promising direct schema reuse.
 - 2.x local packs are currently curated seed data, not a migrated replacement for 1.x pack install or selection workflows.
+- 2.x now has the first real import and migration tooling for a supported subset of 1.x profiles, but not full runtime compatibility.
 - Existing 1.x users should be able to stay on 1.x without being forced into early 2.x semantics.
 - 2.x should avoid breaking the current 1.x release workflow, packaging, or support promises while the redesign is still maturing.
 

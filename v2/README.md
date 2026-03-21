@@ -8,7 +8,7 @@ This tree exists so later prompts implement 2.x in the right places instead of e
 
 ## Current State
 
-As of TWO-14:
+As of TWO-15:
 
 - `v2/core/` contains an experimental stdlib-only Python scaffold for loading, validating, normalizing, and resolving 2.x profile documents
 - `v2/tests/` contains isolated fixtures and tests for that scaffold
@@ -24,6 +24,8 @@ As of TWO-14:
 - `v2/packs/` now contains a real local pack manifest layer and curated built-in packs
 - `v2/core/dev/list-packs` and `v2/core/dev/show-pack` inspect those packs without side effects
 - the existing dev resolve, compile, and plan entrypoints can now resolve profiles from local packs via `--pack` and `--profile-id`
+- `v2/compat/` now contains the first real 1.x compatibility and draft migration slice
+- `v2/compat/dev/inspect-1x-profile` inspects supported 1.x profiles and can emit generated 2.x drafts under `v2/out/migrations/`
 - live session orchestration and production command delegation still do not exist
 
 Python is used only for the early 2.x internal scaffold because `tomllib` gives deterministic TOML parsing with no extra dependency burden.
@@ -38,7 +40,7 @@ This choice does not change the 1.x runtime or make Python the default user-faci
 - `session/`: apply, export, install, off, and repair orchestration
 - `targets/`: target adapters and backend-specific emission
 - `packs/`: pack metadata, family definitions, and pack-local assets
-- `compat/`: legacy bridges, upgrade tools, and future dispatcher shims
+- `compat/`: legacy profile intake, migration helpers, and future dispatcher shims
 - `tests/`: 2.x-only tests and fixtures
 
 ## Rules

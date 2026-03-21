@@ -22,6 +22,12 @@ Current implementation truth as of TWO-14:
 - pack metadata is external profile origin data; it is not authored inline in the profile schema itself
 - pack-aware dev resolution, compile, and planning commands now surface pack origin and family metadata alongside the resolved profile
 
+Current implementation truth as of TWO-15:
+
+- 1.x profile intake now exists only through the dev-only compatibility layer under `v2/compat/`
+- that compatibility layer can emit generated `retrofx.profile/v2alpha1` draft profiles for review
+- 1.x is still not a native authored schema for the 2.x engine
+
 ## Design Laws
 
 - Users author semantic intent, not backend-specific implementation whenever possible.

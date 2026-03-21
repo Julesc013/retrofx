@@ -14,6 +14,7 @@ Implemented now:
 - end-to-end tests for the advisory display-policy compiler slice
 - environment-detection and session-planning tests
 - local pack-manifest discovery and pack-aware resolution tests
+- 1.x compatibility inspection and draft migration tests
 - a small shell runner for 2.x-only tests
 
 Do implement here later:

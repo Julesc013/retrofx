@@ -5,6 +5,13 @@ It is a redesign.
 
 This file defines how 1.x concepts map into 2.x concepts, what can be migrated automatically, what needs manual review, and which old ambiguities 2.x resolves by design.
 
+Current implementation truth as of TWO-15:
+
+- `v2/compat/` now contains a real first migration slice for 1.x profile intake
+- the supported 1.x subset can be inspected and mapped into a deterministic 2.x draft profile
+- migration reports explicitly classify fields as clean, degraded, manual follow-up, or unsupported
+- generated draft profiles are dev-only review artifacts and do not replace the 1.x source files
+
 ## Migration Principles
 
 - 1.x remains valid on the 1.x line and should not be destabilized.
@@ -60,6 +67,12 @@ This file defines how 1.x concepts map into 2.x concepts, what can be migrated a
 | no direct 1.x equivalent | `typography.aa.hinting` | manual | New 2.x policy role. |
 | 1.x pack metadata | `identity.family`, pack defaults, reserved `compose.*` hooks | assisted | Pack lineage becomes data instead of implicit behavior. |
 | 1.x runtime manifest distinction | resolved `artifact_plan.required` and `artifact_plan.optional` | redesign | This moves from implementation detail to planned compiler output. |
+
+Current TWO-15 implementation note:
+
+- the first compatibility slice implements the mappings in the `automatic`, `assisted`, and part of the `manual` column only for the supported 1.x schema subset
+- `effects.transparency`, `effects.scanline_preset`, and `rules.*` are reported, not emitted
+- lifecycle posture is inferred into a dev-only draft; it is not treated as a lossless runtime migration
 
 ## What Can Be Migrated Automatically
 
@@ -201,4 +214,3 @@ persistence = "ephemeral"
 
 The key redesign is that the green phosphor is no longer hidden inside a render-only field.
 It becomes reusable semantic color intent.
-

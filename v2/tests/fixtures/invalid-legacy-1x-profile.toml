@@ -1,0 +1,17 @@
+name = "Invalid Legacy Profile"
+version = 1
+
+[mode]
+type = "monochrome"
+
+[effects]
+blur_strength = 2
+scanlines = true
+flicker = false
+dither = "ordered"
+vignette = true
+
+[scope]
+x11 = true
+tty = false
+tuigreet = false
