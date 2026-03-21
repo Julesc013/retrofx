@@ -1,6 +1,6 @@
 # RetroFX 2.x Implemented Status
 
-This document is the current truth pass for the 2.x branch as of TWO-30.
+This document is the current truth pass for the 2.x branch as of TWO-31.
 It is intentionally blunt.
 
 1.x remains the production line.
@@ -57,6 +57,8 @@ Still intentionally bounded:
 - controlled internal alpha now has a real operational layer, and diagnostics now capture source-control state plus installed bundle or package evidence for the selected profile
 - release-status metadata now distinguishes the current build from the historical local alpha candidate and makes broader-alpha or pre-beta no explicit in machine-readable form
 - release-status metadata now also carries the blocked pre-beta-candidate identity explicitly so the current internal-alpha line is not mistaken for a non-public pre-beta candidate
+- release-status metadata now also carries `ready_for_limited_public_technical_beta=false` and the current public-beta blockers explicitly
+- `package-alpha` now rejects pre-beta, beta, or stable-looking version or status overrides so the current internal package surface cannot fake a public-facing maturity level
 - the default repo-local release output path is now `v2/releases/internal-alpha/`, which is treated as generated machine-local output rather than committed source
 
 Not implemented:
@@ -87,6 +89,7 @@ Related truth docs:
 - broader alpha: no
 - controlled external alpha: no
 - non-public pre-beta: no
+- limited public technical beta: no
 - pre-beta stabilization: no
 - broader testing: no
-- main reasons to avoid broader testing: real-host coverage is still narrow, real Wayland-host evidence is still absent, and migration validation breadth remains limited
+- main reasons to avoid broader testing: real-host coverage is still narrow, real Wayland-host evidence is still absent, package or diagnostics surfaces remain intentionally internal-only, and migration validation breadth remains limited

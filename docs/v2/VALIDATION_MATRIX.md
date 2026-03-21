@@ -4,7 +4,7 @@ This document records the first serious validation pass for the current 2.x expe
 
 For the broader-alpha gate, also read [BROADER_ALPHA_MATRIX.md](BROADER_ALPHA_MATRIX.md).
 
-Validated on: 2026-03-21
+Validated on: 2026-03-22
 
 Validation context:
 
@@ -26,7 +26,7 @@ Status legend:
 
 Current summary:
 
-- `pass`: 24
+- `pass`: 25
 - `degraded-pass`: 2
 - `partial`: 0
 - `fail`: 0
@@ -57,12 +57,13 @@ Current summary:
 | explicit live X11 `picom` probe in real session | active X11 plus `i3` session | `scripts/dev/retrofx-v2 preview-x11 v2/tests/fixtures/passthrough-minimal.toml --probe-picom --probe-seconds 1.0 --out-root /tmp/retrofx-v2-two23-probe` | short-lived explicit live probe | `ok=true`, `probe.status=timed-out`, bounded probe launched against the generated config and wrote preview-state metadata | pass | This is the first manual real-session validation of the explicit TWO-17 probe path. The timeout is an expected bounded-success outcome for this probe design. |
 | bundle generation | repo-local dev | `scripts/dev/retrofx-v2 bundle --pack modern-minimal --profile-id warm-night --bundle-root <temp>` | deterministic bundle emitted | `ok=true`, bundle emitted under `<temp>/bundles/modern-minimal--warm-night` | pass | Pack-aware bundle generation now works through the unified surface. |
 | internal-alpha package generation | repo-local dev plus isolated temp roots | `scripts/dev/retrofx-v2 package-alpha --pack modern-minimal --profile-id warm-night` then `scripts/dev/retrofx-v2 install <package-dir>/bundle` | reproducible non-public package emitted, then packaged bundle installs into isolated `retrofx-v2-dev` roots with release metadata | `ok=true`, package emitted under `v2/releases/internal-alpha/retrofx-v2--2.0.0-alpha.internal.2--modern-minimal--warm-night`; install record and unified status expose `release_version=2.0.0-alpha.internal.2`, `release_status=internal-alpha`, `current_build_kind=untagged-post-alpha-hardening`, and `pre_beta_candidate_ready=false` | pass | TWO-29 and TWO-30 keep the package surface internal-only and truthfully separate it from both the historical local alpha candidate and the still-blocked pre-beta candidate. |
+| public-looking package metadata override is rejected | repo-local dev | `scripts/dev/retrofx-v2 package-alpha --pack modern-minimal --profile-id warm-night --status-label pre-beta` | command fails clearly rather than minting misleading metadata | `ok=false`, `errors[0].code=blocked-package-status-label`, and the returned release-status remains on the current internal-alpha line | pass | TWO-31 hardens the internal package flow so it cannot emit pre-beta or public-looking metadata through simple overrides. |
 | internal-alpha diagnostics capture | isolated temp HOME plus package-installed bundle | `scripts/dev/retrofx-v2 diagnostics --pack modern-minimal --profile-id warm-night --label alpha-smoke --output-root <temp>` | local diagnostic bundle captures platform status, environment, install state, and selected profile evidence without touching 1.x paths | `ok=true`, diagnostics bundle included `capture-manifest.json`, `platform-status.json`, `environment.json`, `install-state.json`, `profile/resolved-profile.json`, `profile/session-plan.json`, and `profile/output-inventory.json` | pass | TWO-25 adds the controlled-alpha evidence capture path needed for real tester feedback. |
 | post-alpha diagnostics remediation pass | isolated temp HOME plus package-installed bundle | `scripts/dev/retrofx-v2 diagnostics --pack modern-minimal --profile-id warm-night --label candidate --output-root <temp>` | diagnostics bundle is self-describing and captures repo plus installed-bundle provenance strongly enough for remediation triage | `ok=true`, `capture-manifest.json` lists itself, `source-control.json` is present, and the bundle includes `profile/install-bundle-inventory.json`, `profile/install-bundle-manifest.json`, and `profile/source-package-manifest.json` while retaining the current candidate release metadata | pass | TWO-27 revalidates the stronger diagnostics bundle against the current candidate package path. |
 | temp HOME install | isolated temp HOME | `scripts/dev/retrofx-v2 install <bundle-path>` | bundle copied into isolated `retrofx-v2-dev` footprint with install record | `ok=true`, bundle dir under `~/.local/share/retrofx-v2-dev/bundles/modern-minimal--warm-night` | pass | Install remains user-local and isolated from 1.x. |
 | temp HOME uninstall or cleanup | isolated temp HOME | `scripts/dev/retrofx-v2 uninstall modern-minimal--warm-night` | installed bundle removed, user config roots preserved | removed bundle and installation record; preserved `profiles/` and `packs/` config roots | pass | Uninstall ownership remains explicit and reversible. |
 | delegated help clarity through unified surface | repo-local dev | `scripts/dev/retrofx-v2 resolve --help` and `scripts/dev/retrofx-v2 bundle --help` | help should clearly present the `retrofx-v2` surface | usage headers now begin with `retrofx-v2 resolve` and `retrofx-v2 bundle` rather than `cli.py` | pass | TWO-23 sets explicit `prog` names on the delegated CLI modules. |
-| full 2.x test suite | repo-local dev | `./v2/tests/test.sh` | full suite passes | `Ran 136 tests in 1.993s` and `OK` | pass | Automated coverage still matches the current branch state after the TWO-30 pre-beta-candidate gating pass. |
+| full 2.x test suite | repo-local dev | `./v2/tests/test.sh` | full suite passes | `Ran 138 tests in 2.110s` and `OK` | pass | Automated coverage still matches the current branch state after the TWO-31 public-surface gating pass. |
 
 ## Interpretation
 
@@ -78,4 +79,5 @@ The remaining gaps are about confidence and polish, not broad missing implementa
 - delegated help now presents the unified `retrofx-v2` surface coherently
 - diagnostics evidence is now strong enough to capture repo-checkout provenance plus installed-bundle or package context for remediation work
 - the default repo-local candidate package root now works as a reproducible machine-local output path without being mistaken for committed source
+- public-looking package version or status overrides are now rejected instead of being able to mint misleading metadata on an internal-only package flow
 - broader multi-host and migration-corpus validation remains limited, which still argues against wider testing

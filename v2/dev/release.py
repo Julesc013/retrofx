@@ -26,11 +26,17 @@ STATUS_LADDER = (
 
 CURRENT_EXPERIMENTAL_VERSION = "2.0.0-alpha.internal.2"
 CURRENT_STATUS_LABEL = "internal-alpha"
-CURRENT_PROMPT = "TWO-30"
+CURRENT_PROMPT = "TWO-31"
 CURRENT_DISTRIBUTION_SCOPE = "internal-non-public"
 CURRENT_COHORT = "controlled-internal"
 PROPOSED_PRE_BETA_VERSION = "2.0.0-prebeta.internal.1"
 PROPOSED_PRE_BETA_STATUS_LABEL = "pre-beta"
+PUBLIC_BETA_BLOCKERS = [
+    "no real Wayland-host validation pass exists yet",
+    "package, install, and diagnostics surfaces remain repo-checkout dependent and intentionally internal-only",
+    "migration validation remains representative rather than broad",
+    "bounded X11 live probing remains a narrow single-host trust surface",
+]
 
 
 def build_experimental_release_metadata(
@@ -74,9 +80,13 @@ def build_experimental_release_metadata(
         "ready_for_non_public_pre_beta": False,
         "ready_for_local_pre_beta_tag_candidate": False,
         "pre_beta_candidate_ready": False,
+        "ready_for_limited_public_technical_beta": False,
+        "ready_for_public_technical_beta_candidate": False,
         "ready_for_pre_beta_stabilization": False,
         "ready_for_broader_testing": False,
         "needs_more_stabilization": True,
+        "needs_public_surface_hardening": True,
+        "public_surface_position": "internal-only",
         "broader_alpha_blockers": [
             "validation remains too dependent on one real X11+i3 host and simulated non-X11 environments",
             "no real Wayland-host validation pass exists yet",
@@ -88,6 +98,7 @@ def build_experimental_release_metadata(
             "current package and diagnostics surfaces remain internal-only and repo-checkout dependent",
             "migration validation remains representative rather than broad",
         ],
+        "public_beta_blockers": list(PUBLIC_BETA_BLOCKERS),
         "proposed_pre_beta_version": PROPOSED_PRE_BETA_VERSION,
         "proposed_pre_beta_status_label": PROPOSED_PRE_BETA_STATUS_LABEL,
         "proposed_pre_beta_tag_name": proposed_pre_beta_tag_name,

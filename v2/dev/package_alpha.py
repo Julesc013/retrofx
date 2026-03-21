@@ -44,15 +44,24 @@ PACKAGE_DOCS = (
     "BROADER_ALPHA_READINESS.md",
     "PRE_BETA_BLOCKERS.md",
     "PRE_BETA_CANDIDATE_NOTES.md",
+    "PRE_BETA_CANDIDATE_SUMMARY.md",
     "PRE_BETA_READINESS.md",
     "PRE_BETA_RELEASE_CHECKLIST.md",
     "PRE_BETA_GATES.md",
+    "PUBLIC_BETA_RISK_SURFACE.md",
+    "PUBLIC_BETA_GATES.md",
+    "PUBLIC_BETA_BLOCKERS.md",
+    "PUBLIC_BETA_READINESS.md",
+    "TECHNICAL_BETA_NOTES.md",
+    "TECHNICAL_BETA_CHECKLIST.md",
     "NEXT_STAGE_VERDICT.md",
     "INTERNAL_ALPHA_RUNBOOK.md",
     "INTERNAL_ALPHA_NOTES.md",
     "ALPHA_READINESS.md",
     "POST_ALPHA_DECISION_RULES.md",
 )
+
+ALLOWED_INTERNAL_PACKAGE_STATUS_LABELS = {"experimental", "internal-alpha"}
 
 IMPLEMENTATION_INFO = {
     "status": "experimental-dev-only",
@@ -84,6 +93,19 @@ def build_internal_alpha_package(
     stdin_isatty: bool | None = None,
     path_lookup: Callable[[str], str | None] | None = None,
 ) -> dict[str, Any]:
+    override_errors = _validate_release_overrides(version=version, status_label=status_label)
+    if override_errors:
+        return {
+            "ok": False,
+            "stage": "package-alpha",
+            "implementation": IMPLEMENTATION_INFO,
+            "release_status": build_experimental_release_metadata(),
+            "source": None,
+            "warnings": [],
+            "errors": override_errors,
+            "package": None,
+        }
+
     release = build_experimental_release_metadata(version=version, status_label=status_label)
     if release["working_tree_clean"] is False and not allow_dirty:
         return {
@@ -188,6 +210,7 @@ def build_internal_alpha_package(
             "Live Wayland render is not implemented.",
             "Broader non-public alpha is not approved yet; this package remains internal-alpha only.",
             "No non-public pre-beta candidate exists for the current build; this package is validation material for continued internal hardening rather than a pre-beta candidate.",
+            "No limited public technical beta is approved for the current build; do not circulate this package outside the intended internal cohort.",
             "Current internal-alpha packages are built from an untagged post-alpha hardening line unless the current version tag explicitly points at HEAD.",
             "1.x remains the production line.",
         ],
@@ -195,6 +218,7 @@ def build_internal_alpha_package(
         "notes": [
             "This package is for controlled internal alpha circulation only.",
             "It does not replace the 1.x runtime, installer, or public release process.",
+            "It is not approved for limited public technical beta circulation.",
         ],
     }
     manifest_artifact = _write_package_file(output_dir, "package-manifest.json", _json_text(manifest))
@@ -223,7 +247,7 @@ def build_internal_alpha_package(
         },
         "note": (
             "This creates a reproducible internal-alpha package around one deterministic 2.x bundle. "
-            "It remains non-public, is not a pre-beta candidate artifact, and does not provide a standalone production toolchain."
+            "It remains non-public, is not a pre-beta or public-technical-beta artifact, and does not provide a standalone production toolchain."
         ),
     }
 
@@ -231,7 +255,7 @@ def build_internal_alpha_package(
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="retrofx-v2 package-alpha",
-        description="Build one deterministic RetroFX 2.x internal-alpha validation package for non-public internal testing. This does not create a pre-beta candidate.",
+        description="Build one deterministic RetroFX 2.x internal-alpha validation package for non-public internal testing. This does not create a pre-beta or public technical beta candidate.",
     )
     add_profile_selection_args(parser)
     parser.add_argument(
@@ -247,11 +271,11 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument(
         "--version",
-        help="Override the experimental internal-alpha version string for this package.",
+        help="Override the experimental version string for this package, but only within the current internal-alpha or experimental line.",
     )
     parser.add_argument(
         "--status-label",
-        help="Override the experimental status label for this package.",
+        help="Override the experimental status label for this package, but only to `experimental` or `internal-alpha`.",
     )
     parser.add_argument(
         "--allow-dirty",
@@ -272,6 +296,47 @@ def main(argv: list[str] | None = None) -> int:
     )
     print(json.dumps(payload, indent=2, sort_keys=False))
     return 0 if payload["ok"] else 1
+
+
+def _validate_release_overrides(*, version: str | None, status_label: str | None) -> list[dict[str, str]]:
+    errors: list[dict[str, str]] = []
+    if status_label is not None and status_label not in ALLOWED_INTERNAL_PACKAGE_STATUS_LABELS:
+        errors.append(
+            {
+                "severity": "error",
+                "code": "blocked-package-status-label",
+                "message": (
+                    f"Status label override `{status_label}` is blocked. "
+                    "The current package flow is internal-alpha only and cannot emit controlled-alpha, pre-beta, public-beta, or stable metadata."
+                ),
+            }
+        )
+
+    if version is not None:
+        lowered = version.lower()
+        if "alpha" not in lowered and "experimental" not in lowered:
+            errors.append(
+                {
+                    "severity": "error",
+                    "code": "blocked-package-version-override",
+                    "message": (
+                        f"Version override `{version}` is blocked. "
+                        "The current package flow only permits experimental or internal-alpha version identities."
+                    ),
+                }
+            )
+        elif any(token in lowered for token in ("prebeta", "beta", "stable")):
+            errors.append(
+                {
+                    "severity": "error",
+                    "code": "blocked-package-version-override",
+                    "message": (
+                        f"Version override `{version}` is blocked. "
+                        "The current package flow cannot mint pre-beta, beta, or stable-looking package identities."
+                    ),
+                }
+            )
+    return errors
 
 
 def _copy_package_docs(package_root: Path) -> list[dict[str, Any]]:
@@ -338,6 +403,7 @@ def _render_package_summary(
         f"release.alpha_candidate_ready: {'yes' if release['alpha_candidate_ready'] else 'no'}",
         f"release.ready_for_broader_alpha: {'yes' if release['ready_for_broader_alpha'] else 'no'}",
         f"release.ready_for_non_public_pre_beta: {'yes' if release['ready_for_non_public_pre_beta'] else 'no'}",
+        f"release.ready_for_limited_public_technical_beta: {'yes' if release['ready_for_limited_public_technical_beta'] else 'no'}",
         f"distribution.scope: {release['distribution_scope']}",
         f"bundle.id: {bundle_manifest['bundle_id']}",
         f"profile.id: {bundle_manifest['profile']['id']}",
@@ -346,6 +412,7 @@ def _render_package_summary(
         f"degraded_targets: {', '.join(bundle_manifest['plan_summary']['degraded_targets']) or '(none)'}",
         "",
         "This package is non-public and expects a repo checkout for command execution.",
+        "It is not approved for limited public technical beta circulation.",
         "Recommended first command: scripts/dev/retrofx-v2 status",
         "",
     ]

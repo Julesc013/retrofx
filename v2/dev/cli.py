@@ -34,11 +34,13 @@ def main(argv: list[str] | None = None) -> int:
         prog="retrofx-v2",
         description=(
             "Unified experimental RetroFX 2.x developer surface. "
-            "This command does not replace the 1.x runtime or the production `retrofx` CLI."
+            "This command does not replace the 1.x runtime or the production `retrofx` CLI, "
+            "and it is not yet approved for a limited public technical beta."
         ),
         epilog=(
             "This surface exposes only the currently implemented experimental commands. "
-            "Export-oriented targets remain far more complete than live apply behavior."
+            "Export-oriented targets remain far more complete than live apply behavior, "
+            "and the overall surface remains internal-only until the public-beta gates are satisfied."
         ),
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -50,13 +52,13 @@ def main(argv: list[str] | None = None) -> int:
     _add_passthrough_command(subparsers, "compile", "Compile the implemented target families into deterministic export artifacts.")
     _add_passthrough_command(subparsers, "plan", "Run the implemented non-destructive session planning preview for the current environment.")
     _add_passthrough_command(subparsers, "preview-x11", "Run the bounded X11 render preview surface. This remains explicit, internal-only, and not pre-beta ready.")
-    _add_passthrough_command(subparsers, "apply", "Run the bounded TWO-19 experimental apply flow under the isolated 2.x-owned footprint.")
+    _add_passthrough_command(subparsers, "apply", "Run the bounded TWO-19 experimental apply flow under the isolated 2.x-owned footprint. This remains internal-only.")
     _add_passthrough_command(subparsers, "off", "Clear the bounded TWO-19 experimental activation without touching 1.x.")
     _add_passthrough_command(subparsers, "bundle", "Build one deterministic TWO-16 dev bundle.")
-    _add_passthrough_command(subparsers, "package-alpha", "Build one reproducible internal-alpha validation package around a deterministic 2.x bundle. Dirty trees are blocked by default. This is not a broader-alpha or pre-beta-candidate package flow.")
-    _add_passthrough_command(subparsers, "diagnostics", "Capture a local TWO-30 diagnostics directory for internal alpha or blocked pre-beta-candidate triage.")
-    _add_passthrough_command(subparsers, "install", "Install one dev bundle into the isolated user-local 2.x footprint.")
-    _add_passthrough_command(subparsers, "uninstall", "Remove one installed dev bundle from the isolated user-local 2.x footprint.")
+    _add_passthrough_command(subparsers, "package-alpha", "Build one reproducible internal-alpha validation package around a deterministic 2.x bundle. Dirty trees are blocked by default. This is not a broader-alpha, pre-beta-candidate, or public-technical-beta package flow.")
+    _add_passthrough_command(subparsers, "diagnostics", "Capture a local TWO-31 diagnostics directory for internal alpha and public-surface gating triage. This remains internal-only.")
+    _add_passthrough_command(subparsers, "install", "Install one dev bundle into the isolated user-local 2.x footprint. This remains internal-only.")
+    _add_passthrough_command(subparsers, "uninstall", "Remove one installed dev bundle from the isolated user-local 2.x footprint. This remains internal-only.")
 
     packs_parser = subparsers.add_parser("packs", help="Inspect the implemented local 2.x pack surface.")
     packs_subparsers = packs_parser.add_subparsers(dest="packs_command", required=True)
@@ -64,9 +66,9 @@ def main(argv: list[str] | None = None) -> int:
     packs_show = packs_subparsers.add_parser("show", help="Show one 2.x pack manifest.")
     packs_show.add_argument("pack_id", help="Pack id under v2/packs/.")
 
-    migrate_parser = subparsers.add_parser("migrate", help="Inspect supported 1.x profiles and draft migration output. This is not runtime compatibility.")
+    migrate_parser = subparsers.add_parser("migrate", help="Inspect supported 1.x profiles and representative draft migration output. This is not runtime compatibility or broad migration assurance.")
     migrate_subparsers = migrate_parser.add_subparsers(dest="migrate_command", required=True)
-    migrate_inspect = migrate_subparsers.add_parser("inspect-1x", help="Inspect one 1.x profile for supported migration mapping.")
+    migrate_inspect = migrate_subparsers.add_parser("inspect-1x", help="Inspect one 1.x profile for supported migration mapping. This remains representative rather than broad.")
     migrate_inspect.add_argument("profile", help="Path to a 1.x profile.")
     migrate_inspect.add_argument("--write-draft", action="store_true", help="Emit a generated 2.x draft migration bundle.")
     migrate_inspect.add_argument("--out-root", help="Override the migration output root.")

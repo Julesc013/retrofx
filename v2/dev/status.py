@@ -47,7 +47,7 @@ COMMAND_SUMMARY = [
         "command": "apply",
         "category": "session",
         "implemented": True,
-        "description": "Run the bounded experimental 2.x apply path under the isolated user-local footprint. This is not a production runtime claim.",
+        "description": "Run the bounded experimental 2.x apply path under the isolated user-local footprint. This remains an internal-only workflow and is not a production or public-technical-beta runtime claim.",
     },
     {
         "command": "off",
@@ -77,7 +77,7 @@ COMMAND_SUMMARY = [
         "command": "migrate inspect-1x",
         "category": "compat",
         "implemented": True,
-        "description": "Inspect a 1.x profile and emit a deterministic migration report or draft.",
+        "description": "Inspect a 1.x profile and emit a deterministic but representative migration report or draft. This is not broad migration assurance.",
     },
     {
         "command": "bundle",
@@ -95,19 +95,19 @@ COMMAND_SUMMARY = [
         "command": "diagnostics",
         "category": "inspect",
         "implemented": True,
-        "description": "Capture a local diagnostics directory with status, environment, state, and optional profile plan evidence for internal alpha triage.",
+        "description": "Capture a local diagnostics directory with status, environment, state, and optional profile plan evidence for internal alpha triage. This remains an internal-only support surface.",
     },
     {
         "command": "install",
         "category": "install",
         "implemented": True,
-        "description": "Install one generated 2.x bundle into the isolated user-local footprint.",
+        "description": "Install one generated 2.x bundle into the isolated user-local footprint. This remains user-local, bounded, and internal-only.",
     },
     {
         "command": "uninstall",
         "category": "install",
         "implemented": True,
-        "description": "Remove one installed experimental 2.x bundle.",
+        "description": "Remove one installed experimental 2.x bundle. This remains user-local, bounded, and internal-only.",
     },
     {
         "command": "smoke",
@@ -241,8 +241,8 @@ IMPLEMENTED_STATUS_MATRIX = [
 
 PLATFORM_IMPLEMENTATION_INFO = {
     "status": "experimental-dev-only",
-    "prompt": "TWO-30",
-    "surface": "unified-dev-platform-internal-alpha",
+    "prompt": "TWO-31",
+    "surface": "unified-dev-platform-internal-only",
     "entrypoint": str(UNIFIED_ENTRYPOINT),
     "implemented_targets": list_targets(),
     "families": list_target_families(),
@@ -278,6 +278,7 @@ def build_platform_status(
         "Internal-alpha packages remain repo-checkout dependent and are not standalone copied toolchains.",
         "Broader non-public alpha is still not approved; non-sway Wayland desktops remain export-oriented validation environments only.",
         "No non-public pre-beta candidate exists for the current build; the reserved pre-beta candidate version remains blocked by the current gates.",
+        "No limited public technical beta is approved for the current build; external-facing docs and package metadata remain preparatory only.",
     ]
     if release_status["local_tag_state"] != "current-head":
         limitations.append(
@@ -340,14 +341,15 @@ def build_platform_status(
         "implemented_status_matrix": IMPLEMENTED_STATUS_MATRIX,
         "limitations": limitations,
         "next_focus": {
-            "phase": "blocked-pre-beta-candidate-continue-internal-hardening",
+            "phase": "public-beta-gate-denied-continue-internal-hardening",
             "doc": str(REPO_ROOT / "docs" / "v2" / "STABILIZATION_PLAN.md"),
             "checklist": str(REPO_ROOT / "docs" / "v2" / "STABILIZATION_CHECKLIST.md"),
             "goals": [
                 "expand validation beyond one real X11 plus i3 host and simulated Wayland or tty environments",
-                "keep broader-alpha and pre-beta-candidate claims fenced off until at least one real Wayland host and another real environment are validated",
+                "keep broader-alpha, pre-beta-candidate, and limited-public-technical-beta claims fenced off until at least one real Wayland host and another real environment are validated",
                 "continue regression hunting inside the already implemented surface instead of new feature sprawl",
                 "keep manifest, cleanup, ownership metadata, and release-state truth aligned with what internal testers actually use",
+                "treat package, diagnostics, and apply surfaces as internal-only until external-support burden and validation breadth improve materially",
             ],
         },
         "note": "This report describes the implemented 2.x experimental platform as it exists now. It is not a production readiness claim.",

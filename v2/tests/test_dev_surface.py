@@ -23,6 +23,8 @@ class UnifiedDevSurfaceTests(unittest.TestCase):
         self.assertIn("package-alpha", process.stdout)
         self.assertIn("diagnostics", process.stdout)
         self.assertIn("smoke", process.stdout)
+        self.assertIn("not yet", process.stdout)
+        self.assertIn("limited public technical beta", process.stdout)
 
     def test_delegated_help_uses_unified_prog_names(self) -> None:
         for command, expected_usage in (
@@ -53,6 +55,11 @@ class UnifiedDevSurfaceTests(unittest.TestCase):
             self.assertIn("ready_for_non_public_pre_beta", payload["release_status"])
             self.assertIn("ready_for_local_pre_beta_tag_candidate", payload["release_status"])
             self.assertIn("pre_beta_candidate_ready", payload["release_status"])
+            self.assertIn("ready_for_limited_public_technical_beta", payload["release_status"])
+            self.assertIn("ready_for_public_technical_beta_candidate", payload["release_status"])
+            self.assertIn("needs_public_surface_hardening", payload["release_status"])
+            self.assertIn("public_surface_position", payload["release_status"])
+            self.assertIn("public_beta_blockers", payload["release_status"])
             self.assertIn("ready_for_pre_beta_stabilization", payload["release_status"])
             self.assertIn("local_tag_exists", payload["release_status"])
             self.assertIn("local_tag_name", payload["release_status"])
@@ -70,6 +77,10 @@ class UnifiedDevSurfaceTests(unittest.TestCase):
             self.assertFalse(payload["release_status"]["ready_for_non_public_pre_beta"])
             self.assertFalse(payload["release_status"]["ready_for_local_pre_beta_tag_candidate"])
             self.assertFalse(payload["release_status"]["pre_beta_candidate_ready"])
+            self.assertFalse(payload["release_status"]["ready_for_limited_public_technical_beta"])
+            self.assertFalse(payload["release_status"]["ready_for_public_technical_beta_candidate"])
+            self.assertTrue(payload["release_status"]["needs_public_surface_hardening"])
+            self.assertEqual(payload["release_status"]["public_surface_position"], "internal-only")
             self.assertFalse(payload["release_status"]["ready_for_pre_beta_stabilization"])
             self.assertEqual(payload["release_status"]["proposed_pre_beta_version"], "2.0.0-prebeta.internal.1")
             self.assertEqual(payload["release_status"]["current_build_kind"], "untagged-post-alpha-hardening")
@@ -140,6 +151,8 @@ class UnifiedDevSurfaceTests(unittest.TestCase):
         interface_names = [item["name"] for item in payload["implemented_interfaces"]["interfaces"]]
         self.assertIn("resolved-profile", interface_names)
         self.assertIn("session-plan", interface_names)
+        self.assertFalse(payload["release_status"]["ready_for_limited_public_technical_beta"])
+        self.assertIn("package, install, and diagnostics surfaces remain repo-checkout dependent", payload["release_status"]["public_beta_blockers"][1])
 
     def test_option_only_pack_selector_reaches_bundle_subcommand(self) -> None:
         with TemporaryDirectory() as tmpbundle:

@@ -9,7 +9,7 @@ RetroFX 2.x now has an explicit non-public experimental version policy for inter
 
 - current 2.x experimental version: `2.0.0-alpha.internal.2`
 - current status label: `internal-alpha`
-- current packaging prompt milestone: `TWO-30`
+- current packaging prompt milestone: `TWO-31`
 - current version tag name: `v2.0.0-alpha.internal.2`
 - latest local/internal alpha candidate tag: `v2.0.0-alpha.internal.1`
 - current build kind: untagged post-alpha hardening
@@ -73,4 +73,4 @@ Example:
 
 That means the branch can be circulated internally without promoting the status label to anything public-facing.
 
-For TWO-29 and TWO-30, the version remains on the internal-alpha line intentionally so the current hardening build is not mistaken for either the historical local alpha candidate tagged at `v2.0.0-alpha.internal.1` or the still-blocked reserved pre-beta candidate `v2.0.0-prebeta.internal.1`.
+For TWO-29 through TWO-31, the version remains on the internal-alpha line intentionally so the current hardening build is not mistaken for either the historical local alpha candidate tagged at `v2.0.0-alpha.internal.1` or the still-blocked reserved pre-beta candidate `v2.0.0-prebeta.internal.1`.

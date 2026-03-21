@@ -65,7 +65,7 @@ Meaning:
 
 ## Current Truth
 
-As of TWO-30:
+As of TWO-31:
 
 - current branch status label: `internal-alpha`
 - current branch version: `2.0.0-alpha.internal.2`
@@ -77,8 +77,9 @@ As of TWO-30:
 - broader alpha: not ready yet
 - controlled external alpha: not ready yet
 - non-public pre-beta: not ready yet
+- limited public technical beta: not ready yet
 - local pre-beta tag candidate: not ready yet
 - pre-beta candidate ready: no
 
 That distinction is deliberate.
-The branch is ready for limited internal circulation without pretending it has crossed into broader alpha, non-public pre-beta, or public-release territory.
+The branch is ready for limited internal circulation without pretending it has crossed into broader alpha, non-public pre-beta, limited public technical beta, or public-release territory.

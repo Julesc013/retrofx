@@ -40,8 +40,15 @@ class InternalAlphaPackageTests(unittest.TestCase):
             self.assertTrue((package_dir / "docs" / "ALPHA_RELEASE_CHECKLIST.md").is_file())
             self.assertTrue((package_dir / "docs" / "PRE_BETA_BLOCKERS.md").is_file())
             self.assertTrue((package_dir / "docs" / "PRE_BETA_CANDIDATE_NOTES.md").is_file())
+            self.assertTrue((package_dir / "docs" / "PRE_BETA_CANDIDATE_SUMMARY.md").is_file())
             self.assertTrue((package_dir / "docs" / "PRE_BETA_READINESS.md").is_file())
             self.assertTrue((package_dir / "docs" / "PRE_BETA_RELEASE_CHECKLIST.md").is_file())
+            self.assertTrue((package_dir / "docs" / "PUBLIC_BETA_RISK_SURFACE.md").is_file())
+            self.assertTrue((package_dir / "docs" / "PUBLIC_BETA_GATES.md").is_file())
+            self.assertTrue((package_dir / "docs" / "PUBLIC_BETA_BLOCKERS.md").is_file())
+            self.assertTrue((package_dir / "docs" / "PUBLIC_BETA_READINESS.md").is_file())
+            self.assertTrue((package_dir / "docs" / "TECHNICAL_BETA_NOTES.md").is_file())
+            self.assertTrue((package_dir / "docs" / "TECHNICAL_BETA_CHECKLIST.md").is_file())
 
     def test_package_manifest_contains_required_internal_alpha_fields(self) -> None:
         with TemporaryDirectory() as tmppackages:
@@ -65,6 +72,11 @@ class InternalAlphaPackageTests(unittest.TestCase):
             self.assertIn("ready_for_non_public_pre_beta", manifest["release_status"])
             self.assertIn("ready_for_local_pre_beta_tag_candidate", manifest["release_status"])
             self.assertIn("pre_beta_candidate_ready", manifest["release_status"])
+            self.assertIn("ready_for_limited_public_technical_beta", manifest["release_status"])
+            self.assertIn("ready_for_public_technical_beta_candidate", manifest["release_status"])
+            self.assertIn("needs_public_surface_hardening", manifest["release_status"])
+            self.assertIn("public_surface_position", manifest["release_status"])
+            self.assertIn("public_beta_blockers", manifest["release_status"])
             self.assertIn("ready_for_pre_beta_stabilization", manifest["release_status"])
             self.assertIn("local_tag_exists", manifest["release_status"])
             self.assertIn("local_tag_name", manifest["release_status"])
@@ -82,6 +94,10 @@ class InternalAlphaPackageTests(unittest.TestCase):
             self.assertFalse(manifest["release_status"]["ready_for_non_public_pre_beta"])
             self.assertFalse(manifest["release_status"]["ready_for_local_pre_beta_tag_candidate"])
             self.assertFalse(manifest["release_status"]["pre_beta_candidate_ready"])
+            self.assertFalse(manifest["release_status"]["ready_for_limited_public_technical_beta"])
+            self.assertFalse(manifest["release_status"]["ready_for_public_technical_beta_candidate"])
+            self.assertTrue(manifest["release_status"]["needs_public_surface_hardening"])
+            self.assertEqual(manifest["release_status"]["public_surface_position"], "internal-only")
             self.assertFalse(manifest["release_status"]["ready_for_pre_beta_stabilization"])
             self.assertEqual(manifest["release_status"]["proposed_pre_beta_version"], "2.0.0-prebeta.internal.1")
             self.assertEqual(manifest["release_status"]["current_build_kind"], "untagged-post-alpha-hardening")
@@ -96,9 +112,40 @@ class InternalAlphaPackageTests(unittest.TestCase):
             self.assertIn("docs/BROADER_ALPHA_READINESS.md", manifest["included_docs"])
             self.assertIn("docs/PRE_BETA_BLOCKERS.md", manifest["included_docs"])
             self.assertIn("docs/PRE_BETA_CANDIDATE_NOTES.md", manifest["included_docs"])
+            self.assertIn("docs/PRE_BETA_CANDIDATE_SUMMARY.md", manifest["included_docs"])
             self.assertIn("docs/PRE_BETA_READINESS.md", manifest["included_docs"])
             self.assertIn("docs/PRE_BETA_RELEASE_CHECKLIST.md", manifest["included_docs"])
+            self.assertIn("docs/PUBLIC_BETA_RISK_SURFACE.md", manifest["included_docs"])
+            self.assertIn("docs/PUBLIC_BETA_GATES.md", manifest["included_docs"])
+            self.assertIn("docs/PUBLIC_BETA_BLOCKERS.md", manifest["included_docs"])
+            self.assertIn("docs/PUBLIC_BETA_READINESS.md", manifest["included_docs"])
+            self.assertIn("docs/TECHNICAL_BETA_NOTES.md", manifest["included_docs"])
+            self.assertIn("docs/TECHNICAL_BETA_CHECKLIST.md", manifest["included_docs"])
             self.assertTrue(manifest["metadata_artifacts"])
+
+    def test_publicish_status_label_override_is_blocked(self) -> None:
+        with TemporaryDirectory() as tmppackages:
+            payload = build_internal_alpha_package(
+                pack_id="modern-minimal",
+                pack_profile_id="warm-night",
+                package_root=tmppackages,
+                allow_dirty=True,
+                status_label="pre-beta",
+            )
+            self.assertFalse(payload["ok"])
+            self.assertEqual(payload["errors"][0]["code"], "blocked-package-status-label")
+
+    def test_publicish_version_override_is_blocked(self) -> None:
+        with TemporaryDirectory() as tmppackages:
+            payload = build_internal_alpha_package(
+                pack_id="modern-minimal",
+                pack_profile_id="warm-night",
+                package_root=tmppackages,
+                allow_dirty=True,
+                version="2.0.0-prebeta.internal.1",
+            )
+            self.assertFalse(payload["ok"])
+            self.assertEqual(payload["errors"][0]["code"], "blocked-package-version-override")
 
     def test_packaged_bundle_installs_into_temp_home(self) -> None:
         with TemporaryDirectory() as tmppackages, TemporaryDirectory() as tmphome:
@@ -174,6 +221,8 @@ class InternalAlphaPackageTests(unittest.TestCase):
         self.assertIn("retrofx-v2 package-alpha", process.stdout)
         self.assertIn("--package-root", process.stdout)
         self.assertIn("--allow-dirty", process.stdout)
+        self.assertIn("does not create a pre-beta", process.stdout)
+        self.assertIn("public technical", process.stdout)
 
         wrapper_process = self._run([str(WRAPPER), "--help"])
         self.assertEqual(wrapper_process.returncode, 0, msg=wrapper_process.stderr)

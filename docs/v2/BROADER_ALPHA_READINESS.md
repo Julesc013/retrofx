@@ -1,6 +1,6 @@
 # RetroFX 2.x Broader Alpha Readiness
 
-This document answers the broader-alpha question for the current 2.x branch after the TWO-30 hardening pass.
+This document answers the broader-alpha question for the current 2.x branch after the TWO-31 hardening pass.
 
 It is not a public release note.
 It is not a promise that 2.x is ready for public alpha, beta, or production use.
@@ -46,13 +46,14 @@ Pre-beta stabilization is not ready because:
 
 ## Practical Reading
 
-For TWO-30, the correct interpretation is:
+For TWO-31, the correct interpretation is:
 
 - internal alpha only: yes
 - current branch version: `2.0.0-alpha.internal.2`
 - proposed pre-beta candidate version: `2.0.0-prebeta.internal.1`
 - latest historical local alpha candidate: `v2.0.0-alpha.internal.1`
 - broader non-public alpha: no
+- limited public technical beta: no
 - more internal hardening next: yes
 
 The immediate next step is another focused hardening cycle around real Wayland-host evidence, additional real-host validation, and broader migration-corpus review.

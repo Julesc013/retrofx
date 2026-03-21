@@ -17,12 +17,13 @@ It is the current blocker set derived from [BROADER_ALPHA_MATRIX.md](BROADER_ALP
 There are current `pre-beta-blocker` items.
 The branch is not ready for a non-public pre-beta candidate.
 
-Resolved in TWO-29 and TWO-30:
+Resolved in TWO-29 through TWO-31:
 
 - release-status metadata now separates the current `.2` build from the historical `.1` local alpha candidate instead of conflating them
 - `package-alpha` now blocks dirty working trees by default unless `--allow-dirty` is used for explicit internal triage
 - the unified status and package surfaces now report the current build as an untagged post-alpha hardening build rather than a current tagged candidate
 - the blocked pre-beta-candidate state is now explicit in release metadata, package contents, and dedicated operator docs instead of being implied only by the broader readiness prose
+- `package-alpha` now also rejects pre-beta, beta, or stable-looking version and status overrides so the internal package surface cannot mint misleading candidate or public-facing metadata
 
 ## Pre-Beta-Blocker
 

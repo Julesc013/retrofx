@@ -1,6 +1,6 @@
 # RetroFX 2.x Pre-Beta Readiness
 
-This document answers the pre-beta question for the current 2.x branch after the TWO-30 stabilization pass.
+This document answers the pre-beta question for the current 2.x branch after the TWO-31 public-surface gating pass.
 
 It is not a public release note.
 It does not imply public beta, stable release, or replacement of 1.x.
@@ -55,6 +55,7 @@ More internal hardening is still the correct next step because:
 - the branch is already deterministic and truthful enough for continued internal-alpha work
 - the unified dev surface is coherent and the package flow is now stricter about dirty-tree generation
 - version, tag, and candidate state are now reported more truthfully for the current build
+- public-surface docs now also make limited-public-technical-beta no explicit instead of leaving that as an implied next step
 - the remaining blockers are mostly about validation breadth and release-surface trust, not missing subsystems
 
 ## Tester Audience At This Stage

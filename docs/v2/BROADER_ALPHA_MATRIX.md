@@ -1,11 +1,11 @@
 # RetroFX 2.x Broader Alpha Matrix
 
-This matrix records the broader-alpha-oriented validation pass carried forward through TWO-30.
+This matrix records the broader-alpha-oriented validation pass carried forward through TWO-31.
 
 It does not replace [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md).
 It extends the branch evidence with broader environment and surface classification.
 
-Validated on: 2026-03-21
+Validated on: 2026-03-22
 
 Evidence sources:
 
@@ -27,7 +27,7 @@ Status legend:
 
 Current summary:
 
-- `pass`: 15
+- `pass`: 16
 - `degraded-pass`: 4
 - `partial`: 0
 - `fail`: 0
@@ -56,7 +56,8 @@ Current summary:
 | bounded apply or off | temp HOME, safe contexts only | `scripts/dev/retrofx-v2 apply`, `status`, `off` | 2.x-owned state only, deterministic cleanup | `apply` on `warm-night-theme-only.toml` staged activation with `live_applied_targets=[]`; `status` reported the activation; `off` removed only `active/current` and `current-state.json` while preserving manifests and install roots | pass | Trust remains bounded to internal-safe contexts. |
 | install, diagnostics, and uninstall | temp HOME install mode | `package-alpha`, `install`, `diagnostics`, `uninstall` | isolated install-state and reproducible diagnostics | install succeeded under `retrofx-v2-dev`, diagnostics captured release-status plus installed-bundle evidence, and uninstall removed only the bundle and installation record while preserving user config roots | pass | This is the strongest packaging/distribution surface currently available. |
 | broader-alpha package shape | repo-local dev | `scripts/dev/retrofx-v2 package-alpha ...` | if broader-alpha ready, package metadata would say so | current package manifest still says `status_label=internal-alpha`, `version=2.0.0-alpha.internal.2`, `current_build_kind=untagged-post-alpha-hardening`, `ready_for_broader_alpha=false`, and `pre_beta_candidate_ready=false` | pass | Honest narrowing remains the intended result in TWO-29 and TWO-30. |
-| full 2.x suite after TWO-30 gating | repo-local dev | `./v2/tests/test.sh` | suite remains green after surface narrowing | `Ran 136 tests in 1.993s` and `OK` | pass | Final suite pass confirms the narrowed surface and new pre-beta fences did not regress the implemented branch. |
+| public-looking package override fence | repo-local dev | `scripts/dev/retrofx-v2 package-alpha --pack modern-minimal --profile-id warm-night --status-label pre-beta` | public-looking package metadata should be rejected clearly | current branch evidence now shows `ok=false` with `errors[0].code=blocked-package-status-label` instead of minting misleading metadata | pass | TWO-31 keeps the internal package surface from pretending to be pre-beta or public-facing. |
+| full 2.x suite after TWO-31 gating | repo-local dev | `./v2/tests/test.sh` | suite remains green after surface narrowing | `Ran 138 tests in 2.110s` and `OK` | pass | Final suite pass confirms the narrowed surface and new public-surface fences did not regress the implemented branch. |
 
 ## Interpretation
 
@@ -68,5 +69,5 @@ The branch is still not ready for broader alpha because:
 - non-sway Wayland desktops are now explicitly fenced as export-oriented validation paths
 - migration validation breadth remains limited
 
-The immediate value of TWO-30 is not new capability.
-It is stricter classification of what should remain internal-only and what still blocks broader alpha or pre-beta positioning.
+The immediate value of TWO-31 is not new capability.
+It is stricter classification of what should remain internal-only and what still blocks broader alpha, pre-beta, or limited public technical beta positioning.
