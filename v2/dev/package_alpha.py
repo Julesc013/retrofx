@@ -54,6 +54,9 @@ PACKAGE_DOCS = (
     "PUBLIC_BETA_READINESS.md",
     "TECHNICAL_BETA_NOTES.md",
     "TECHNICAL_BETA_CHECKLIST.md",
+    "TECHNICAL_BETA_CANDIDATE_NOTES.md",
+    "TECHNICAL_BETA_CANDIDATE_SUMMARY.md",
+    "TECHNICAL_BETA_RELEASE_CHECKLIST.md",
     "NEXT_STAGE_VERDICT.md",
     "INTERNAL_ALPHA_RUNBOOK.md",
     "INTERNAL_ALPHA_NOTES.md",
@@ -210,7 +213,7 @@ def build_internal_alpha_package(
             "Live Wayland render is not implemented.",
             "Broader non-public alpha is not approved yet; this package remains internal-alpha only.",
             "No non-public pre-beta candidate exists for the current build; this package is validation material for continued internal hardening rather than a pre-beta candidate.",
-            "No limited public technical beta is approved for the current build; do not circulate this package outside the intended internal cohort.",
+            "A separate limited technical-beta candidate may exist for the current build, but this package flow remains internal-alpha only and should not be circulated as the public-facing candidate surface.",
             "Current internal-alpha packages are built from an untagged post-alpha hardening line unless the current version tag explicitly points at HEAD.",
             "1.x remains the production line.",
         ],
@@ -218,7 +221,7 @@ def build_internal_alpha_package(
         "notes": [
             "This package is for controlled internal alpha circulation only.",
             "It does not replace the 1.x runtime, installer, or public release process.",
-            "It is not approved for limited public technical beta circulation.",
+            "If a limited technical-beta candidate exists, it is a separate copied-toolchain package rather than this internal-alpha flow.",
         ],
     }
     manifest_artifact = _write_package_file(output_dir, "package-manifest.json", _json_text(manifest))
@@ -247,7 +250,7 @@ def build_internal_alpha_package(
         },
         "note": (
             "This creates a reproducible internal-alpha package around one deterministic 2.x bundle. "
-            "It remains non-public, is not a pre-beta or public-technical-beta artifact, and does not provide a standalone production toolchain."
+            "It remains non-public, is not the technical-beta candidate artifact, and does not provide a standalone production toolchain."
         ),
     }
 
@@ -412,7 +415,7 @@ def _render_package_summary(
         f"degraded_targets: {', '.join(bundle_manifest['plan_summary']['degraded_targets']) or '(none)'}",
         "",
         "This package is non-public and expects a repo checkout for command execution.",
-        "It is not approved for limited public technical beta circulation.",
+        "If a limited technical-beta candidate exists, it is a separate copied-toolchain package rather than this internal-alpha flow.",
         "Recommended first command: scripts/dev/retrofx-v2 status",
         "",
     ]

@@ -1,11 +1,11 @@
 # RetroFX 2.x Pre-Beta Readiness
 
-This document answers the pre-beta question for the current 2.x branch after the TWO-31 public-surface gating pass.
+This document answers the pre-beta question for the current 2.x branch after the TWO-32 technical-beta candidate pass.
 
 It is not a public release note.
 It does not imply public beta, stable release, or replacement of 1.x.
 
-Decision date: 2026-03-21
+Decision date: 2026-03-22
 
 ## Verdict
 
@@ -45,7 +45,7 @@ The branch is not ready for a non-public pre-beta candidate because:
 - broader-alpha gates are still not satisfied
 - there is still no real Wayland-host validation pass
 - migration validation is still representative rather than broad
-- current package and diagnostics surfaces remain intentionally internal-alpha oriented
+- the branch now takes a narrower limited technical-beta route instead of reviving the blocked non-public pre-beta path
 - the reserved pre-beta candidate version `2.0.0-prebeta.internal.1` is still only a blocked future candidate identity rather than an approved branch state
 
 ## Why Internal Hardening Should Continue
@@ -55,15 +55,15 @@ More internal hardening is still the correct next step because:
 - the branch is already deterministic and truthful enough for continued internal-alpha work
 - the unified dev surface is coherent and the package flow is now stricter about dirty-tree generation
 - version, tag, and candidate state are now reported more truthfully for the current build
-- public-surface docs now also make limited-public-technical-beta no explicit instead of leaving that as an implied next step
-- the remaining blockers are mostly about validation breadth and release-surface trust, not missing subsystems
+- public-surface docs now define a limited technical-beta candidate explicitly rather than leaving it as a vague future idea
+- the remaining blockers for pre-beta are mostly about broader environment breadth rather than missing subsystems
 
 ## Tester Audience At This Stage
 
-The current audience remains:
+The broader internal developer audience remains:
 
 - core contributors
 - technically literate internal testers with repo access
 - operators comfortable with temp-HOME validation, machine-readable manifests, and export-only caveats
 
-The branch is not yet suitable for a wider non-public pre-beta cohort.
+The branch is not yet suitable for a wider non-public pre-beta cohort even though a narrower limited technical-beta candidate now exists.

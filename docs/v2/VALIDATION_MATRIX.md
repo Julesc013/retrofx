@@ -26,8 +26,8 @@ Status legend:
 
 Current summary:
 
-- `pass`: 25
-- `degraded-pass`: 2
+- `pass`: 30
+- `degraded-pass`: 3
 - `partial`: 0
 - `fail`: 0
 - `blocked`: 0
@@ -63,21 +63,30 @@ Current summary:
 | temp HOME install | isolated temp HOME | `scripts/dev/retrofx-v2 install <bundle-path>` | bundle copied into isolated `retrofx-v2-dev` footprint with install record | `ok=true`, bundle dir under `~/.local/share/retrofx-v2-dev/bundles/modern-minimal--warm-night` | pass | Install remains user-local and isolated from 1.x. |
 | temp HOME uninstall or cleanup | isolated temp HOME | `scripts/dev/retrofx-v2 uninstall modern-minimal--warm-night` | installed bundle removed, user config roots preserved | removed bundle and installation record; preserved `profiles/` and `packs/` config roots | pass | Uninstall ownership remains explicit and reversible. |
 | delegated help clarity through unified surface | repo-local dev | `scripts/dev/retrofx-v2 resolve --help` and `scripts/dev/retrofx-v2 bundle --help` | help should clearly present the `retrofx-v2` surface | usage headers now begin with `retrofx-v2 resolve` and `retrofx-v2 bundle` rather than `cli.py` | pass | TWO-23 sets explicit `prog` names on the delegated CLI modules. |
-| full 2.x test suite | repo-local dev | `./v2/tests/test.sh` | full suite passes | `Ran 138 tests in 2.110s` and `OK` | pass | Automated coverage still matches the current branch state after the TWO-31 public-surface gating pass. |
+| limited technical-beta wrapper help and status | clean temp repo and copied-toolchain candidate surface | `scripts/dev/retrofx-v2-techbeta --help` and `status` | outside-facing wrapper exposes only the narrowed advanced-tester commands and reports technical-beta candidate metadata truthfully | help exposes `status`, `resolve`, `plan`, `compile`, `bundle`, `install`, `uninstall`, `diagnostics`, `apply`, `off`, `packs`, and `smoke`; status reports `version=2.0.0-techbeta.1`, `status_label=technical-beta`, `ready_for_limited_public_technical_beta=true`, and `public_surface_position=limited-public-technical-beta-candidate` | pass | TWO-32 turns the public-facing surface into a narrower wrapper instead of exposing the broader internal developer CLI. |
+| limited technical-beta candidate package generation | clean temp repo | `scripts/dev/retrofx-v2 package-technical-beta --pack modern-minimal --profile-id warm-night --package-root <temp>` | copied-toolchain candidate package emits reproducibly with technical-beta metadata | package emitted under `<temp>/retrofx-v2--2.0.0-techbeta.1--modern-minimal--warm-night`; manifest schema is `retrofx.technical-beta-package/v2alpha1`; metadata reports `distribution_scope=limited-public-technical-beta` and includes `bin/retrofx-v2-techbeta` | pass | This is the first candidate package shape that does not assume a source checkout for advanced testers. |
+| limited technical-beta resolve, plan, and compile | copied-toolchain package under temp output roots | `bin/retrofx-v2-techbeta resolve`, `plan`, and `compile --pack modern-minimal --profile-id warm-night` | packaged wrapper runs deterministic core workflows without repo archaeology | packaged wrapper resolved, planned, and compiled successfully; outputs include `bundle/metadata/resolved-profile.json`, `bundle/metadata/session-plan.json`, and deterministic target artifacts under the temp out root | pass | Confirms the copied toolchain is actually runnable, not just archived. |
+| limited technical-beta bounded apply or off | copied-toolchain package under temp HOME on X11 host | `bin/retrofx-v2-techbeta apply --pack modern-minimal --profile-id warm-night`, then `off` | advanced-tester runtime path remains bounded, user-local, and reversible | apply succeeded through the packaged wrapper and `off` removed only 2.x-owned `active/current` and `current-state.json` state under the temp HOME footprint | pass | The candidate keeps the same bounded ownership model as the internal runtime slice. |
+| limited technical-beta degraded Wayland planning | copied-toolchain package under simulated Wayland plus `sway` | `WAYLAND_DISPLAY=wayland-0 XDG_SESSION_TYPE=wayland XDG_CURRENT_DESKTOP=sway ... bin/retrofx-v2-techbeta plan --pack modern-minimal --profile-id warm-night --write-preview --out-root <temp>` | degraded/export-only path stays visible and honest instead of pretending to be supported live runtime | packaged wrapper planned successfully, reported Wayland-oriented degradation honestly, and kept X11 runtime expectations out of the supported live path | degraded-pass | This is the intended outside-facing story for Wayland today. |
+| limited technical-beta install, diagnostics, and uninstall | copied-toolchain package under temp HOME and temp diagnostics root | `bin/retrofx-v2-techbeta install <package>/bundle`, `diagnostics`, `uninstall` | packaged tester workflow remains user-local, diagnosable, and reversible | install succeeded with `release_status=technical-beta`; diagnostics wrote `capture-manifest.json`, `platform-status.json`, `install-state.json`, `profile/resolved-profile.json`, `profile/session-plan.json`, and `profile/source-package-manifest.json`; uninstall removed only owned bundle and installation state | pass | TWO-32 closes the previous repo-checkout assumption gap for outside advanced testers. |
+| full 2.x test suite | repo-local dev | `./v2/tests/test.sh` | full suite passes | `Ran 143 tests in 2.743s` and `OK` | pass | Automated coverage still matches the current branch state after the TWO-32 technical-beta candidate preparation pass. |
 
 ## Interpretation
 
-The implemented 2.x surface now validates well enough for controlled internal alpha use:
+The implemented 2.x surface now validates across two different operator stories:
 
-- core pipeline, packs, migration, compile, package, install, and bounded apply or off flows all passed
-- environment planning degraded honestly in non-X11 contexts
-- X11 render compilation preview is real across monochrome, palette, and passthrough modes
+- the broader `retrofx-v2` surface remains suitable for internal developer and remediation work
+- the narrower copied-toolchain `retrofx-v2-techbeta` surface now validates well enough for a limited public technical beta candidate aimed at advanced testers
 
-The remaining gaps are about confidence and polish, not broad missing implementation:
+What materially changed in TWO-32:
 
-- explicit live X11 probing now has one real-host bounded validation run
-- delegated help now presents the unified `retrofx-v2` surface coherently
-- diagnostics evidence is now strong enough to capture repo-checkout provenance plus installed-bundle or package context for remediation work
-- the default repo-local candidate package root now works as a reproducible machine-local output path without being mistaken for committed source
-- public-looking package version or status overrides are now rejected instead of being able to mint misleading metadata on an internal-only package flow
-- broader multi-host and migration-corpus validation remains limited, which still argues against wider testing
+- the public-facing wrapper is smaller and more truthful than the internal developer CLI
+- the candidate package no longer assumes a source checkout, because it carries a copied runnable toolchain
+- package, install, diagnostics, and uninstall flows now work through the candidate wrapper itself
+- Wayland remains explicitly degraded or export-only on that outside-facing surface rather than being implied as supported live runtime
+
+The remaining gaps are still real, but they no longer block the narrower technical-beta candidate:
+
+- explicit live X11 probing remains an internal developer surface, not part of the outside-facing candidate promise
+- migration remains internal-only and should not be treated as a public technical-beta assurance surface
+- broader multi-host and migration-corpus validation remain limited, which still argues against any broader public beta posture beyond advanced testers

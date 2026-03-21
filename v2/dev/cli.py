@@ -20,6 +20,7 @@ from v2.session.install import cli as install_cli
 
 from . import capture_diagnostics as dev_diagnostics
 from . import package_alpha as dev_package_alpha
+from . import package_technical_beta as dev_package_technical_beta
 from .smoke import run_smoke_workflow
 from .status import build_platform_status
 
@@ -35,12 +36,12 @@ def main(argv: list[str] | None = None) -> int:
         description=(
             "Unified experimental RetroFX 2.x developer surface. "
             "This command does not replace the 1.x runtime or the production `retrofx` CLI, "
-            "and it is not yet approved for a limited public technical beta."
+            "and it remains the broader internal developer surface even when a narrower technical-beta candidate exists."
         ),
         epilog=(
             "This surface exposes only the currently implemented experimental commands. "
             "Export-oriented targets remain far more complete than live apply behavior, "
-            "and the overall surface remains internal-only until the public-beta gates are satisfied."
+            "and the overall surface remains broader and more internal than the dedicated `retrofx-v2-techbeta` candidate wrapper."
         ),
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -56,7 +57,8 @@ def main(argv: list[str] | None = None) -> int:
     _add_passthrough_command(subparsers, "off", "Clear the bounded TWO-19 experimental activation without touching 1.x.")
     _add_passthrough_command(subparsers, "bundle", "Build one deterministic TWO-16 dev bundle.")
     _add_passthrough_command(subparsers, "package-alpha", "Build one reproducible internal-alpha validation package around a deterministic 2.x bundle. Dirty trees are blocked by default. This is not a broader-alpha, pre-beta-candidate, or public-technical-beta package flow.")
-    _add_passthrough_command(subparsers, "diagnostics", "Capture a local TWO-31 diagnostics directory for internal alpha and public-surface gating triage. This remains internal-only.")
+    _add_passthrough_command(subparsers, "package-technical-beta", "Build one copied-toolchain limited technical-beta candidate package for advanced testers. This stays local and does not publish anything automatically.")
+    _add_passthrough_command(subparsers, "diagnostics", "Capture a local TWO-32 diagnostics directory for internal alpha or limited technical-beta triage.")
     _add_passthrough_command(subparsers, "install", "Install one dev bundle into the isolated user-local 2.x footprint. This remains internal-only.")
     _add_passthrough_command(subparsers, "uninstall", "Remove one installed dev bundle from the isolated user-local 2.x footprint. This remains internal-only.")
 
@@ -123,6 +125,8 @@ def main(argv: list[str] | None = None) -> int:
         return install_cli.main(["bundle", *_normalize_passthrough(args.args)])
     if args.command == "package-alpha":
         return dev_package_alpha.main(_normalize_passthrough(args.args))
+    if args.command == "package-technical-beta":
+        return dev_package_technical_beta.main(_normalize_passthrough(args.args))
     if args.command == "diagnostics":
         return dev_diagnostics.main(_normalize_passthrough(args.args))
     if args.command == "install":
@@ -192,6 +196,8 @@ def _dispatch_passthrough_command(argv: list[str]) -> int | None:
         return install_cli.main(["bundle", *argv[1:]])
     if command == "package-alpha":
         return dev_package_alpha.main(argv[1:])
+    if command == "package-technical-beta":
+        return dev_package_technical_beta.main(argv[1:])
     if command == "diagnostics":
         return dev_diagnostics.main(argv[1:])
     if command == "install":

@@ -49,6 +49,9 @@ class InternalAlphaPackageTests(unittest.TestCase):
             self.assertTrue((package_dir / "docs" / "PUBLIC_BETA_READINESS.md").is_file())
             self.assertTrue((package_dir / "docs" / "TECHNICAL_BETA_NOTES.md").is_file())
             self.assertTrue((package_dir / "docs" / "TECHNICAL_BETA_CHECKLIST.md").is_file())
+            self.assertTrue((package_dir / "docs" / "TECHNICAL_BETA_CANDIDATE_NOTES.md").is_file())
+            self.assertTrue((package_dir / "docs" / "TECHNICAL_BETA_CANDIDATE_SUMMARY.md").is_file())
+            self.assertTrue((package_dir / "docs" / "TECHNICAL_BETA_RELEASE_CHECKLIST.md").is_file())
 
     def test_package_manifest_contains_required_internal_alpha_fields(self) -> None:
         with TemporaryDirectory() as tmppackages:
@@ -94,13 +97,14 @@ class InternalAlphaPackageTests(unittest.TestCase):
             self.assertFalse(manifest["release_status"]["ready_for_non_public_pre_beta"])
             self.assertFalse(manifest["release_status"]["ready_for_local_pre_beta_tag_candidate"])
             self.assertFalse(manifest["release_status"]["pre_beta_candidate_ready"])
-            self.assertFalse(manifest["release_status"]["ready_for_limited_public_technical_beta"])
-            self.assertFalse(manifest["release_status"]["ready_for_public_technical_beta_candidate"])
-            self.assertTrue(manifest["release_status"]["needs_public_surface_hardening"])
-            self.assertEqual(manifest["release_status"]["public_surface_position"], "internal-only")
+            self.assertTrue(manifest["release_status"]["ready_for_limited_public_technical_beta"])
+            self.assertTrue(manifest["release_status"]["ready_for_public_technical_beta_candidate"])
+            self.assertFalse(manifest["release_status"]["needs_public_surface_hardening"])
+            self.assertEqual(manifest["release_status"]["public_surface_position"], "limited-public-technical-beta-candidate")
             self.assertFalse(manifest["release_status"]["ready_for_pre_beta_stabilization"])
             self.assertEqual(manifest["release_status"]["proposed_pre_beta_version"], "2.0.0-prebeta.internal.1")
-            self.assertEqual(manifest["release_status"]["current_build_kind"], "untagged-post-alpha-hardening")
+            self.assertEqual(manifest["release_status"]["proposed_technical_beta_version"], "2.0.0-techbeta.1")
+            self.assertEqual(manifest["release_status"]["current_build_kind"], "technical-beta-candidate-prep")
             self.assertEqual(manifest["release_status"]["latest_existing_local_alpha_tag"], "v2.0.0-alpha.internal.1")
             self.assertEqual(manifest["distribution"]["scope"], "internal-non-public")
             self.assertEqual(manifest["bundle"]["relative_dir"], "bundle")
@@ -121,6 +125,9 @@ class InternalAlphaPackageTests(unittest.TestCase):
             self.assertIn("docs/PUBLIC_BETA_READINESS.md", manifest["included_docs"])
             self.assertIn("docs/TECHNICAL_BETA_NOTES.md", manifest["included_docs"])
             self.assertIn("docs/TECHNICAL_BETA_CHECKLIST.md", manifest["included_docs"])
+            self.assertIn("docs/TECHNICAL_BETA_CANDIDATE_NOTES.md", manifest["included_docs"])
+            self.assertIn("docs/TECHNICAL_BETA_CANDIDATE_SUMMARY.md", manifest["included_docs"])
+            self.assertIn("docs/TECHNICAL_BETA_RELEASE_CHECKLIST.md", manifest["included_docs"])
             self.assertTrue(manifest["metadata_artifacts"])
 
     def test_publicish_status_label_override_is_blocked(self) -> None:

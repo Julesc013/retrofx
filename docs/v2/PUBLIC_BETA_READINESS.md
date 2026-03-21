@@ -1,53 +1,55 @@
 # RetroFX 2.x Public Beta Readiness
 
-This document answers the public-surface question for the current 2.x branch after the TWO-31 gating pass.
+This document answers the public-surface question for the current 2.x branch after the TWO-32 candidate-preparation pass.
 
 It is not a public release note.
-It does not authorize publication.
+It does not authorize automatic publication.
 
 Decision date: 2026-03-22
 
 ## Verdict
 
-READY_FOR_LIMITED_PUBLIC_TECHNICAL_BETA=no
+READY_FOR_LIMITED_PUBLIC_TECHNICAL_BETA=yes
 
 READY_FOR_CONTINUED_NON_PUBLIC_PRE_BETA=no
 
-NEEDS_ANOTHER_HARDENING_CYCLE=yes
+NEEDS_ANOTHER_HARDENING_CYCLE=no
 
-## What “Limited Public Technical Beta” Would Mean Here
+## What “Limited Public Technical Beta” Means Here
 
-For RetroFX 2.x, a limited public technical beta would mean:
+For RetroFX 2.x, a limited public technical beta now means:
 
-- technically literate outside testers could use the documented workflows without source archaeology
-- package, install, uninstall, diagnostics, and cleanup behavior are predictable enough for outside circulation
+- technically literate outside testers can use the copied-toolchain package without source-tree archaeology
+- package, install, uninstall, diagnostics, and cleanup behavior are predictable enough for that narrow audience
 - degraded and unsupported environments are explicit enough to keep support burden manageable
 - 1.x remains the production line and 2.x remains clearly experimental
 
-It still would not mean:
+It still does not mean:
 
-- public general-user beta
+- general-public beta
 - production readiness
 - replacement of the 1.x runtime or CLI
 - live Wayland render
 - global desktop ownership
+- broad migration compatibility promises
 
-## Why The Answer Is Still No
+## Why The Answer Is Now Yes
 
-- no real Wayland-host validation pass exists yet
-- package, install, and diagnostics surfaces are still intentionally internal-only and repo-checkout dependent
-- migration validation breadth is still too narrow
-- the explicit X11 probe remains a narrow single-host surface
+- the externally visible tester surface is now the narrower `retrofx-v2-techbeta` wrapper rather than the broader internal developer surface
+- the technical-beta package now carries a copied runnable toolchain instead of assuming a repo checkout
+- bounded apply or off remains user-local and reversible, and is explicitly gated to X11-oriented environments
+- migration and the explicit X11 probe are no longer overexposed; they remain on the internal developer surface
 
-## Why Another Hardening Cycle Is Required
+## What Remains Narrow
 
-- the current branch is coherent enough for continued internal alpha work
-- the public-facing docs can now be prepared safely without implying approval
-- the remaining blockers are about external-surface trust and support burden, not missing core implementation
+- validated live runtime support is still centered on X11 plus `i3`-like environments
+- Wayland remains plan, compile, bundle, and diagnostics territory rather than supported live runtime ownership
+- toolkit outputs remain advisory exports
+- 1.x remains the production line
 
 ## Current Branch Position
 
 - continue internal alpha: yes
 - continue non-public pre-beta: no
-- limited public technical beta: no
-- next step: one more internal hardening cycle focused on real-host breadth and outside-tester support discipline
+- limited public technical beta: yes
+- next step: local candidate packaging, local candidate tag preparation, and disciplined advanced-tester circulation without automatic publication

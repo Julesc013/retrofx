@@ -49,6 +49,14 @@ Meaning:
 - validation and interface hardening dominate the work
 - broader internal confidence exists
 
+### `technical-beta`
+
+Meaning:
+
+- narrow outside circulation to technically literate testers is acceptable
+- support matrix, cleanup, and diagnostics expectations are explicit
+- the surface stays smaller than the broader internal developer toolchain
+
 ### `public-beta`
 
 Meaning:
@@ -65,21 +73,25 @@ Meaning:
 
 ## Current Truth
 
-As of TWO-31:
+As of TWO-32:
 
 - current branch status label: `internal-alpha`
 - current branch version: `2.0.0-alpha.internal.2`
-- current build kind: untagged post-alpha hardening
+- current build kind: technical-beta candidate prep
 - reserved proposed pre-beta candidate version: `2.0.0-prebeta.internal.1`
+- approved limited technical-beta candidate version: `2.0.0-techbeta.1`
+- approved limited technical-beta candidate status label: `technical-beta`
 - readiness: narrow controlled internal alpha continuation is acceptable
 - latest historical local alpha candidate: `2.0.0-alpha.internal.1`
 - historical local alpha tag: `v2.0.0-alpha.internal.1`
 - broader alpha: not ready yet
-- controlled external alpha: not ready yet
+- controlled external alpha: ready only through the narrowed technical-beta surface
 - non-public pre-beta: not ready yet
-- limited public technical beta: not ready yet
+- limited public technical beta: ready
+- local technical-beta tag candidate: ready
 - local pre-beta tag candidate: not ready yet
 - pre-beta candidate ready: no
 
 That distinction is deliberate.
-The branch is ready for limited internal circulation without pretending it has crossed into broader alpha, non-public pre-beta, limited public technical beta, or public-release territory.
+The broader internal developer surface remains internal-only.
+The narrower copied-toolchain `technical-beta` candidate is now acceptable for advanced testers without pretending that RetroFX 2.x has crossed into general-public beta or stable territory.

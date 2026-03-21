@@ -1,53 +1,60 @@
 # RetroFX 2.x Technical Beta Notes
 
-This document is written in a form that could be shown to outside advanced testers later.
+These notes apply to the limited public technical-beta candidate prepared in TWO-32.
 
-It is not approval for publication.
-For TWO-31, the branch is still not ready for a limited public technical beta.
+This is still experimental.
+It is not a general-public beta.
+It does not replace RetroFX 1.x.
 
 ## Intended Tester Audience
 
+- advanced testers
 - technically literate testers
-- users comfortable with repo checkouts, temp-HOME runs, and machine-readable JSON output
-- users who understand explicit environment caveats and export-only behavior
+- users comfortable with JSON output, temp-HOME runs, and explicit cleanup
+- users who understand support-matrix caveats and export-only behavior
 
-## What The Branch Currently Supports
+## Supported Candidate Surface
 
-- `status`, `resolve`, `plan`, `compile`, `bundle`, `install`, `uninstall`, `diagnostics`, and `smoke`
-- pack-aware profile resolution and curated built-in packs
-- deterministic terminal, WM, toolkit-export, typography, display-policy, and bounded X11 compiler outputs
-- bounded apply/off inside isolated `retrofx-v2-dev` roots
+- `retrofx-v2-techbeta status`
+- `resolve`, `plan`, `compile`, `bundle`, and `smoke`
+- `install`, `uninstall`, and `diagnostics`
+- bounded `apply` and `off` on X11-oriented environments only
+- pack-aware profile resolution through the copied toolchain
 
-## Important Limitations
+## Supported And Validated Scenarios
 
-- this branch is still not approved for publication
-- 1.x remains the production runtime and CLI
-- live Wayland render is not implemented
-- toolkit outputs are advisory exports, not desktop ownership
-- the package flow still assumes a repo checkout rather than a standalone copied toolchain
-- the strongest real-host evidence still centers on one X11 plus `i3` host
+- X11 plus `i3`-like environment for bounded runtime checks
+- temp-HOME install, uninstall, and diagnostics capture
+- deterministic terminal, WM, toolkit-export, typography, display-policy, and X11 artifact generation
 
-## Explicitly Unsupported Right Now
+## Degraded Or Export-Only Areas
 
-The following areas are unsupported in the current branch:
+- Wayland plus `sway`-like environments are acceptable for `status`, `resolve`, `plan`, `compile`, `bundle`, `diagnostics`, and `smoke`
+- toolkit outputs are advisory exports, not live desktop ownership
 
-- public/general-user beta expectations
-- live Wayland render ownership
+## Explicitly Unsupported In This Candidate
+
+These unsupported areas are not bugs for the limited technical-beta line:
+
+- general-user beta expectations
 - global desktop mutation
-- standalone copied-toolchain distribution
+- live Wayland render ownership
+- migration assurance beyond the internal developer surface
+- the explicit bounded X11 `picom` probe
 
 ## Recommended Smoke Path
 
-1. `scripts/dev/retrofx-v2 status`
-2. `scripts/dev/retrofx-v2 smoke --pack modern-minimal --profile-id warm-night`
-3. `scripts/dev/retrofx-v2 package-alpha --pack modern-minimal --profile-id warm-night`
-4. temp-HOME `install`, `diagnostics`, and `uninstall`
-5. bounded `apply` or `off` only if you understand the current internal caveats
+1. `bin/retrofx-v2-techbeta status`
+2. `bin/retrofx-v2-techbeta smoke --pack modern-minimal --profile-id warm-night`
+3. `bin/retrofx-v2-techbeta install <package-dir>/bundle`
+4. `bin/retrofx-v2-techbeta diagnostics --pack modern-minimal --profile-id warm-night --label first-pass`
+5. `bin/retrofx-v2-techbeta uninstall <bundle-id>`
+6. on supported X11 only, `bin/retrofx-v2-techbeta apply --pack modern-minimal --profile-id warm-night` followed by `bin/retrofx-v2-techbeta off`
 
 ## Revert And Cleanup
 
-- `scripts/dev/retrofx-v2 off`
-- `scripts/dev/retrofx-v2 uninstall <bundle-id>`
+- `bin/retrofx-v2-techbeta off`
+- `bin/retrofx-v2-techbeta uninstall <bundle-id>`
 - prefer temp HOME or isolated XDG roots for validation
 
 ## Useful Feedback
@@ -55,12 +62,13 @@ The following areas are unsupported in the current branch:
 - deterministic output regressions
 - install, uninstall, or cleanup ownership problems
 - misleading status, help, or docs wording
-- capability misclassification across environments
+- capability misclassification across X11 and Wayland environments
 - diagnostics bundles missing evidence needed to reproduce a bug
 
-## Not Useful As “Bug” Reports Right Now
+## Not Useful As Bug Reports For This Candidate
 
 - lack of live Wayland render
 - lack of global GNOME, Plasma, or Xfce ownership
 - advisory toolkit exports not acting like live desktop integration
-- lack of 1.x runtime compatibility takeover
+- lack of 1.x runtime takeover
+- absence of the internal-only `preview-x11` probe on the technical-beta wrapper

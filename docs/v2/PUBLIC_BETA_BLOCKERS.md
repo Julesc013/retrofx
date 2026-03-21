@@ -1,55 +1,46 @@
 # RetroFX 2.x Public Beta Blockers
 
-This document lists the issues that still block a limited public technical beta.
+This document lists the issues that still block a broader public beta.
 
-It is separate from alpha and pre-beta blockers because the concern here is outside advanced-tester safety and support burden.
+For the narrower limited technical-beta candidate prepared in TWO-32, there are no open `public-beta-blocker` items.
+The remaining items below are non-blocking limitations for that candidate but still matter for any broader future public surface.
 
 ## Public-Beta-Blocker
 
-### 1. No real Wayland-host validation pass exists yet
-
-- Severity: `public-beta-blocker`
-- Evidence: current validation still relies on one strong real X11 plus `i3` host and simulated or forced Wayland classification
-- Why it matters: outside testers need a clearer environment matrix than the branch can honestly provide today
-
-### 2. Package, install, and diagnostics flows remain repo-checkout dependent and internal-only
-
-- Severity: `public-beta-blocker`
-- Evidence: `package-alpha` still produces an internal-alpha package and the docs still frame install or diagnostics as repo-checkout-driven internal workflows
-- Why it matters: this is too much hidden operator context for even a limited public technical beta
+None open for the limited technical-beta candidate.
 
 ## High
 
-### 3. Migration validation breadth is still too narrow
+### 1. Real-host validation breadth remains intentionally narrow
 
 - Severity: `high`
-- Evidence: migration docs and matrices still describe the validated corpus as representative rather than broad
-- Why it matters: outside testers could over-trust migration reporting if this is not resolved first
+- Evidence: the candidate support matrix is intentionally anchored to one real X11 plus `i3` validation host plus bounded temp-HOME flows
+- Why it matters: this is acceptable for a limited technical-beta audience, but it still blocks any broader public beta story
 
-### 4. The explicit X11 live probe remains a narrow single-host trust surface
+### 2. Migration breadth remains representative rather than broad
 
 - Severity: `high`
-- Evidence: the bounded probe is real, but its real-host validation still centers on one X11 plus `i3` environment
-- Why it matters: public technical beta should not make this look broader than it is
+- Evidence: migration remains available only on the internal developer surface and is not part of the technical-beta promise
+- Why it matters: this is acceptable when fenced, but it blocks any broader public-facing compatibility claim
 
 ## Medium
 
-### 5. Toolkit exports are deterministic but still advisory only
+### 3. Wayland remains export-oriented rather than live-runtime supported
 
 - Severity: `medium`
-- Evidence: GTK, Qt, icon-cursor, and desktop-style outputs compile cleanly, but they do not provide live desktop ownership
-- Why it matters: this is acceptable when documented, but it reduces what an outside tester can meaningfully validate
+- Evidence: the technical-beta wrapper allows plan, compile, bundle, and diagnostics on Wayland-like environments, but not bounded live apply
+- Why it matters: acceptable for the limited technical-beta matrix, but still blocks broader cross-environment expectations
 
-### 6. The unified dev surface still assumes high operator literacy
+### 4. Toolkit exports remain advisory only
 
 - Severity: `medium`
-- Evidence: the branch is coherent, but it still expects familiarity with temp HOME, JSON output, and repo-local execution
-- Why it matters: this is manageable internally, but it still raises the support burden for outside testers
+- Evidence: GTK, Qt, icon-cursor, and desktop-style outputs are deterministic exports, not live desktop ownership
+- Why it matters: acceptable when documented, but not a basis for broader desktop-integration claims
 
 ## Current Result
 
-For TWO-31:
+For TWO-32:
 
-- `READY_FOR_LIMITED_PUBLIC_TECHNICAL_BETA=no`
-- current public surface position: internal-only
-- recommended next step: another internal hardening cycle rather than outside circulation
+- `READY_FOR_LIMITED_PUBLIC_TECHNICAL_BETA=yes`
+- current public surface position: `limited-public-technical-beta-candidate`
+- recommended next step: circulate the narrowed copied-toolchain candidate to advanced testers while keeping broader claims fenced

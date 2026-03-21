@@ -2,35 +2,36 @@
 
 This document defines what must be true before the 2.x branch can claim a limited public technical beta.
 
-This gate is stricter than the current internal-alpha position and also stricter than a blocked non-public pre-beta placeholder.
+This gate is narrower than the broader internal developer surface.
+It is not a gate for general-public beta or stable release.
 
 ## A. Documentation
 
 Required:
 
 - README and readiness docs are truthful
-- install, uninstall, diagnostics, and cleanup flow are documented clearly
+- installation, uninstall, diagnostics, and cleanup flow are documented clearly
 - supported versus degraded versus unsupported environments are explicit
 - known limitations and non-goals are obvious to outside advanced testers
 
-Current TWO-31 state:
+Current TWO-32 state:
 
-- not met for public beta
-- docs are now clearer, but they still describe an internal-only toolchain and repo-checkout-dependent workflow
+- satisfied for the limited technical-beta surface
+- the candidate package ships the relevant notes, checklist, and readiness docs directly
 
 ## B. Workflow Safety
 
 Required:
 
 - no hidden destructive side effects
-- bounded apply/off remains trustworthy in supported environments
+- bounded apply or off remains trustworthy in supported environments
 - package, install, uninstall, and diagnostics flows are deterministic
 - cleanup and ownership are explicit
 
-Current TWO-31 state:
+Current TWO-32 state:
 
-- partially satisfied
-- the flows are bounded and deterministic for internal use, but the overall operator burden is still too high for outside testers
+- satisfied for the limited technical-beta surface
+- apply is explicitly gated to X11-oriented environments and everything remains user-local
 
 ## C. Implementation Trust
 
@@ -38,14 +39,13 @@ Required:
 
 - compiler outputs remain deterministic
 - status, manifests, and install-state are trustworthy
-- migration tooling is clearly honest and validated broadly enough for outside use
-- X11 render is clearly classified and not overclaimed
-- degraded/export-only paths are surfaced explicitly
+- degraded and unsupported paths are surfaced explicitly
+- risky internal-only paths are fenced off from outside testers
 
-Current TWO-31 state:
+Current TWO-32 state:
 
-- not met for public beta
-- deterministic behavior is good, but migration breadth and real-host breadth are still too narrow
+- satisfied for the limited technical-beta surface
+- migration and the explicit X11 probe are now outside the support promise rather than overclaimed
 
 ## D. Audience Suitability
 
@@ -55,16 +55,16 @@ Required:
 - the branch does not impersonate production quality
 - the support burden remains manageable for maintainers
 
-Current TWO-31 state:
+Current TWO-32 state:
 
-- not met
-- the branch still assumes internal context, repo access, and high operator familiarity
+- satisfied for the limited technical-beta surface
+- the copied-toolchain package, wrapper, notes, and diagnostics flow remove the old repo-checkout requirement
 
 ## Gate Result
 
-For TWO-31:
+For TWO-32:
 
-- limited public technical beta: not ready
-- continued non-public pre-beta: not ready
+- limited public technical beta: ready
+- continued non-public pre-beta: not the active track
 - continued internal alpha: yes
-- next step: another internal hardening cycle focused on real-host breadth and external-surface discipline
+- next step: local candidate packaging and optional local tag preparation for the limited technical-beta surface only

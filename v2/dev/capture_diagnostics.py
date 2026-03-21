@@ -24,7 +24,7 @@ DEFAULT_ARTIFACT_ROOT = REPO_ROOT / "v2" / "out"
 
 IMPLEMENTATION_INFO = {
     "status": "experimental-dev-only",
-    "prompt": "TWO-31",
+    "prompt": "TWO-32",
     "surface": "controlled-alpha-diagnostics",
     "mode": "local-file-based-evidence-capture",
     "not_implemented": [
@@ -157,7 +157,7 @@ def capture_diagnostics(
         },
         "artifacts": artifacts,
         "note": (
-            "This diagnostics capture is for controlled internal alpha evidence only. "
+            "This diagnostics capture is for bounded 2.x evidence gathering across internal alpha and limited technical-beta workflows. "
             "It writes local files and does not perform network reporting or touch 1.x state."
         ),
     }
@@ -166,7 +166,7 @@ def capture_diagnostics(
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="retrofx-v2 diagnostics",
-        description="Capture a local 2.x diagnostics directory for controlled internal alpha testing.",
+        description="Capture a local 2.x diagnostics directory for controlled internal alpha or limited technical-beta testing.",
     )
     add_profile_selection_args(parser)
     parser.add_argument(

@@ -1,6 +1,6 @@
 # RetroFX 2.x Implemented Status
 
-This document is the current truth pass for the 2.x branch as of TWO-31.
+This document is the current truth pass for the 2.x branch as of TWO-32.
 It is intentionally blunt.
 
 1.x remains the production line.
@@ -20,7 +20,7 @@ It is intentionally blunt.
 | display policy outputs | yes | yes | no | Display policy is concrete, planned, exportable, and consumed by the bounded X11 render slice. |
 | pack system | yes | yes | no | Local pack manifests and curated built-in packs are real. Remote/community distribution is not. |
 | migration tooling | yes | yes | no | 1.x profile inspection and draft migration are real. Runtime compatibility is not. |
-| install or bundle flow | yes | yes | no | Repo-local bundles, internal-alpha packages, and isolated user-local experimental installs are real. Uninstall rejects paths outside the managed 2.x bundle store. The package flow remains internal-alpha only. |
+| install or bundle flow | yes | yes | no | Repo-local bundles, internal-alpha packages, limited technical-beta candidate packages, and isolated user-local experimental installs are real. Uninstall rejects paths outside the managed 2.x bundle store. |
 | X11 render or compiler | yes | yes | no | Shader, picom, runtime metadata, and explicit bounded preview exist for X11 only. The explicit probe has one real X11 plus `i3` validation run and remains internal-only. |
 | session planning | yes | yes | no | Environment detection and capability-aware planning are real and non-destructive. |
 | bounded apply or off | yes | yes | no | TWO-19 current activation, manifests, last-good, and `off` are real but intentionally narrow, and cleanup now stays inside managed 2.x roots. |
@@ -40,9 +40,11 @@ Implemented and coherent now:
 - `scripts/dev/retrofx-v2 migrate inspect-1x`
 - `scripts/dev/retrofx-v2 bundle`, `install`, and `uninstall`
 - `scripts/dev/retrofx-v2 package-alpha`
+- `scripts/dev/retrofx-v2 package-technical-beta`
 - `scripts/dev/retrofx-v2 diagnostics`
 - `scripts/dev/retrofx-v2 apply`, `off`, and `preview-x11`
 - `scripts/dev/retrofx-v2 smoke`
+- `scripts/dev/retrofx-v2-techbeta`
 
 Still intentionally bounded:
 
@@ -53,12 +55,14 @@ Still intentionally bounded:
 - broader-alpha readiness is not approved; non-sway Wayland desktops are explicitly fenced as export-oriented validation environments
 - the current branch version is `2.0.0-alpha.internal.2`, which is an untagged post-alpha hardening build rather than the historical `.1` local alpha candidate
 - internal-alpha packages are reproducible and self-describing, but they still assume a repo checkout rather than a standalone copied toolchain
+- the limited technical-beta candidate is a separate copied-toolchain surface exposed through `retrofx-v2-techbeta`
 - release-ish package generation now blocks dirty trees by default unless explicit internal triage mode is requested
 - controlled internal alpha now has a real operational layer, and diagnostics now capture source-control state plus installed bundle or package evidence for the selected profile
 - release-status metadata now distinguishes the current build from the historical local alpha candidate and makes broader-alpha or pre-beta no explicit in machine-readable form
 - release-status metadata now also carries the blocked pre-beta-candidate identity explicitly so the current internal-alpha line is not mistaken for a non-public pre-beta candidate
-- release-status metadata now also carries `ready_for_limited_public_technical_beta=false` and the current public-beta blockers explicitly
+- release-status metadata now also carries the technical-beta candidate identity, support matrix, and `ready_for_limited_public_technical_beta=true`
 - `package-alpha` now rejects pre-beta, beta, or stable-looking version or status overrides so the current internal package surface cannot fake a public-facing maturity level
+- `package-technical-beta` now produces a local copied-toolchain candidate package and keeps the explicit X11 probe plus migration tooling outside the public-facing support promise
 - the default repo-local release output path is now `v2/releases/internal-alpha/`, which is treated as generated machine-local output rather than committed source
 
 Not implemented:
@@ -89,7 +93,8 @@ Related truth docs:
 - broader alpha: no
 - controlled external alpha: no
 - non-public pre-beta: no
-- limited public technical beta: no
+- limited public technical beta: yes
+- limited public technical beta candidate ready: yes
 - pre-beta stabilization: no
 - broader testing: no
-- main reasons to avoid broader testing: real-host coverage is still narrow, real Wayland-host evidence is still absent, package or diagnostics surfaces remain intentionally internal-only, and migration validation breadth remains limited
+- main reasons to avoid broader testing: live support remains intentionally narrow to the technical-beta matrix, real Wayland-host live-runtime evidence remains out of scope, and migration validation breadth remains limited

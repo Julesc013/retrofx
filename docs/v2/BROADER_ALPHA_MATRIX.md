@@ -1,6 +1,6 @@
 # RetroFX 2.x Broader Alpha Matrix
 
-This matrix records the broader-alpha-oriented validation pass carried forward through TWO-31.
+This matrix records the broader-alpha-oriented validation pass carried forward through TWO-32.
 
 It does not replace [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md).
 It extends the branch evidence with broader environment and surface classification.
@@ -15,6 +15,7 @@ Evidence sources:
 - TWO-28, TWO-29, and TWO-30 scenario reruns under `/tmp/retrofx-v2-two28-*`, `/tmp/retrofx-v2-two29-*`, and `/tmp/retrofx-v2-two30-*`
 - latest tagged internal candidate `v2.0.0-alpha.internal.1`
 - current internal-alpha hardening version `2.0.0-alpha.internal.2`
+- current limited public technical-beta candidate version `2.0.0-techbeta.1`
 
 Status legend:
 
@@ -27,8 +28,8 @@ Status legend:
 
 Current summary:
 
-- `pass`: 16
-- `degraded-pass`: 4
+- `pass`: 18
+- `degraded-pass`: 5
 - `partial`: 0
 - `fail`: 0
 - `blocked`: 0
@@ -57,17 +58,22 @@ Current summary:
 | install, diagnostics, and uninstall | temp HOME install mode | `package-alpha`, `install`, `diagnostics`, `uninstall` | isolated install-state and reproducible diagnostics | install succeeded under `retrofx-v2-dev`, diagnostics captured release-status plus installed-bundle evidence, and uninstall removed only the bundle and installation record while preserving user config roots | pass | This is the strongest packaging/distribution surface currently available. |
 | broader-alpha package shape | repo-local dev | `scripts/dev/retrofx-v2 package-alpha ...` | if broader-alpha ready, package metadata would say so | current package manifest still says `status_label=internal-alpha`, `version=2.0.0-alpha.internal.2`, `current_build_kind=untagged-post-alpha-hardening`, `ready_for_broader_alpha=false`, and `pre_beta_candidate_ready=false` | pass | Honest narrowing remains the intended result in TWO-29 and TWO-30. |
 | public-looking package override fence | repo-local dev | `scripts/dev/retrofx-v2 package-alpha --pack modern-minimal --profile-id warm-night --status-label pre-beta` | public-looking package metadata should be rejected clearly | current branch evidence now shows `ok=false` with `errors[0].code=blocked-package-status-label` instead of minting misleading metadata | pass | TWO-31 keeps the internal package surface from pretending to be pre-beta or public-facing. |
-| full 2.x suite after TWO-31 gating | repo-local dev | `./v2/tests/test.sh` | suite remains green after surface narrowing | `Ran 138 tests in 2.110s` and `OK` | pass | Final suite pass confirms the narrowed surface and new public-surface fences did not regress the implemented branch. |
+| limited technical-beta wrapper surface | clean temp repo and copied-toolchain candidate package | `scripts/dev/retrofx-v2-techbeta --help`, `status`, and `package-technical-beta ...` | a narrower outside-facing surface exists without exposing the broader internal CLI | the wrapper exposes only curated advanced-tester commands; status reports `version=2.0.0-techbeta.1`, `status_label=technical-beta`, and `ready_for_limited_public_technical_beta=true`; package generation emits a copied-toolchain candidate under `retrofx-v2--2.0.0-techbeta.1--modern-minimal--warm-night` | pass | TWO-32 makes broader-alpha readiness less central by giving outside testers a smaller, more supportable surface. |
+| limited technical-beta degraded Wayland plan | copied-toolchain candidate under simulated Wayland plus `sway` | `bin/retrofx-v2-techbeta plan --pack modern-minimal --profile-id warm-night --write-preview --out-root <temp>` | Wayland remains explicitly degraded/export-only rather than being overclaimed as supported live runtime | packaged wrapper planned successfully and reported honest degradation for X11-only runtime pieces | degraded-pass | This keeps the outside-facing support promise aligned with current implementation reality. |
+| full 2.x suite after TWO-32 candidate prep | repo-local dev | `./v2/tests/test.sh` | suite remains green after adding the narrower technical-beta surface | `Ran 143 tests in 2.743s` and `OK` | pass | Final suite pass confirms the candidate wrapper and copied-toolchain package did not regress the implemented branch. |
 
 ## Interpretation
 
-The branch remains suitable for internal alpha continuation and local/internal candidate use.
+The branch remains unsuitable for the older broader-alpha framing, but it is no longer limited to internal-only circulation.
 
-The branch is still not ready for broader alpha because:
+Broader alpha is still not the right next-stage label because:
 
 - the strongest live-validation evidence still centers on one real X11 plus `i3` host
-- non-sway Wayland desktops are now explicitly fenced as export-oriented validation paths
+- non-sway Wayland desktops remain explicitly fenced as export-oriented validation paths
 - migration validation breadth remains limited
 
-The immediate value of TWO-31 is not new capability.
-It is stricter classification of what should remain internal-only and what still blocks broader alpha, pre-beta, or limited public technical beta positioning.
+The immediate value of TWO-32 is a narrower outside-facing promise:
+
+- advanced testers now have a copied-toolchain candidate surface that does not require source-tree archaeology
+- the broader internal developer surface remains available, but it is no longer the recommended outside-facing entrypoint
+- broader-alpha language remains too wide for the current evidence, even though the limited public technical-beta candidate now clears its own narrower gates

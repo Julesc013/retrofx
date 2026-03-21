@@ -124,13 +124,16 @@ class AlphaSupportTests(unittest.TestCase):
             "docs/v2/PRE_BETA_BLOCKERS.md": ["pre-beta-blocker", "Wayland-host", "internal-only"],
             "docs/v2/PRE_BETA_READINESS.md": ["READY_FOR_NON_PUBLIC_PRE_BETA=no", "READY_FOR_CONTINUED_BROADER_ALPHA=no", "READY_FOR_MORE_INTERNAL_HARDENING=yes"],
             "docs/v2/PRE_BETA_RELEASE_CHECKLIST.md": ["do not create a pre-beta candidate", "package-alpha", "status"],
-            "docs/v2/PUBLIC_BETA_RISK_SURFACE.md": ["package-alpha", "internal-only", "public technical beta"],
-            "docs/v2/PUBLIC_BETA_GATES.md": ["Documentation", "Workflow Safety", "Audience Suitability"],
-            "docs/v2/PUBLIC_BETA_BLOCKERS.md": ["public-beta-blocker", "Wayland-host", "repo-checkout dependent"],
-            "docs/v2/PUBLIC_BETA_READINESS.md": ["READY_FOR_LIMITED_PUBLIC_TECHNICAL_BETA=no", "NEEDS_ANOTHER_HARDENING_CYCLE=yes", "internal-only"],
-            "docs/v2/TECHNICAL_BETA_NOTES.md": ["not approved for publication", "diagnostics", "unsupported"],
+            "docs/v2/PUBLIC_BETA_RISK_SURFACE.md": ["retrofx-v2-techbeta", "candidate surface", "internal-only"],
+            "docs/v2/PUBLIC_BETA_GATES.md": ["Documentation", "Workflow Safety", "limited public technical beta: ready"],
+            "docs/v2/PUBLIC_BETA_BLOCKERS.md": ["None open for the limited technical-beta candidate", "public-beta-blocker", "X11"],
+            "docs/v2/PUBLIC_BETA_READINESS.md": ["READY_FOR_LIMITED_PUBLIC_TECHNICAL_BETA=yes", "limited public technical beta: yes", "copied-toolchain"],
+            "docs/v2/TECHNICAL_BETA_NOTES.md": ["advanced testers", "diagnostics", "unsupported"],
             "docs/v2/TECHNICAL_BETA_CHECKLIST.md": ["status", "diagnostics", "cleanup"],
-            "docs/v2/NEXT_STAGE_VERDICT.md": ["READY_FOR_INTERNAL_ALPHA_CONTINUATION", "READY_FOR_BROADER_ALPHA", "READY_FOR_PRE_BETA_STABILIZATION"],
+            "docs/v2/TECHNICAL_BETA_CANDIDATE_NOTES.md": ["TECHNICAL_BETA_CANDIDATE_READY=yes", "2.0.0-techbeta.1", "X11"],
+            "docs/v2/TECHNICAL_BETA_CANDIDATE_SUMMARY.md": ["TECHNICAL_BETA_CANDIDATE_READY=yes", "v2.0.0-techbeta.1", "technical-beta"],
+            "docs/v2/TECHNICAL_BETA_RELEASE_CHECKLIST.md": ["public-beta-blocker", "status", "technical-beta package"],
+            "docs/v2/NEXT_STAGE_VERDICT.md": ["READY_FOR_INTERNAL_ALPHA_CONTINUATION", "READY_FOR_BROADER_ALPHA", "READY_FOR_LIMITED_PUBLIC_TECHNICAL_BETA=yes"],
         }
         for relative_path, expected_strings in doc_expectations.items():
             content = (REPO_ROOT / relative_path).read_text(encoding="utf-8")
