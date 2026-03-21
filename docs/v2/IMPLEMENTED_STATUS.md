@@ -1,6 +1,6 @@
 # RetroFX 2.x Implemented Status
 
-This document is the current truth pass for the 2.x branch as of TWO-28.
+This document is the current truth pass for the 2.x branch as of TWO-29.
 It is intentionally blunt.
 
 1.x remains the production line.
@@ -51,9 +51,11 @@ Still intentionally bounded:
 - install and current activation remain separated, but unified `status` now reports both surfaces together
 - controlled internal alpha readiness is narrow and currently grounded most strongly in one real X11 plus `i3` validation host
 - broader-alpha readiness is not approved; non-sway Wayland desktops are explicitly fenced as export-oriented validation environments
+- the current branch version is `2.0.0-alpha.internal.2`, which is an untagged post-alpha hardening build rather than the historical `.1` local alpha candidate
 - internal-alpha packages are reproducible and self-describing, but they still assume a repo checkout rather than a standalone copied toolchain
+- release-ish package generation now blocks dirty trees by default unless explicit internal triage mode is requested
 - controlled internal alpha now has a real operational layer, and diagnostics now capture source-control state plus installed bundle or package evidence for the selected profile
-- release-status metadata now carries the local candidate tag name and candidate-ready boolean used by the final local/internal alpha gate
+- release-status metadata now distinguishes the current build from the historical local alpha candidate and makes broader-alpha or pre-beta no explicit in machine-readable form
 - the default repo-local release output path is now `v2/releases/internal-alpha/`, which is treated as generated machine-local output rather than committed source
 
 Not implemented:
@@ -75,10 +77,12 @@ Related truth docs:
 
 - internal experimental use: yes
 - controlled internal alpha: yes, for a narrow internal cohort
-- local alpha tag candidate: yes, for local or internal-only use after a clean-tree checklist pass
-- alpha candidate ready: yes, for a local or internal-only snapshot after the current clean-tree candidate subset passes on the candidate commit
+- current local alpha tag candidate: no
+- alpha candidate ready for the current branch build: no
+- latest historical local alpha candidate: `v2.0.0-alpha.internal.1`
 - broader alpha: no
 - controlled external alpha: no
+- non-public pre-beta: no
 - pre-beta stabilization: no
 - broader testing: no
 - main reasons to avoid broader testing: real-host coverage is still narrow, real Wayland-host evidence is still absent, and migration validation breadth remains limited

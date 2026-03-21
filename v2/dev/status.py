@@ -59,7 +59,7 @@ COMMAND_SUMMARY = [
         "command": "preview-x11",
         "category": "render",
         "implemented": True,
-        "description": "Stage bounded X11 render artifacts and optionally run an explicit short-lived picom probe. This remains internal-only and is validated most strongly on X11+i3-like hosts.",
+        "description": "Stage bounded X11 render artifacts and optionally run an explicit short-lived picom probe. This remains internal-only, not pre-beta ready, and is validated most strongly on X11+i3-like hosts.",
     },
     {
         "command": "packs list",
@@ -89,7 +89,7 @@ COMMAND_SUMMARY = [
         "command": "package-alpha",
         "category": "release",
         "implemented": True,
-        "description": "Build a reproducible non-public internal-alpha package around one deterministic 2.x bundle plus runbook docs. This is not a broader-alpha or public package surface.",
+        "description": "Build a reproducible non-public internal-alpha package around one deterministic 2.x bundle plus runbook docs. Dirty trees are blocked by default. This is not a broader-alpha, pre-beta, or public package surface.",
     },
     {
         "command": "diagnostics",
@@ -241,7 +241,7 @@ IMPLEMENTED_STATUS_MATRIX = [
 
 PLATFORM_IMPLEMENTATION_INFO = {
     "status": "experimental-dev-only",
-    "prompt": "TWO-28",
+    "prompt": "TWO-29",
     "surface": "unified-dev-platform-internal-alpha",
     "entrypoint": str(UNIFIED_ENTRYPOINT),
     "implemented_targets": list_targets(),
@@ -267,12 +267,27 @@ def build_platform_status(
     activation_status = describe_current_activation(env=env, cwd=cwd)
     install_state = describe_install_state(env=env, cwd=cwd)
     packs = discover_packs()
+    release_status = build_experimental_release_metadata()
+    limitations = [
+        "2.x remains experimental and dev-only; 1.x is still the production line.",
+        "Not every compiled target can be live-applied yet.",
+        "Toolkit exports are advisory; live desktop mutation remains future work.",
+        "Wayland render remains unsupported for live runtime ownership.",
+        "Compatibility work is inspection and draft migration only, not runtime parity.",
+        "Controlled internal alpha readiness is narrow; real-world validation is strongest on one X11 plus i3 host and simulated elsewhere.",
+        "Internal-alpha packages remain repo-checkout dependent and are not standalone copied toolchains.",
+        "Broader non-public alpha is still not approved; non-sway Wayland desktops remain export-oriented validation environments only.",
+    ]
+    if release_status["local_tag_state"] != "current-head":
+        limitations.append(
+            "The current build is an untagged post-alpha hardening build; the latest local alpha candidate tag remains historical rather than current."
+        )
 
     return {
         "ok": True,
         "stage": "platform-status",
         "implementation": PLATFORM_IMPLEMENTATION_INFO,
-        "release_status": build_experimental_release_metadata(),
+        "release_status": release_status,
         "source_control": build_source_control_summary(),
         "developer_start_here": {
             "entrypoint": str(UNIFIED_ENTRYPOINT),
@@ -322,25 +337,16 @@ def build_platform_status(
             "current_activation": activation_status,
         },
         "implemented_status_matrix": IMPLEMENTED_STATUS_MATRIX,
-        "limitations": [
-            "2.x remains experimental and dev-only; 1.x is still the production line.",
-            "Not every compiled target can be live-applied yet.",
-            "Toolkit exports are advisory; live desktop mutation remains future work.",
-            "Wayland render remains unsupported for live runtime ownership.",
-            "Compatibility work is inspection and draft migration only, not runtime parity.",
-            "Controlled internal alpha readiness is narrow; real-world validation is strongest on one X11 plus i3 host and simulated elsewhere.",
-            "The local alpha candidate remains repo-checkout dependent and is not a standalone copied toolchain.",
-            "Broader non-public alpha is still not approved; non-sway Wayland desktops remain export-oriented validation environments only.",
-        ],
+        "limitations": limitations,
         "next_focus": {
-            "phase": "broader-alpha-hardening-still-required",
+            "phase": "pre-beta-hardening-still-required",
             "doc": str(REPO_ROOT / "docs" / "v2" / "STABILIZATION_PLAN.md"),
             "checklist": str(REPO_ROOT / "docs" / "v2" / "STABILIZATION_CHECKLIST.md"),
             "goals": [
                 "expand validation beyond one real X11 plus i3 host and simulated Wayland or tty environments",
-                "keep broader-alpha claims fenced off until at least one real Wayland host and another real environment are validated",
+                "keep broader-alpha and pre-beta claims fenced off until at least one real Wayland host and another real environment are validated",
                 "continue regression hunting inside the already implemented surface instead of new feature sprawl",
-                "keep manifest, cleanup, and ownership metadata aligned with what internal testers actually use",
+                "keep manifest, cleanup, ownership metadata, and release-state truth aligned with what internal testers actually use",
             ],
         },
         "note": "This report describes the implemented 2.x experimental platform as it exists now. It is not a production readiness claim.",

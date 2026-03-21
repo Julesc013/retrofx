@@ -24,7 +24,7 @@ DEFAULT_ARTIFACT_ROOT = REPO_ROOT / "v2" / "out"
 
 IMPLEMENTATION_INFO = {
     "status": "experimental-dev-only",
-    "prompt": "TWO-28",
+    "prompt": "TWO-29",
     "surface": "controlled-alpha-diagnostics",
     "mode": "local-file-based-evidence-capture",
     "not_implemented": [

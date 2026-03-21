@@ -1,6 +1,6 @@
 # RetroFX 2.x Alpha Readiness
 
-This document records the TWO-28 readiness decision for the current 2.x branch.
+This document records the TWO-29 readiness decision for the current 2.x branch.
 
 Decision date: 2026-03-21
 
@@ -14,17 +14,21 @@ READY_FOR_CONTROLLED_INTERNAL_ALPHA=yes
 
 READY_FOR_CONTROLLED_ALPHA=no
 
-READY_FOR_LOCAL_ALPHA_TAG_CANDIDATE=yes
+READY_FOR_LOCAL_ALPHA_TAG_CANDIDATE=no
 
-ALPHA_CANDIDATE_READY=yes
+ALPHA_CANDIDATE_READY=no
 
 READY_FOR_BROADER_ALPHA=no
 
 READY_FOR_CONTROLLED_EXTERNAL_ALPHA=no
 
+READY_FOR_NON_PUBLIC_PRE_BETA=no
+
 READY_FOR_PRE_BETA_STABILIZATION=no
 
 READY_FOR_BROADER_TESTING=no
+
+READY_FOR_MORE_INTERNAL_HARDENING=yes
 
 NEEDS_MORE_STABILIZATION=yes
 
@@ -50,6 +54,8 @@ The branch is ready for internal experimental use and for a narrow controlled in
 - there are no current `alpha-blocker` or `high` findings left open in the remediation backlog
 - TWO-28 now explicitly fences non-sway Wayland desktop sessions as export-oriented validation environments instead of leaving broader-alpha interpretation ambiguous
 - TWO-28 now narrows machine-readable release-status and package metadata so they no longer imply broader-alpha approval
+- TWO-29 now separates the current `.2` hardening build from the historical `.1` local alpha candidate instead of conflating them
+- TWO-29 now blocks `package-alpha` on dirty working trees by default so release-ish internal artifacts stay tied to clean-tree states
 
 The branch is not ready for broader alpha, controlled external alpha, or pre-beta stabilization because:
 
@@ -58,18 +64,20 @@ The branch is not ready for broader alpha, controlled external alpha, or pre-bet
 - non-sway Wayland desktops remain export-oriented validation paths rather than trusted live-preview targets
 - migration validation remains representative rather than broad
 - the current package shape is still repo-checkout dependent and intentionally internal-only
+- the current branch is a post-alpha hardening build rather than a current tagged candidate snapshot
 
 ## Recommended Next Step
 
 The correct next phase is:
 
-1. Treat the current branch as acceptable for local or internal alpha use only after the working tree is clean, [ALPHA_RELEASE_CHECKLIST.md](ALPHA_RELEASE_CHECKLIST.md) passes, and the candidate version remains `2.0.0-alpha.internal.1`.
+1. Treat the current branch as acceptable for continued internal alpha use only after the working tree is clean and [ALPHA_RELEASE_CHECKLIST.md](ALPHA_RELEASE_CHECKLIST.md) passes where relevant.
 2. Continue the narrow controlled internal alpha on known-good internal hosts, with explicit emphasis on X11 plus `i3` validation first.
 3. Use [BROADER_ALPHA_MATRIX.md](BROADER_ALPHA_MATRIX.md), [BROADER_ALPHA_READINESS.md](BROADER_ALPHA_READINESS.md), [PRE_BETA_GATES.md](PRE_BETA_GATES.md), and [NEXT_STAGE_VERDICT.md](NEXT_STAGE_VERDICT.md) as the gate set before any broader-alpha discussion.
 4. Re-run the matrix on at least one real Wayland host and one additional real X11 host.
 5. Expand the migration validation corpus before making compatibility claims beyond the current representative set.
 6. Keep `scripts/dev/retrofx-v2 preview-x11` and `package-alpha` positioned as internal-only surfaces until the broader-alpha gates are satisfied.
-7. Reassess broader testing only after the multi-host evidence improves.
+7. Treat `v2.0.0-alpha.internal.1` as the last historical local alpha candidate and `2.0.0-alpha.internal.2` as the current post-alpha hardening line.
+8. Reassess broader testing or any non-public pre-beta discussion only after the multi-host evidence improves.
 
 ## What This Is Not
 

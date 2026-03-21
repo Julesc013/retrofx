@@ -16,6 +16,8 @@ It is intentionally stricter than the current internal-alpha gate.
 
 - target compiler outputs remain deterministic for the implemented families
 - package, install, uninstall, and diagnostics flows remain reproducible
+- release metadata must distinguish current hardening builds from historical tagged alpha candidates truthfully
+- release-ish package generation must not silently proceed from a dirty tree by default
 - current-state, install-state, and manifest shapes remain contract-tested
 
 ### 3. Honest Supported Surface
@@ -49,8 +51,11 @@ Pre-beta remains blocked if any of these remain true:
 
 ## Current Status
 
-For TWO-28:
+For TWO-29:
 
 - broader alpha: not ready
+- non-public pre-beta: not ready
 - pre-beta: not ready
+- current branch version: `2.0.0-alpha.internal.2`
+- latest historical local alpha candidate: `v2.0.0-alpha.internal.1`
 - current next step: continue internal alpha hardening rather than pre-beta staging

@@ -1,6 +1,6 @@
 # RetroFX 2.x Broader Alpha Readiness
 
-This document answers the broader-alpha question for the current 2.x branch after the TWO-28 hardening pass.
+This document answers the broader-alpha question for the current 2.x branch after the TWO-29 hardening pass.
 
 It is not a public release note.
 It is not a promise that 2.x is ready for public alpha, beta, or production use.
@@ -30,6 +30,7 @@ Broader alpha is still not ready because:
 - there is still no real Wayland-host validation pass for the currently declared surface
 - non-sway Wayland desktops are still export-oriented validation environments, not trusted live-preview environments
 - migration validation remains representative rather than broad
+- the current branch is an untagged post-alpha hardening build rather than a broader-alpha candidate line
 
 Controlled external alpha is not ready because:
 
@@ -45,11 +46,12 @@ Pre-beta stabilization is not ready because:
 
 ## Practical Reading
 
-For TWO-28, the correct interpretation is:
+For TWO-29, the correct interpretation is:
 
 - internal alpha only: yes
-- local or internal alpha candidate: yes
+- current branch version: `2.0.0-alpha.internal.2`
+- latest historical local alpha candidate: `v2.0.0-alpha.internal.1`
 - broader non-public alpha: no
-- pre-beta hardening next: no
+- more internal hardening next: yes
 
 The immediate next step is another focused hardening cycle around real Wayland-host evidence, additional real-host validation, and broader migration-corpus review.

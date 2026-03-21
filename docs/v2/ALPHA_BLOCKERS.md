@@ -10,7 +10,7 @@ It is a concrete blocker list derived from [VALIDATION_MATRIX.md](VALIDATION_MAT
 
 ## Current Alpha-Blocker Status
 
-There are no current `alpha-blocker` items for the supported internal-alpha surface after the TWO-28 hardening pass.
+There are no current `alpha-blocker` items for the supported internal-alpha surface after the TWO-29 hardening pass.
 
 Resolved in TWO-23:
 
@@ -31,9 +31,14 @@ Resolved in TWO-27:
 - the default repo-local package output root is now treated as generated output so the local candidate package flow can be exercised without contaminating branch state
 - the full local candidate subset now passes again on the current branch state, including repo-local package generation, temp-HOME install or diagnostics or uninstall, and the bounded X11 preview probe
 
+Resolved in TWO-29:
+
+- the current `.2` hardening build is now explicitly separated from the historical `.1` local alpha candidate in release-status metadata
+- `package-alpha` now blocks dirty working trees by default so release-ish internal artifacts do not silently come from non-reproducible branch states
+
 ## Current High-Severity Status
 
-There are no current open `high` items in the supported internal-alpha surface after TWO-28 hardening.
+There are no current open `high` items in the supported internal-alpha surface after TWO-29 hardening.
 
 ## Medium
 

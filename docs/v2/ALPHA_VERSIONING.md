@@ -7,10 +7,12 @@ RetroFX 2.x now has an explicit non-public experimental version policy for inter
 
 ## Current Version
 
-- current 2.x experimental version: `2.0.0-alpha.internal.1`
+- current 2.x experimental version: `2.0.0-alpha.internal.2`
 - current status label: `internal-alpha`
-- current packaging prompt milestone: `TWO-28`
-- current local/internal candidate tag name: `v2.0.0-alpha.internal.1`
+- current packaging prompt milestone: `TWO-29`
+- current version tag name: `v2.0.0-alpha.internal.2`
+- latest local/internal alpha candidate tag: `v2.0.0-alpha.internal.1`
+- current build kind: untagged post-alpha hardening
 - code-side source of truth: `v2/dev/release.py`
 
 ## Format
@@ -21,7 +23,7 @@ The current internal format is:
 
 Example:
 
-- `2.0.0-alpha.internal.1`
+- `2.0.0-alpha.internal.2`
 
 Why this format:
 
@@ -54,6 +56,7 @@ Use this rule set for now:
 - do not invent multiple competing 2.x version formats
 - keep the version static within a given committed internal-alpha state
 - keep status labels separate from readiness decisions
+- keep historical local candidate tags separate from newer untagged hardening builds
 
 ## Readiness Versus Version
 
@@ -61,10 +64,10 @@ Version and readiness are related but not identical.
 
 Example:
 
-- version: `2.0.0-alpha.internal.1`
+- version: `2.0.0-alpha.internal.2`
 - status label: `internal-alpha`
-- readiness decision: controlled internal alpha is acceptable for a narrow cohort
+- readiness decision: controlled internal alpha is acceptable for a narrow cohort, but the current build is not a local alpha candidate and is not a non-public pre-beta candidate
 
 That means the branch can be circulated internally without promoting the status label to anything public-facing.
 
-For TWO-28, that same internal version remains the prepared local or internal alpha-candidate version, while broader alpha remains explicitly blocked by evidence rather than by missing versioning.
+For TWO-29, the version is intentionally incremented to separate the current post-alpha hardening build from the historical local alpha candidate tagged at `v2.0.0-alpha.internal.1`.

@@ -2,6 +2,9 @@
 
 This document defines the first disciplined local or internal alpha-candidate position for the current 2.x branch.
 
+It is now a historical reference for the latest local alpha candidate.
+The current branch version is newer and is not itself this tagged candidate.
+
 It is not a public release note.
 It is not a promise that 2.x should replace 1.x.
 

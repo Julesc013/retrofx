@@ -65,16 +65,17 @@ Meaning:
 
 ## Current Truth
 
-As of TWO-28:
+As of TWO-29:
 
 - current branch status label: `internal-alpha`
+- current branch version: `2.0.0-alpha.internal.2`
+- current build kind: untagged post-alpha hardening
 - readiness: narrow controlled internal alpha continuation is acceptable
-- local alpha candidate: acceptable for local or internal-only use after the checklist pass
-- candidate version: `2.0.0-alpha.internal.1`
-- local tag candidate: `v2.0.0-alpha.internal.1`
+- latest historical local alpha candidate: `2.0.0-alpha.internal.1`
+- historical local alpha tag: `v2.0.0-alpha.internal.1`
 - broader alpha: not ready yet
 - controlled external alpha: not ready yet
-- pre-beta stabilization: not ready yet
+- non-public pre-beta: not ready yet
 
 That distinction is deliberate.
-The branch is ready for limited internal circulation without pretending it has crossed into public or broadly distributed alpha territory.
+The branch is ready for limited internal circulation without pretending it has crossed into broader alpha, non-public pre-beta, or public-release territory.

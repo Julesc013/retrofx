@@ -42,6 +42,8 @@ PACKAGE_DOCS = (
     "ALPHA_RELEASE_CHECKLIST.md",
     "BROADER_ALPHA_MATRIX.md",
     "BROADER_ALPHA_READINESS.md",
+    "PRE_BETA_BLOCKERS.md",
+    "PRE_BETA_READINESS.md",
     "PRE_BETA_GATES.md",
     "NEXT_STAGE_VERDICT.md",
     "INTERNAL_ALPHA_RUNBOOK.md",
@@ -74,12 +76,33 @@ def build_internal_alpha_package(
     target_names: list[str] | None = None,
     version: str | None = None,
     status_label: str | None = None,
+    allow_dirty: bool = False,
     env: Mapping[str, str] | None = None,
     cwd: str | Path | None = None,
     stdin_isatty: bool | None = None,
     path_lookup: Callable[[str], str | None] | None = None,
 ) -> dict[str, Any]:
     release = build_experimental_release_metadata(version=version, status_label=status_label)
+    if release["working_tree_clean"] is False and not allow_dirty:
+        return {
+            "ok": False,
+            "stage": "package-alpha",
+            "implementation": IMPLEMENTATION_INFO,
+            "release_status": release,
+            "source": None,
+            "warnings": [],
+            "errors": [
+                {
+                    "severity": "error",
+                    "code": "dirty-working-tree",
+                    "message": (
+                        "Package generation is blocked by default on a dirty working tree. "
+                        "Commit or stash changes first, or rerun with `--allow-dirty` for internal triage only."
+                    ),
+                }
+            ],
+            "package": None,
+        }
 
     with TemporaryDirectory() as tmpbundle:
         bundle_payload = build_dev_bundle(
@@ -162,6 +185,7 @@ def build_internal_alpha_package(
             "Toolkit exports remain advisory and live desktop integration is not implemented.",
             "Live Wayland render is not implemented.",
             "Broader non-public alpha is not approved yet; this package remains internal-alpha only.",
+            "Current internal-alpha packages are built from an untagged post-alpha hardening line unless the current version tag explicitly points at HEAD.",
             "1.x remains the production line.",
         ],
         "recommended_smoke_flow": _recommended_smoke_flow(bundle_manifest),
@@ -226,6 +250,11 @@ def main(argv: list[str] | None = None) -> int:
         "--status-label",
         help="Override the experimental status label for this package.",
     )
+    parser.add_argument(
+        "--allow-dirty",
+        action="store_true",
+        help="Allow package generation from a dirty working tree. Use only for internal triage, not release-like validation.",
+    )
     args = parser.parse_args(argv)
 
     payload = build_internal_alpha_package(
@@ -236,6 +265,7 @@ def main(argv: list[str] | None = None) -> int:
         target_names=args.targets,
         version=args.version,
         status_label=args.status_label,
+        allow_dirty=args.allow_dirty,
     )
     print(json.dumps(payload, indent=2, sort_keys=False))
     return 0 if payload["ok"] else 1
@@ -301,8 +331,10 @@ def _render_package_summary(
         f"release.version: {release['version']}",
         f"release.status: {release['status_label']}",
         f"release.local_tag_name: {release['local_tag_name']}",
+        f"release.local_tag_state: {release['local_tag_state']}",
         f"release.alpha_candidate_ready: {'yes' if release['alpha_candidate_ready'] else 'no'}",
         f"release.ready_for_broader_alpha: {'yes' if release['ready_for_broader_alpha'] else 'no'}",
+        f"release.ready_for_non_public_pre_beta: {'yes' if release['ready_for_non_public_pre_beta'] else 'no'}",
         f"distribution.scope: {release['distribution_scope']}",
         f"bundle.id: {bundle_manifest['bundle_id']}",
         f"profile.id: {bundle_manifest['profile']['id']}",

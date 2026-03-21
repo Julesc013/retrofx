@@ -45,6 +45,7 @@ This is the non-public branch note for internal 2.x testers.
 Best current fit:
 
 - repo checkout available
+- current branch version `2.0.0-alpha.internal.2` should be treated as an untagged post-alpha hardening build
 - X11 plus `i3` is the strongest validated live-preview environment
 - Wayland is currently best exercised through planning and export-oriented validation
 - Wayland GNOME, Plasma, and unknown desktops should be treated as export-oriented validation environments only
@@ -76,3 +77,4 @@ Best current fit:
 - bundle and install metadata are explicit, but not public-release contracts
 - internal alpha now depends on disciplined use of the diagnostics and feedback templates rather than ad hoc reports
 - package-alpha is still an internal-alpha package flow, not a broader-alpha distribution surface
+- `v2.0.0-alpha.internal.1` remains the latest historical local alpha candidate; the current branch is beyond that candidate snapshot

@@ -1,6 +1,9 @@
 # RetroFX 2.x Alpha Candidate Summary
 
-This is the concise operator summary for the first local or internal 2.x alpha candidate.
+This is the concise operator summary for the latest local or internal 2.x alpha candidate.
+
+It is a historical candidate summary.
+The current branch version is newer and is not itself this tagged candidate.
 
 ## Candidate
 

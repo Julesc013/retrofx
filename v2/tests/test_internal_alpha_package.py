@@ -24,6 +24,7 @@ class InternalAlphaPackageTests(unittest.TestCase):
                 pack_id="modern-minimal",
                 pack_profile_id="warm-night",
                 package_root=tmppackages,
+                allow_dirty=True,
             )
             self.assertTrue(payload["ok"])
             package_dir = Path(payload["package"]["output_dir"])
@@ -37,6 +38,8 @@ class InternalAlphaPackageTests(unittest.TestCase):
             self.assertTrue((package_dir / "docs" / "ALPHA_CANDIDATE_NOTES.md").is_file())
             self.assertTrue((package_dir / "docs" / "ALPHA_CANDIDATE_SUMMARY.md").is_file())
             self.assertTrue((package_dir / "docs" / "ALPHA_RELEASE_CHECKLIST.md").is_file())
+            self.assertTrue((package_dir / "docs" / "PRE_BETA_BLOCKERS.md").is_file())
+            self.assertTrue((package_dir / "docs" / "PRE_BETA_READINESS.md").is_file())
 
     def test_package_manifest_contains_required_internal_alpha_fields(self) -> None:
         with TemporaryDirectory() as tmppackages:
@@ -44,6 +47,7 @@ class InternalAlphaPackageTests(unittest.TestCase):
                 pack_id="crt-core",
                 pack_profile_id="green-crt",
                 package_root=tmppackages,
+                allow_dirty=True,
             )
             manifest = json.loads(Path(payload["package"]["manifest_path"]).read_text(encoding="utf-8"))
             self.assertEqual(manifest["schema"], "retrofx.internal-alpha-package/v2alpha1")
@@ -56,12 +60,22 @@ class InternalAlphaPackageTests(unittest.TestCase):
             self.assertIn("alpha_candidate_ready", manifest["release_status"])
             self.assertIn("ready_for_controlled_internal_alpha", manifest["release_status"])
             self.assertIn("ready_for_broader_alpha", manifest["release_status"])
+            self.assertIn("ready_for_non_public_pre_beta", manifest["release_status"])
             self.assertIn("ready_for_pre_beta_stabilization", manifest["release_status"])
+            self.assertIn("local_tag_exists", manifest["release_status"])
             self.assertIn("local_tag_name", manifest["release_status"])
+            self.assertIn("local_tag_state", manifest["release_status"])
             self.assertIn("local_tag_points_at_head", manifest["release_status"])
+            self.assertIn("latest_existing_local_alpha_tag", manifest["release_status"])
+            self.assertIn("current_build_kind", manifest["release_status"])
             self.assertFalse(manifest["release_status"]["ready_for_controlled_alpha"])
+            self.assertFalse(manifest["release_status"]["ready_for_local_alpha_tag_candidate"])
+            self.assertFalse(manifest["release_status"]["alpha_candidate_ready"])
             self.assertFalse(manifest["release_status"]["ready_for_broader_alpha"])
+            self.assertFalse(manifest["release_status"]["ready_for_non_public_pre_beta"])
             self.assertFalse(manifest["release_status"]["ready_for_pre_beta_stabilization"])
+            self.assertEqual(manifest["release_status"]["current_build_kind"], "untagged-post-alpha-hardening")
+            self.assertEqual(manifest["release_status"]["latest_existing_local_alpha_tag"], "v2.0.0-alpha.internal.1")
             self.assertEqual(manifest["distribution"]["scope"], "internal-non-public")
             self.assertEqual(manifest["bundle"]["relative_dir"], "bundle")
             self.assertIn("terminal-tui", manifest["supported_target_families"])
@@ -70,6 +84,8 @@ class InternalAlphaPackageTests(unittest.TestCase):
             self.assertIn("docs/ALPHA_CANDIDATE_NOTES.md", manifest["included_docs"])
             self.assertIn("docs/ALPHA_CANDIDATE_SUMMARY.md", manifest["included_docs"])
             self.assertIn("docs/BROADER_ALPHA_READINESS.md", manifest["included_docs"])
+            self.assertIn("docs/PRE_BETA_BLOCKERS.md", manifest["included_docs"])
+            self.assertIn("docs/PRE_BETA_READINESS.md", manifest["included_docs"])
             self.assertTrue(manifest["metadata_artifacts"])
 
     def test_packaged_bundle_installs_into_temp_home(self) -> None:
@@ -78,6 +94,7 @@ class InternalAlphaPackageTests(unittest.TestCase):
                 pack_id="modern-minimal",
                 pack_profile_id="warm-night",
                 package_root=tmppackages,
+                allow_dirty=True,
             )
             env = self._temp_home_env(tmphome)
             payload = install_dev_bundle(Path(package["package"]["output_dir"]) / "bundle", env=env, now="2026-03-21T12:00:00Z")
@@ -93,6 +110,7 @@ class InternalAlphaPackageTests(unittest.TestCase):
                 pack_id="modern-minimal",
                 pack_profile_id="warm-night",
                 package_root=tmppackages,
+                allow_dirty=True,
             )
             env = self._temp_home_env(tmphome)
             install_dev_bundle(Path(package["package"]["output_dir"]) / "bundle", env=env, now="2026-03-21T12:00:00Z")
@@ -106,6 +124,7 @@ class InternalAlphaPackageTests(unittest.TestCase):
                 pack_id="crt-core",
                 pack_profile_id="green-crt",
                 package_root=tmppackages,
+                allow_dirty=True,
             )
             env = self._temp_home_env(tmphome)
             install_dev_bundle(Path(package["package"]["output_dir"]) / "bundle", env=env, now="2026-03-21T12:00:00Z")
@@ -114,11 +133,35 @@ class InternalAlphaPackageTests(unittest.TestCase):
             self.assertEqual(status["installed_bundles"][0]["release_version"], CURRENT_EXPERIMENTAL_VERSION)
             self.assertEqual(status["installed_bundles"][0]["release_status"], CURRENT_STATUS_LABEL)
 
+    def test_dirty_tree_package_generation_is_blocked_by_default(self) -> None:
+        dirty_marker = REPO_ROOT / "v2" / ".two29-dirty-package-test"
+        try:
+            dirty_marker.write_text("dirty\n", encoding="utf-8")
+            with TemporaryDirectory() as tmppackages:
+                blocked = build_internal_alpha_package(
+                    pack_id="modern-minimal",
+                    pack_profile_id="warm-night",
+                    package_root=tmppackages,
+                )
+                self.assertFalse(blocked["ok"])
+                self.assertEqual(blocked["errors"][0]["code"], "dirty-working-tree")
+
+                allowed = build_internal_alpha_package(
+                    pack_id="modern-minimal",
+                    pack_profile_id="warm-night",
+                    package_root=tmppackages,
+                    allow_dirty=True,
+                )
+                self.assertTrue(allowed["ok"])
+        finally:
+            dirty_marker.unlink(missing_ok=True)
+
     def test_runbook_relevant_package_commands_are_reachable(self) -> None:
         process = self._run([str(ENTRYPOINT), "package-alpha", "--pack", "modern-minimal", "--profile-id", "warm-night", "--help"])
         self.assertEqual(process.returncode, 0, msg=process.stderr)
         self.assertIn("retrofx-v2 package-alpha", process.stdout)
         self.assertIn("--package-root", process.stdout)
+        self.assertIn("--allow-dirty", process.stdout)
 
         wrapper_process = self._run([str(WRAPPER), "--help"])
         self.assertEqual(wrapper_process.returncode, 0, msg=wrapper_process.stderr)
@@ -130,6 +173,7 @@ class InternalAlphaPackageTests(unittest.TestCase):
                 pack_id="crt-core",
                 pack_profile_id="green-crt",
                 package_root=tmppackages,
+                allow_dirty=True,
             )
             env = self._temp_home_env(tmphome)
             install_dev_bundle(Path(package["package"]["output_dir"]) / "bundle", env=env, now="2026-03-21T12:00:00Z")

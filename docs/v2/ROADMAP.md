@@ -5,7 +5,7 @@ Each phase should narrow uncertainty before more implementation surface is added
 
 ## Current Progress
 
-Status after TWO-28:
+Status after TWO-29:
 
 - 2.0-C has an experimental implementation foothold for load, validate, normalize, and resolve in `v2/core/`
 - 2.0-D has started with the first terminal/TUI compiler family under `v2/targets/terminal/`
@@ -28,6 +28,7 @@ Status after TWO-28:
 - TWO-26 runs the first post-alpha remediation cycle, tightens diagnostics truth and reproduction evidence, and records that a local internal alpha candidate is acceptable while broader testing is still not
 - TWO-27 aligns the internal-alpha version and candidate docs, wires local candidate metadata into status and packaging, and prepares the first disciplined local or internal alpha candidate snapshot without making any public-release claim
 - TWO-28 adds the broader-alpha matrix and broader-alpha gate docs, narrows machine-readable readiness metadata back to internal-alpha only, and explicitly fences non-sway Wayland desktop sessions as export-oriented validation environments rather than broader-alpha-ready targets
+- TWO-29 increments the current internal-alpha version to a post-alpha hardening build, blocks dirty-tree package generation by default, and adds explicit pre-beta blockers and readiness docs without widening the supported surface
 - broad live session orchestration, Wayland render, and broader target families remain future phases
 
 ## 2.0-A Product And Spec Design
