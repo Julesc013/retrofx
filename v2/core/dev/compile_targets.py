@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any, Mapping
 
 from v2.core.dev.profile_input import add_profile_selection_args, run_selected_profile_pipeline
-from v2.render import build_display_policy_summary
+from v2.render import build_display_policy_summary, build_x11_render_summary
 from v2.session.environment import detect_environment
 from v2.targets import compile_resolved_profile_targets, list_target_families, list_targets
 
@@ -16,7 +16,7 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_OUT_ROOT = REPO_ROOT / "v2" / "out"
 IMPLEMENTATION_INFO = {
     "status": "experimental-dev-only",
-    "prompt": "TWO-14",
+    "prompt": "TWO-17",
     "families": list_target_families(),
     "implemented_targets": list_targets(),
     "mode": "export-only-dev",
@@ -25,7 +25,7 @@ IMPLEMENTATION_INFO = {
         "artifact planning",
         "session orchestration",
         "apply/install/off behavior",
-        "live WM reload, session integration, or display mutation",
+        "live WM reload, broad session integration, or global display mutation",
         "global toolkit and desktop control",
     ],
 }
@@ -41,6 +41,7 @@ def compile_profile_to_output(
     env: Mapping[str, str] | None = None,
     cwd: str | Path | None = None,
     stdin_isatty: bool | None = None,
+    path_lookup: Any | None = None,
 ) -> dict[str, Any]:
     pipeline_result = run_selected_profile_pipeline(
         profile=str(profile_path) if profile_path is not None else None,
@@ -63,13 +64,18 @@ def compile_profile_to_output(
 
     resolved_profile = pipeline_result.resolved_profile
     assert resolved_profile is not None
-    environment = detect_environment(env=env, cwd=cwd, stdin_isatty=stdin_isatty)
+    environment = detect_environment(env=env, cwd=cwd, stdin_isatty=stdin_isatty, path_lookup=path_lookup)
     display_policy = build_display_policy_summary(resolved_profile, environment)
+    x11_render = build_x11_render_summary(resolved_profile, environment)
     compiled = compile_resolved_profile_targets(
         resolved_profile,
         chosen_out_root,
         target_names,
-        compile_context={"environment": environment, "display_policy": display_policy},
+        compile_context={
+            "environment": environment,
+            "display_policy": display_policy,
+            "x11_render": x11_render,
+        },
     )
     return {
         "ok": True,
@@ -83,8 +89,10 @@ def compile_profile_to_output(
         "pack": resolved_profile.get("pack"),
         "environment": environment,
         "resolved_typography": resolved_profile["semantics"]["typography"],
+        "resolved_render": resolved_profile["semantics"]["render"],
         "resolved_display_policy": resolved_profile["semantics"]["render"]["display"],
         "display_policy": display_policy,
+        "x11_render": x11_render,
         "profile_output_root": compiled["profile_output_root"],
         "selected_targets": compiled["selected_targets"],
         "compiled_targets": compiled["compiled_targets"],
@@ -93,7 +101,7 @@ def compile_profile_to_output(
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Compile experimental RetroFX 2.x target artifacts, including advisory display-policy outputs, from a 2.x profile.",
+        description="Compile experimental RetroFX 2.x target artifacts, including bounded X11 render outputs, from a 2.x profile.",
     )
     add_profile_selection_args(parser)
     parser.add_argument(

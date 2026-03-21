@@ -9,7 +9,8 @@ Implemented now:
 
 - environment detection under `environment/`
 - capability-aware non-destructive planning under `planning/`
-- no live apply, install, off, or recovery execution yet
+- explicit dev-only X11 preview staging under `dev/`
+- no stable live apply, install, off, or recovery execution yet
 
 Do implement here later:
 
@@ -22,6 +23,7 @@ Do implement here later:
 Planned sub-areas:
 
 - `apply/`: execution-mode sequencing and side-effect orchestration
+- `dev/`: explicit non-default preview helpers that exercise bounded runtime paths safely
 - `environment/`: environment model and detection helpers
 - `planning/`: capability-aware target/apply planning and preview reports
 - `install/`: user-local install ownership and uninstall planning

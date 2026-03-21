@@ -9,12 +9,12 @@ The authoring format may evolve later, but the semantic schema described here is
 TWO-08 introduces the first experimental dev-only loader, validator, normalizer, and resolved-profile scaffold for this schema under `v2/core/`.
 Later prompts build on that foundation.
 
-Current implementation truth as of TWO-13:
+Current implementation truth as of TWO-17:
 
 - authored `render.display.*` fields are validated, normalized, and carried into the resolved profile
 - display policy is now surfaced in dev compile and planning outputs
-- advisory display-policy artifacts now exist for the early X11/render-adjacent family
-- live display mutation and full render-target consumption are still future work
+- bounded X11 render artifacts now exist for shader, picom config, and runtime metadata
+- live display mutation and broad render-target consumption are still future work
 
 Current implementation truth as of TWO-14:
 
@@ -323,11 +323,11 @@ Targets may honor them, downgrade them, or ignore them with explicit warnings de
 These are global appearance intents, not universal hardware or compositor promises.
 They are especially likely to degrade outside render-capable targets.
 
-Current TWO-13 implementation note:
+Current TWO-17 implementation note:
 
 - these fields are concrete in the resolved profile
-- they compile today only into advisory/export-oriented artifacts and planner output
-- they do not imply live gamma, night-light, or compositor control yet
+- they compile today into advisory/export-oriented artifacts, bounded X11 render artifacts, and planner output
+- they do not imply global live gamma, night-light, or compositor control yet
 
 ## Chrome And UI Tokens
 

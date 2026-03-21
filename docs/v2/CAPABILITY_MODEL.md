@@ -14,11 +14,11 @@ Nothing may silently skip this model.
 
 ## Current Implementation Status
 
-As of TWO-13:
+As of TWO-17:
 
 - `v2/session/planning/plan.py` implements the first real capability-aware planning slice
 - it intersects the resolved profile, detected environment, and currently implemented target families
-- the planner now also interprets resolved display policy as `future-render-consumer`, `advisory-export-only`, or `degraded-ignored-live`
+- the planner now also interprets resolved display policy and bounded X11 render capability as explicit structured outputs
 - the current planner is still narrow: it reasons only about implemented targets and remains preview-only
 - artifact-plan-driven lifecycle execution is still future work
 
@@ -96,10 +96,10 @@ The planner then produces:
 - capabilities that are unavailable
 - whether the result is `apply`, `export-only`, or `unsupported`
 
-Current TWO-13 implementation note:
+Current TWO-17 implementation note:
 
 - the implemented planner currently emits `compile-and-export`, `compile-and-apply-preview`, `compile-but-degraded`, and `skipped-unsupported` decisions
-- display-policy interpretation is now included as a structured planner output alongside per-target decisions
+- display-policy interpretation and bounded X11 render interpretation are now included as structured planner outputs alongside per-target decisions
 - that output is meant to prove the architecture, not to claim production lifecycle ownership yet
 
 ## Logging And Truthfulness

@@ -114,9 +114,22 @@ What it compiles:
 - shader or render-source artifacts
 - X11 render-adjacent helper outputs
 
+Current implementation status:
+
+- as of TWO-17 this is now a real implemented 2.x target family, not just an advisory placeholder
+- implemented dev-only targets currently cover `x11-shader`, `x11-picom`, `x11-render-runtime`, and `x11-display-policy`
+- implemented render scope is intentionally bounded to passthrough, monochrome, and `vga16` palette mode with a small effect subset
+- outputs are written under `v2/out/<profile-id>/<target>/`
+
 Typical mode:
 
 - apply-capable, install-capable, and export-capable depending on integration path
+
+Current TWO-17 mode:
+
+- export-oriented by default
+- explicit dev-only live preview for X11 + `picom`
+- not default apply/install ownership
 
 Typical artifacts:
 
@@ -133,6 +146,8 @@ Common limitations:
 
 - not equivalent to whole-desktop theming
 - depends on truthful compositor and environment support
+- current live preview is bounded and experimental rather than a full session runtime
+- Wayland render remains out of scope for the current implementation
 
 ## 5. WM Config Family
 

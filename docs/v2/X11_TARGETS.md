@@ -5,11 +5,21 @@ It remains important, but it is no longer the definition of the whole product.
 
 ## Current Implementation Status
 
-As of TWO-13:
+As of TWO-17:
 
-- the full X11 render family is still not implemented
-- one narrow advisory/export target now exists for resolved display policy
-- that target is meant to package resolved display-transform intent for future consumers, not to claim live compositor control
+- `v2/targets/x11/` now contains a real bounded X11 render family
+- implemented dev-only targets currently cover:
+  - `x11-shader`
+  - `x11-picom`
+  - `x11-render-runtime`
+  - `x11-display-policy`
+- implemented render scope is intentionally narrow:
+  - passthrough
+  - monochrome with bands
+  - `vga16` palette mode
+  - bounded `blur`, `ordered dither`, `scanlines`, `flicker`, `vignette`, and `hotcore`
+- `v2/session/dev/preview_x11_render.py` and `scripts/dev/retrofx-v2-preview-x11` now stage those artifacts and can run an explicit short-lived `picom` probe
+- this remains dev-only, X11-only, and non-default
 
 ## Family Scope
 
@@ -36,7 +46,8 @@ Emits:
 Mode:
 
 - export-capable
-- apply-capable when session orchestration explicitly owns the X11 runtime path
+- apply-preview-capable only through the explicit TWO-17 dev X11 probe path
+- not a production session owner
 - install-capable in managed X11 session flows
 
 Cannot represent:
@@ -62,7 +73,7 @@ Emits:
 Mode:
 
 - export-capable
-- apply-capable only in a truthful X11 compositor-hosted path
+- live-preview-capable only in the truthful X11 + `picom` dev path
 
 Cannot represent:
 
@@ -78,6 +89,7 @@ That means:
 
 - the adapter emits compositor or shader inputs
 - session orchestration decides whether and how those become active
+- the current TWO-17 preview path only validates this relationship in a bounded dev-only way
 
 ## Relevant Token Classes
 
@@ -106,6 +118,15 @@ The X11 family may declare:
 
 But the decision that the active plan requires a compositor belongs to the planner.
 
+Current TWO-17 implementation note:
+
+- the planner now computes an explicit `x11_render` summary
+- that summary reports:
+  - requested render mode
+  - implemented bounded mode
+  - whether live preview is possible in the detected X11 environment
+  - what degraded cleanly to export-only or passthrough
+
 ## How X11 Targets Differ From Theme-Only Targets
 
 X11 targets differ because they may:
@@ -124,6 +145,8 @@ Theme-only targets generally:
 - the X11 render family is not the same as desktop-wide theming
 - the X11 path remains environment-dependent
 - a truthful X11 target plan may still degrade or export-only when the compositor path is unavailable
+- Wayland render remains unsupported in TWO-17
+- the dev probe path does not replace the 1.x runtime and does not claim default session ownership
 
 ## Relation To 1.x
 

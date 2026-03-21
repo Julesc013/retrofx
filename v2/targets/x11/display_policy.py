@@ -1,4 +1,4 @@
-"""Advisory X11/render-adjacent display-policy compiler for the early 2.x scaffold."""
+"""Display-policy export compiler for the bounded TWO-17 X11 render slice."""
 
 from __future__ import annotations
 
@@ -44,9 +44,9 @@ class X11DisplayPolicyCompiler:
         ]
 
         warnings = list(display_policy["warnings"])
-        if display_policy["overall_status"] != "future-render-consumer":
+        if display_policy["overall_status"] != "x11-render-live-preview-available":
             warnings.append(
-                "This display-policy target remains advisory/export-only in TWO-13; no live display transform runtime exists yet."
+                "This display-policy target remains export-oriented in the current environment; only the explicit X11 render preview path consumes it live."
             )
 
         return TargetCompileResult(
@@ -71,7 +71,7 @@ class X11DisplayPolicyCompiler:
             warnings=warnings,
             notes=[
                 "Deterministic advisory display-policy artifacts from the resolved profile.",
-                "The JSON artifact is for explainability; the env artifact is a future-consumer stub for render-capable X11 integration.",
+                "The JSON artifact is for explainability; the env artifact remains a render-consumer stub for the bounded TWO-17 X11 family.",
             ],
         )
 
@@ -84,7 +84,7 @@ class X11DisplayPolicyCompiler:
         payload = {
             "implementation": {
                 "status": "experimental-dev-only",
-                "prompt": "TWO-13",
+                "prompt": "TWO-17",
                 "mode": "export-only-dev",
             },
             "profile": {

@@ -29,19 +29,20 @@ It is broader than RetroFX 1.x, but it is still bounded by explicit capability d
 
 ## Current Implementation State
 
-As of TWO-16:
+As of TWO-17:
 
 - `v2/core/` contains an experimental dev-only scaffold for loading, validating, normalizing, and resolving 2.x profiles
 - `v2/tests/` contains isolated 2.x fixtures and tests for that scaffold
 - `v2/targets/terminal/` contains the first real 2.x compiler family: `xresources`, `alacritty`, `kitty`, `tmux`, and `vim`
 - `v2/targets/wm/` now contains the second real 2.x compiler family: `i3`, `sway`, and `waybar`
 - `v2/targets/toolkit/` now contains the first real typography-policy export target: `fontconfig`
-- `v2/targets/x11/` now contains the first advisory X11/render-adjacent display-policy target
+- `v2/targets/x11/` now contains a real bounded X11 render family: `x11-shader`, `x11-picom`, `x11-render-runtime`, plus `x11-display-policy`
 - `v2/core/dev/compile-targets <profile>` compiles those implemented targets into `v2/out/<profile-id>/...`
 - `v2/session/` now contains real environment detection and capability-aware session planning preview code
 - `v2/core/dev/plan-session <profile>` detects the environment, builds a preview plan, and can write a non-destructive preview bundle under `v2/out/<profile-id>/plan/`
+- `v2/session/dev/preview_x11_render.py` and `scripts/dev/retrofx-v2-preview-x11` now stage X11 render artifacts and can run an explicit short-lived `picom` probe in X11
 - resolved typography defaults, stacks, and session-local font-policy artifacts now exist, but global font orchestration does not
-- resolved display policy is now concrete, planned, and exportable, but live display mutation does not exist
+- resolved display policy is now concrete, planned, exportable, and consumable by the bounded X11 render slice, but global display mutation does not exist
 - `v2/packs/` now contains a real local pack system with `retrofx.pack/v2alpha1` manifests and curated built-in packs
 - `v2/core/dev/list-packs` and `v2/core/dev/show-pack` now inspect those local packs
 - `v2/core/dev/resolve-profile`, `compile-targets`, and `plan-session` can now resolve profiles from local packs via `--pack <pack-id> --profile-id <profile-id>`
@@ -51,5 +52,5 @@ As of TWO-16:
 - `scripts/dev/retrofx-v2-bundle` now builds deterministic repo-local bundles under `v2/bundles/<bundle-id>/`
 - `scripts/dev/retrofx-v2-install`, `retrofx-v2-status`, and `retrofx-v2-uninstall` now manage an isolated user-local `retrofx-v2-dev` footprint
 - that install flow is still dev-only, user-local, and non-destructive to 1.x
-- live apply, session-default switching, public packaging, and full session orchestration are still future work
+- stable live apply, session-default switching, public packaging, Wayland render, and full session orchestration are still future work
 - the working product line remains 1.x; no default CLI migration has happened

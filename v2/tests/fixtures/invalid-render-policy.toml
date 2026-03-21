@@ -1,0 +1,26 @@
+schema = "retrofx.profile/v2alpha1"
+
+[identity]
+id = "invalid-render-policy"
+name = "Invalid Render Policy"
+family = "crt"
+strictness = "strict-authentic"
+
+[color.semantic]
+bg0 = "#050907"
+fg0 = "#86ff7a"
+
+[render]
+mode = "palette"
+
+[render.palette]
+kind = "vga16"
+
+[render.quantization]
+bands = 8
+
+[render.effects]
+dither = "chaotic"
+scanlines = true
+flicker = false
+vignette = true

@@ -11,13 +11,14 @@ If a compiler reads raw authored profile text, it is bypassing the 2.x engine.
 
 ## Current Implementation Status
 
-TWO-09 and TWO-10 implement the first narrow subset of this contract under `v2/targets/terminal/` and `v2/targets/wm/`.
+TWO-09, TWO-10, TWO-12, and TWO-17 implement the first narrow subset of this contract under `v2/targets/terminal/`, `v2/targets/wm/`, `v2/targets/toolkit/`, and `v2/targets/x11/`.
 
 Current truth:
 
 - implemented compilers consume the resolved profile only
-- they emit deterministic terminal, TUI, and WM theme/config artifacts into an explicit dev output root
+- they emit deterministic terminal, TUI, WM, typography, display-policy, and bounded X11 render artifacts into an explicit dev output root
 - they run only in explicit dev export mode
+- the TWO-17 X11 family additionally supports an explicit dev-only live probe path, but that probe still sits above the target compiler layer and does not make target compilers own session mutation
 
 Still not implemented:
 

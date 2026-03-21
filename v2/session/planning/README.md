@@ -30,5 +30,5 @@ Governing docs:
 
 Current rule:
 
-- TWO-13 planning is dev-only and non-destructive
+- TWO-17 planning is dev-only and non-destructive by default
 - the planner may write preview reports under `v2/out/<profile-id>/plan/`, but it must not mutate the live session

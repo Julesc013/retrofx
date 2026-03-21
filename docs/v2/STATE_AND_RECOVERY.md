@@ -104,6 +104,12 @@ Future implementation prompts should plan at least these logical records:
 Exact filenames are deferred.
 The important rule is that current-session state and install-owned state remain distinct.
 
+Current TWO-17 implementation note:
+
+- the dev-only X11 preview path now writes isolated preview metadata under `v2/out/<profile-id>/x11-render-runtime/preview-state.json`
+- that record is intentionally separate from any future real active-state or install-state records
+- it exists only to prove the shape of bounded runtime metadata and cleanup hints without touching 1.x state
+
 ## What Different Operations Act On
 
 ### `apply-now`

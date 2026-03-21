@@ -117,10 +117,11 @@ class DisplayPolicyTests(unittest.TestCase):
             },
             cwd=REPO_ROOT,
             stdin_isatty=False,
+            path_lookup=_simulated_path_lookup,
         )
         self.assertTrue(payload["ok"])
         self.assertIn("display_policy", payload["profile"])
-        self.assertEqual(payload["plan"]["display_policy"]["overall_status"], "future-render-consumer")
+        self.assertEqual(payload["plan"]["display_policy"]["overall_status"], "x11-render-live-preview-available")
 
     def test_x11_and_wayland_display_policy_interpretations_differ(self) -> None:
         x11_payload = plan_profile_session(
@@ -134,6 +135,7 @@ class DisplayPolicyTests(unittest.TestCase):
             },
             cwd=REPO_ROOT,
             stdin_isatty=False,
+            path_lookup=_simulated_path_lookup,
         )
         wayland_payload = plan_profile_session(
             FIXTURES / "warm-night-display-policy.toml",
@@ -146,12 +148,19 @@ class DisplayPolicyTests(unittest.TestCase):
             },
             cwd=REPO_ROOT,
             stdin_isatty=False,
+            path_lookup=_simulated_path_lookup,
         )
-        self.assertEqual(x11_payload["plan"]["display_policy"]["overall_status"], "future-render-consumer")
-        self.assertEqual(wayland_payload["plan"]["display_policy"]["overall_status"], "advisory-export-only")
+        self.assertEqual(x11_payload["plan"]["display_policy"]["overall_status"], "x11-render-live-preview-available")
+        self.assertEqual(wayland_payload["plan"]["display_policy"]["overall_status"], "export-only-non-x11")
 
     def test_dev_compile_entrypoint_emits_display_policy_json(self) -> None:
         with TemporaryDirectory() as tmpdir:
+            fakebin = Path(tmpdir) / "fakebin"
+            fakebin.mkdir(parents=True, exist_ok=True)
+            for command in ("picom", "xrdb", "i3-msg"):
+                path = fakebin / command
+                path.write_text("#!/usr/bin/env bash\nexit 0\n", encoding="utf-8")
+                path.chmod(0o755)
             env = dict(
                 DISPLAY=":1",
                 XDG_SESSION_TYPE="x11",
@@ -159,7 +168,7 @@ class DisplayPolicyTests(unittest.TestCase):
                 I3SOCK="/tmp/i3.sock",
                 TERM="xterm-256color",
                 PYTHONPATH=str(REPO_ROOT),
-                PATH=str(Path("/usr/bin")) + ":" + str(Path("/bin")),
+                PATH=str(fakebin),
             )
             process = subprocess.run(
                 [
@@ -181,7 +190,18 @@ class DisplayPolicyTests(unittest.TestCase):
             self.assertEqual(process.returncode, 0, msg=process.stderr)
             payload = json.loads(process.stdout)
             self.assertTrue(payload["ok"])
-            self.assertEqual(payload["display_policy"]["overall_status"], "future-render-consumer")
+            self.assertEqual(payload["display_policy"]["overall_status"], "x11-render-live-preview-available")
+
+
+def _simulated_path_lookup(name: str) -> str | None:
+    available = {
+        "picom": "/usr/bin/picom",
+        "xrdb": "/usr/bin/xrdb",
+        "i3-msg": "/usr/bin/i3-msg",
+        "swaymsg": "/usr/bin/swaymsg",
+        "waybar": "/usr/bin/waybar",
+    }
+    return available.get(name)
 
 
 if __name__ == "__main__":

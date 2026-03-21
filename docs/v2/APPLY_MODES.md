@@ -8,11 +8,12 @@ The session layer decides which mode is truthful in the current context.
 
 ## Current Implementation Status
 
-As of TWO-11:
+As of TWO-17:
 
 - `compile-only` and `export-only` now exist as real preview concepts in the dev planner
 - `apply-now` exists only as an explicit preview category for selected targets such as `i3`, `sway`, or `xresources` when the environment matches
-- no live mode mutates the user session yet
+- the bounded TWO-17 X11 slice now adds one explicit exception: a dev-only short-lived `picom` probe can validate generated X11 render artifacts in the current X11 session
+- no mode claims broad production session ownership yet
 
 ## Summary
 
@@ -54,7 +55,7 @@ Meaningful participants:
 
 - every target family, because planning exists even when no emission will occur
 
-Current TWO-11 implementation note:
+Current TWO-17 implementation note:
 
 - `v2/core/dev/plan-session` can inspect a profile, detect the environment, and build a compile-oriented preview plan without emitting target artifacts unless preview output is explicitly requested
 
@@ -90,7 +91,7 @@ Meaningful participants:
 - toolkit and desktop export targets
 - X11 artifacts intended for inspection rather than activation
 
-Current TWO-11 implementation note:
+Current TWO-17 implementation note:
 
 - the implemented dev compiler families and the session planner both remain export-oriented by default
 
@@ -131,10 +132,11 @@ Important reminder:
 - `apply-now` is capability- and environment-dependent
 - a target may support `export-only` and `install-for-session` but not truthful current-session apply
 
-Current TWO-11 implementation note:
+Current TWO-17 implementation note:
 
 - the session planner can mark `i3`, `sway`, or `xresources` as apply-preview candidates when the environment matches and the profile requests `current-session`
-- those candidates remain preview-only; no side effects happen yet
+- the planner can now also mark the bounded X11 render preview targets as explicit apply-preview candidates in X11 + `picom`
+- those candidates remain experimental and opt-in; no default session takeover happens
 
 ## 4. `install-for-session`
 

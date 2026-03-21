@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Mapping
 
-from v2.render import build_display_policy_summary
+from v2.render import build_display_policy_summary, build_x11_render_summary
 from v2.targets import TARGET_COMPILERS, list_target_families, list_targets
 
 TARGET_RULES = {
@@ -34,6 +34,20 @@ TARGET_RULES = {
     },
     "x11-display-policy": {
         "preferred_session_types": {"x11", "wayland"},
+        "apply_preview_session_types": set(),
+    },
+    "x11-picom": {
+        "preferred_session_types": {"x11"},
+        "apply_preview_session_types": {"x11"},
+        "requires_executables": {"picom"},
+    },
+    "x11-render-runtime": {
+        "preferred_session_types": {"x11"},
+        "apply_preview_session_types": {"x11"},
+        "requires_executables": {"picom"},
+    },
+    "x11-shader": {
+        "preferred_session_types": {"x11"},
         "apply_preview_session_types": set(),
     },
     "i3": {
@@ -70,6 +84,7 @@ def build_session_plan(resolved_profile: Mapping[str, Any], environment: Mapping
     persistence = str(resolved_profile["semantics"]["session"]["persistence"])
     render_mode = str(resolved_profile["semantics"]["render"]["mode"])
     display_policy = build_display_policy_summary(resolved_profile, environment)
+    x11_render = build_x11_render_summary(resolved_profile, environment)
     implemented_families = list_target_families()
     implemented_targets = list_targets()
     implemented_target_classes = sorted(
@@ -89,7 +104,7 @@ def build_session_plan(resolved_profile: Mapping[str, Any], environment: Mapping
     skipped_targets: list[dict[str, Any]] = []
     warnings: list[str] = []
     notes: list[str] = [
-        "TWO-13 planning is preview-only and does not mutate the current session.",
+        "TWO-17 planning is preview-only and does not mutate the current session unless the explicit dev-only X11 live probe is requested.",
         "Capability filtering currently reasons over implemented target families only.",
     ]
 
@@ -105,6 +120,7 @@ def build_session_plan(resolved_profile: Mapping[str, Any], environment: Mapping
             requested_by=requested_by,
             environment=environment,
             apply_mode=apply_mode,
+            x11_render=x11_render,
         )
         target_entries.append(entry)
         family_entries.setdefault(entry["family_name"], []).append(entry)
@@ -141,14 +157,15 @@ def build_session_plan(resolved_profile: Mapping[str, Any], environment: Mapping
 
     if render_mode != "passthrough":
         warnings.append(
-            "Resolved render intent is present, but TWO-13 planning still treats live render/runtime execution as future work."
+            "Resolved render intent is present and TWO-17 can now emit bounded X11 render artifacts, but live preview remains explicit and experimental."
         )
     if display_policy["requested_fields"]:
         warnings.extend(display_policy["warnings"])
+    warnings.extend(x11_render["warnings"])
 
     if apply_mode != "export-only":
         warnings.append(
-            f"`session.apply_mode = \"{apply_mode}\"` is previewed only; live apply/install orchestration is not implemented yet."
+            f"`session.apply_mode = \"{apply_mode}\"` is previewed only; live apply/install orchestration is still not implemented beyond the dev-only X11 probe path."
         )
 
     environment_capabilities = _summarize_environment_capabilities(environment)
@@ -171,6 +188,7 @@ def build_session_plan(resolved_profile: Mapping[str, Any], environment: Mapping
             "persistence": persistence,
         },
         "display_policy": display_policy,
+        "x11_render": x11_render,
         "environment_capabilities": environment_capabilities,
         "family_plans": family_plan_summary,
         "target_entries": target_entries,
@@ -191,10 +209,12 @@ def _build_target_entry(
     requested_by: list[str],
     environment: Mapping[str, Any],
     apply_mode: str,
+    x11_render: Mapping[str, Any],
 ) -> dict[str, Any]:
     rules = TARGET_RULES[target_name]
     session_type = str(environment["session_type"])
     wm_or_de = str(environment["wm_or_de"])
+    executables = dict(environment.get("executables", {}))
     reasons: list[str] = []
     warnings: list[str] = []
     plan_action = "compile-and-export"
@@ -210,23 +230,46 @@ def _build_target_entry(
     else:
         reasons.append(f"Target `{target_name}` is meaningful in the detected `{session_type}` environment.")
 
+    missing_executables = sorted(name for name in rules.get("requires_executables", set()) if not executables.get(name))
+    if missing_executables:
+        reasons.append(
+            f"Missing executable prerequisites for live preview: {', '.join(missing_executables)}."
+        )
+        warnings.append(
+            f"Target `{target_name}` remains export-only because required executable(s) are unavailable: {', '.join(missing_executables)}."
+        )
+
     if apply_mode == "current-session":
-        if _can_preview_apply_now(rules, session_type, wm_or_de):
+        if _can_preview_apply_now(rules, session_type, wm_or_de) and not missing_executables:
             plan_action = "compile-and-apply-preview"
             status_class = "partial"
             reasons.append("This target would be a current-session apply candidate once live orchestration exists.")
-            warnings.append("Preview only: TWO-13 does not execute current-session side effects.")
+            warnings.append("Preview only: TWO-17 only supports an explicit dev-only X11 live probe and does not take over the current session.")
         elif aligned:
             warnings.append(
                 "Current-session intent is requested, but this target remains export-only until live session orchestration exists."
             )
     elif apply_mode in {"installed-default", "explicit-only"} and aligned:
         warnings.append(
-            f"`session.apply_mode = \"{apply_mode}\"` is not implemented; this target remains an export-only preview in TWO-13."
+            f"`session.apply_mode = \"{apply_mode}\"` is not implemented; this target remains an export-only preview in TWO-17."
         )
 
     if target_name in {"i3", "sway", "waybar"} and session_type not in {"x11", "wayland"}:
         warnings.append("WM targets can be generated here, but the current environment does not look like a live GUI WM session.")
+
+    if target_name in {"x11-shader", "x11-picom", "x11-render-runtime"}:
+        reasons.append(
+            f"Requested render mode `{x11_render['requested_mode']}` currently compiles as `{x11_render['implemented_mode']}` in the bounded TWO-17 X11 slice."
+        )
+        if x11_render["degraded_fields"]:
+            plan_action = "compile-but-degraded"
+            status_class = "partial"
+            warnings.extend(
+                f"{degraded['path']} degraded from `{degraded['requested']}` to `{degraded['implemented_as']}`."
+                for degraded in x11_render["degraded_fields"]
+            )
+        if target_name == "x11-shader":
+            reasons.append("Shader output is always an artifact step; live preview is mediated through the paired picom/runtime targets.")
 
     return {
         "kind": "concrete-target",
@@ -265,9 +308,9 @@ def _summarize_environment_capabilities(environment: Mapping[str, Any]) -> dict[
             "environment_capable": session_type == "x11",
             "picom_available": bool(executables.get("picom")),
             "possible_if_implemented": x11_render_possible,
-            "implemented_now": False,
+            "implemented_now": True,
             "reason": (
-                "The detected environment could host an X11 compositor path, but TWO-13 still lacks the live X11 render family."
+                "The detected environment can host the bounded TWO-17 X11 render slice, including the explicit dev-only live probe path."
                 if session_type == "x11"
                 else "The detected environment is not an X11 session."
             ),

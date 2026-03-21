@@ -6,7 +6,10 @@ Purpose:
 
 Implemented now:
 
-- `x11-display-policy`: advisory/export-only packaging of resolved display policy for future X11/render consumers
+- `x11-shader`: deterministic GLSL shader output for the bounded TWO-17 X11 render subset
+- `x11-picom`: deterministic picom config output pointing at the generated shader
+- `x11-render-runtime`: runtime metadata for the dev-only X11 preview path
+- `x11-display-policy`: explicit display-policy export alongside the real bounded render outputs
 
 What belongs here:
 
@@ -28,4 +31,6 @@ Governing docs:
 
 Later prompts should implement:
 
-- truthful X11 adapters that consume resolved render policy and respect planner-owned compositor requirements
+- broader palette families beyond `vga16`
+- stronger runtime validation and cleanup helpers
+- truthful stable X11 lifecycle ownership once session orchestration is ready

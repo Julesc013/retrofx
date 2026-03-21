@@ -13,12 +13,14 @@ It is a first-class subsystem with explicit ownership and safety rules.
 
 ## Current Implementation Status
 
-As of TWO-16:
+As of TWO-17:
 
 - `v2/session/environment/` implements best-effort environment detection for the dev scaffold
 - `v2/session/planning/` implements non-destructive capability-aware planning against the resolved profile and implemented target families
 - `v2/core/dev/plan-session` exposes that planning layer as a dev-only preview surface
 - planner output now includes structured display-policy interpretation in addition to target-family decisions
+- planner output now also includes explicit `x11_render` capability summaries for the bounded TWO-17 X11 family
+- `v2/session/dev/preview_x11_render.py` now stages real X11 render artifacts and can run an explicit short-lived `picom` probe without touching 1.x state
 - `v2/session/install/` now also contains a separate experimental user-local bundle/install slice for `retrofx-v2-dev`
 - live apply, session-default install orchestration, rollback, repair, and integration execution are still not implemented
 
@@ -86,9 +88,10 @@ The session subsystem should eventually produce:
 - integration-hook records
 - warnings about skipped, degraded, or partial lifecycle outcomes
 
-Current TWO-16 truth:
+Current TWO-17 truth:
 
 - the implemented planner produces environment records, per-target preview decisions, display-policy interpretation, degradation warnings, and optional preview bundles
+- the implemented X11 preview path also writes isolated preview-state metadata under the 2.x output tree
 - it does not yet produce active-state or recovery records
 - experimental install-state records now exist, but only through the separate TWO-16 bundle/install helpers rather than through session execution
 

@@ -23,11 +23,11 @@ Render answers:
 - whether scanlines, dithering, glow, or display transforms should apply
 - how a render-capable host should transform pixels
 
-Current TWO-13 implementation note:
+Current TWO-17 implementation note:
 
 - theme compilation is already real for terminal, WM, and typography-policy outputs
-- render is still mostly advisory, but display-policy values are now resolved, planned, and exported in the first X11/render-adjacent compiler slice
-- this remains export-oriented and non-destructive, not live global display control
+- render is now real in a bounded X11 slice: shader, picom config, runtime metadata, and display-policy artifacts can be compiled from the resolved model
+- this remains experimental, X11-only, and non-destructive by default; it is not live global display control
 
 ## Where They Overlap
 

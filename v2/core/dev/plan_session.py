@@ -16,7 +16,7 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_OUT_ROOT = REPO_ROOT / "v2" / "out"
 IMPLEMENTATION_INFO = {
     "status": "experimental-dev-only",
-    "prompt": "TWO-14",
+    "prompt": "TWO-17",
     "surface": "session-planning-preview",
     "implemented_targets": list_targets(),
     "families": list_target_families(),
@@ -25,7 +25,7 @@ IMPLEMENTATION_INFO = {
         "live apply/off/install behavior",
         "session wrapper mutation",
         "artifact-plan driven lifecycle execution",
-        "live X11 render family",
+        "Wayland render family",
         "global toolkit orchestration and login target families",
     ],
 }
@@ -39,6 +39,7 @@ def plan_profile_session(
     env: Mapping[str, str] | None = None,
     cwd: str | Path | None = None,
     stdin_isatty: bool | None = None,
+    path_lookup: Any | None = None,
     out_root: str | Path | None = None,
     write_preview: bool = False,
 ) -> dict[str, Any]:
@@ -65,7 +66,7 @@ def plan_profile_session(
     resolved_profile = pipeline_result.resolved_profile
     assert resolved_profile is not None
 
-    environment = detect_environment(env=env, cwd=cwd, stdin_isatty=stdin_isatty)
+    environment = detect_environment(env=env, cwd=cwd, stdin_isatty=stdin_isatty, path_lookup=path_lookup)
     plan = build_session_plan(resolved_profile, environment)
     preview_bundle = None
     if write_preview:
@@ -97,7 +98,7 @@ def plan_profile_session(
         "environment": environment,
         "plan": plan,
         "preview_bundle": preview_bundle,
-        "note": "This is a dev-only planning preview. It does not apply or install anything.",
+        "note": "This is a dev-only planning preview. It does not apply or install anything except for the separate explicit X11 live probe path added in TWO-17.",
     }
 
 
@@ -184,6 +185,8 @@ def _render_summary_text(payload: Mapping[str, Any]) -> str:
         f"session_type: {environment['session_type']}",
         f"wm_or_de: {environment['wm_or_de']}",
         f"requested_targets: {', '.join(plan['requested_targets']) or '(none)'}",
+        f"render_mode: {plan['x11_render']['requested_mode']} -> {plan['x11_render']['implemented_mode']}",
+        f"x11_render_status: {plan['x11_render']['overall_status']}",
         f"terminal_primary: {payload['profile']['typography']['terminal_primary']}",
         f"ui_sans: {payload['profile']['typography']['ui_sans']}",
         (

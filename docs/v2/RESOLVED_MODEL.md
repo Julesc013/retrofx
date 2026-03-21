@@ -9,9 +9,10 @@ TWO-08 implements the first experimental resolved-profile scaffold in `v2/core/r
 That implementation produces the pre-capability-filtering semantic model plus explicit placeholder sections for capability context, target planning, and artifact planning.
 It is intentionally incomplete and dev-only.
 
-Current TWO-13 implementation note:
+Current TWO-17 implementation note:
 
 - resolved typography and render display policy are now concrete enough to drive real export-only compiler slices
+- resolved render mode, effects, palette intent, and display policy are now concrete enough to drive bounded real X11 render compiler slices
 - capability-filtered target plans and artifact plans are still partial previews rather than full lifecycle truth
 
 ## Layer Boundaries
@@ -127,11 +128,11 @@ Canonical metadata copied from the normalized profile:
   - `blue_light_reduction`
   - `tint_bias`
 
-Current TWO-13 implementation note:
+Current TWO-17 implementation note:
 
 - these display-policy fields are resolved and inspectable today
-- the first advisory/export-only compiler slice now consumes them for X11/render-adjacent artifacts
-- live runtime consumption remains future work
+- the first bounded X11 render compiler slice now consumes them for shader, picom, runtime, and display-policy artifacts
+- broad live runtime consumption remains future work outside the dev-only X11 probe path
 
 ### 5. `semantics.chrome`
 

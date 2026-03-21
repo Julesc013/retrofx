@@ -7,9 +7,15 @@ from typing import Any, Mapping
 
 from v2.targets.interfaces import TargetCompileResult
 from v2.targets.x11.display_policy import X11DisplayPolicyCompiler
+from v2.targets.x11.picom import X11PicomCompiler
+from v2.targets.x11.runtime import X11RenderRuntimeCompiler
+from v2.targets.x11.shader import X11ShaderCompiler
 
 X11_COMPILERS = {
     "x11-display-policy": X11DisplayPolicyCompiler(),
+    "x11-picom": X11PicomCompiler(),
+    "x11-render-runtime": X11RenderRuntimeCompiler(),
+    "x11-shader": X11ShaderCompiler(),
 }
 
 
@@ -21,6 +27,7 @@ def compile_resolved_profile_targets(
     resolved_profile: Mapping[str, Any],
     out_root: str | Path,
     target_names: list[str] | None = None,
+    compile_context: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     profile_id = str(resolved_profile["identity"]["id"])
     base_output_root = Path(out_root)
@@ -34,7 +41,7 @@ def compile_resolved_profile_targets(
     results: list[TargetCompileResult] = []
     for target_name in selected_targets:
         compiler = X11_COMPILERS[target_name]
-        results.append(compiler.compile(resolved_profile, profile_output_root))
+        results.append(compiler.compile(resolved_profile, profile_output_root, compile_context=compile_context))
 
     return {
         "profile_id": profile_id,

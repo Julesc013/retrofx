@@ -8,10 +8,11 @@ Implemented now:
 
 - `resolve_profile.py`: load, validate, normalize, and resolve a 2.x profile fixture or file
 - `resolve-profile`: thin shell wrapper around the Python module
-- `compile_targets.py`: compile the implemented terminal/TUI, WM, typography-policy, and advisory display-policy target families into `v2/out/<profile-id>/...`
+- `compile_targets.py`: compile the implemented terminal/TUI, WM, typography-policy, bounded X11 render, and display-policy target families into `v2/out/<profile-id>/...`
 - `compile-targets`: thin shell wrapper around the compiler entrypoint
 - `plan_session.py`: detect the environment, build a capability-aware session plan, surface resolved typography and display policy, and optionally write a preview bundle
 - `plan-session`: thin shell wrapper around the session planner
+- `v2/session/dev/preview_x11_render.py`: explicit dev-only X11 render staging plus optional bounded `picom` probe
 - `list_packs.py`: list built-in local 2.x packs from `v2/packs/`
 - `list-packs`: thin shell wrapper around the local pack listing entrypoint
 - `show_pack.py`: inspect one local pack manifest and its curated profiles
@@ -27,7 +28,7 @@ What does not belong here:
 
 - production CLI commands
 - production target emission workflows
-- live apply or install behavior
+- default live apply or install behavior
 
 Governing docs:
 

@@ -1,0 +1,17 @@
+schema = "retrofx.profile/v2alpha1"
+
+[identity]
+id = "passthrough-minimal"
+name = "Passthrough Minimal"
+family = "modern-minimal"
+strictness = "practical-daily-driver"
+
+[color.semantic]
+bg0 = "#101214"
+fg0 = "#d7dde4"
+accent_primary = "#8aa9c8"
+
+[session]
+targets = ["x11", "terminal"]
+apply_mode = "export-only"
+persistence = "export-only"

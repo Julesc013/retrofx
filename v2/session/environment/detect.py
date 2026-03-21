@@ -31,7 +31,7 @@ def detect_environment(
 
     notes: list[str] = [
         "Environment detection is best-effort and uses local process context only.",
-        "TWO-13 planning is dev-only and does not mutate the live session.",
+        "TWO-17 planning is dev-only and does not mutate the live session unless an explicit X11 live probe is requested.",
     ]
     warnings: list[str] = []
 
@@ -123,7 +123,7 @@ def detect_environment(
             "x11_render_path_environment": {
                 "session_capable": session_type == "x11",
                 "picom_available": executables["picom"],
-                "implemented_now": False,
+                "implemented_now": True,
             },
         },
         "notes": notes,

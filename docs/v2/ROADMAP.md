@@ -5,19 +5,19 @@ Each phase should narrow uncertainty before more implementation surface is added
 
 ## Current Progress
 
-Status after TWO-16:
+Status after TWO-17:
 
 - 2.0-C has an experimental implementation foothold for load, validate, normalize, and resolve in `v2/core/`
 - 2.0-D has started with the first terminal/TUI compiler family under `v2/targets/terminal/`
 - 2.0-D now also has the first WM theme/config compiler family under `v2/targets/wm/`
-- 2.0-D now has the first X11/render-adjacent advisory compiler target for display policy under `v2/targets/x11/`
+- 2.0-D now has the first real bounded X11 render/compiler family under `v2/targets/x11/`
 - 2.0-E has begun narrowly with non-destructive environment detection and capability-aware planning preview under `v2/session/`
 - 2.0-F has begun narrowly with concrete typography resolution and export-only font-policy artifacts
 - 2.0-F now also includes the first concrete display-policy resolution and export slice
 - 2.0-G has now started narrowly with a local pack manifest format, curated built-in packs, and pack-aware dev resolution under `v2/packs/`
 - 2.0-G now also includes the first 1.x compatibility inspection and draft migration slice under `v2/compat/`
 - 2.0-G now also includes deterministic dev bundles plus experimental user-local install, uninstall, and status helpers under `v2/session/install/` and `scripts/dev/`
-- live session orchestration and broader target families remain future phases
+- live session orchestration, Wayland render, and broader target families remain future phases
 
 ## 2.0-A Product And Spec Design
 
@@ -95,7 +95,8 @@ Current implementation note:
 - TWO-10 extends that same export-oriented slice into WM theme/config compilers for `i3`, `sway`, and `waybar`
 - TWO-12 deepens the terminal slice with resolved typography consumption
 - TWO-13 adds an advisory X11/render-adjacent display-policy target without claiming live render ownership
-- TTY, `tuigreet`, install/apply, and full X11 runtime ownership are still future work
+- TWO-17 turns that into the first real bounded X11 render slice with shader, picom, runtime metadata, and an explicit dev-only live probe path
+- TTY, `tuigreet`, stable install/apply, and Wayland render are still future work
 
 ## 2.0-E Session Orchestration Layer
 
@@ -118,6 +119,7 @@ Current implementation note:
 
 - TWO-11 starts this phase with environment detection and preview planning only
 - TWO-13 extends that preview layer with structured display-policy interpretation
+- TWO-17 adds the first explicit dev-only X11 live probe surface without claiming full session orchestration ownership
 - live apply, install, off, repair, and integration hooks are still future work
 
 ## 2.0-F Richer Theming And Display Policy
