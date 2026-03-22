@@ -15,7 +15,7 @@ It keeps the broader internal surface from being mistaken for the outside-facing
 - version: `2.0.0-alpha.internal.2`
 - status label: `internal-alpha`
 - intended surface: `scripts/dev/retrofx-v2`
-- current prompt milestone in code metadata: `TWO-33`
+- current prompt milestone in code metadata: `TWO-35`
 - matching local tag for this exact version: none
 - latest historical local alpha tag: `v2.0.0-alpha.internal.1`
 - note: the current `main` HEAD uses this identity by default, but it is not represented by a current local tag

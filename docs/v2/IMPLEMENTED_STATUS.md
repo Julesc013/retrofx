@@ -102,7 +102,7 @@ Still intentionally bounded:
 - `package-alpha` now rejects pre-beta, beta, or stable-looking version or status overrides so the current internal package surface cannot fake a public-facing maturity level
 - `package-technical-beta` now produces a local copied-toolchain candidate package and keeps the explicit X11 probe plus migration tooling outside the public-facing support promise
 - the first limited technical-beta execution cycle has now been run against the tagged candidate package, with structured diagnostics evidence under the new technical-beta matrix and blocker docs
-- the rapid merged-`main` execution pass has now re-run that surface directly on the current branch state and recorded one short remediation list before broader beta stabilization should be reconsidered
+- the real merged-`main` technical-beta execution pass has now exercised the copied-toolchain package directly, confirmed end-to-end technical-beta install metadata, and shifted the next-stage gate from immediate remediation to broader evidence collection
 - the default repo-local release output path is now `v2/releases/internal-alpha/`, which is treated as generated machine-local output rather than committed source
 
 Still not implemented:
@@ -139,7 +139,7 @@ Related truth docs:
 - limited public technical beta candidate ready: yes
 - limited technical beta continuation: yes
 - broader beta stabilization: no
-- another fast remediation cycle before broader beta stabilization: yes
+- another fast remediation cycle before broader beta stabilization: no
 - pre-beta stabilization: no
 - broader testing: no
-- main reasons to avoid broader testing: live support remains intentionally narrow to the technical-beta matrix, the fallback technical-beta install path still leaks internal developer-line metadata, lower-level surfaced JSON still leaks prompt-era identifiers, real Wayland-host live-runtime evidence remains out of scope, and migration validation breadth remains limited
+- main reasons to avoid broader testing: live support remains intentionally narrow to the technical-beta matrix, there is still no outside-tester report corpus, lower-level surfaced JSON still leaks prompt-era identifiers, real Wayland-host live-runtime evidence remains out of scope, and migration validation breadth remains limited

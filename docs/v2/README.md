@@ -17,7 +17,7 @@ As of the current `main` branch state:
 - the latest local `v2.0.0-techbeta.1` tag is a candidate snapshot, not proof that the current `main` HEAD is identical to that tagged build
 - limited technical beta continuation is approved
 - broader beta stabilization is not approved
-- one fast remediation cycle is now recommended before revisiting broader beta stabilization
+- the next step is continued limited technical beta with real outside-tester evidence collection, not an immediate forced remediation loop
 
 If docs seem to conflict, trust these first:
 
@@ -33,6 +33,8 @@ If docs seem to conflict, trust these first:
 - [IMPLEMENTED_STATUS.md](IMPLEMENTED_STATUS.md)
 - [EXPERIMENTAL_STATUS.md](EXPERIMENTAL_STATUS.md)
 - [CURRENT_EXECUTION_BASELINE.md](CURRENT_EXECUTION_BASELINE.md)
+- [TECHNICAL_BETA_OPERATIONS.md](TECHNICAL_BETA_OPERATIONS.md)
+- [LIMITED_TECHNICAL_BETA_RUNBOOK.md](LIMITED_TECHNICAL_BETA_RUNBOOK.md)
 - [TECHNICAL_BETA_READINESS.md](TECHNICAL_BETA_READINESS.md)
 - [TECHNICAL_BETA_MATRIX.md](TECHNICAL_BETA_MATRIX.md)
 - [BROADER_BETA_STABILIZATION_READINESS.md](BROADER_BETA_STABILIZATION_READINESS.md)
@@ -67,6 +69,8 @@ If docs seem to conflict, trust these first:
 - [INTERNAL_ALPHA_RUNBOOK.md](INTERNAL_ALPHA_RUNBOOK.md)
 - [TECHNICAL_BETA_NOTES.md](TECHNICAL_BETA_NOTES.md)
 - [TECHNICAL_BETA_CHECKLIST.md](TECHNICAL_BETA_CHECKLIST.md)
+- [TECHNICAL_BETA_OPERATIONS.md](TECHNICAL_BETA_OPERATIONS.md)
+- [LIMITED_TECHNICAL_BETA_RUNBOOK.md](LIMITED_TECHNICAL_BETA_RUNBOOK.md)
 - [TECHNICAL_BETA_CANDIDATE_NOTES.md](TECHNICAL_BETA_CANDIDATE_NOTES.md)
 - [TECHNICAL_BETA_CANDIDATE_SUMMARY.md](TECHNICAL_BETA_CANDIDATE_SUMMARY.md)
 - [TECHNICAL_BETA_RELEASE_CHECKLIST.md](TECHNICAL_BETA_RELEASE_CHECKLIST.md)
@@ -119,7 +123,8 @@ Current packaging and circulation truth:
 
 - `package-alpha` remains the internal developer-line package flow
 - `package-technical-beta` builds the narrower copied-toolchain package for advanced testers
-- the rapid `main`-branch execution pass confirmed continued limited technical beta, but it also exposed one short remediation list before broader beta stabilization should be discussed again
+- the real `main`-branch copied-toolchain execution pass confirmed continued limited technical beta and removed the earlier package or install metadata blocker
+- broader beta stabilization is still blocked by evidence breadth, not by an immediate package-surface breakage
 
 ## Surfaces You Should Not Confuse
 
@@ -189,4 +194,4 @@ For those questions, use the current-truth docs listed at the top of this file.
 1. `scripts/dev/retrofx-v2 package-technical-beta --pack modern-minimal --profile-id warm-night`
 2. `<package-dir>/bin/retrofx-v2-techbeta status`
 3. `<package-dir>/bin/retrofx-v2-techbeta smoke --pack modern-minimal --profile-id warm-night`
-4. read [TECHNICAL_BETA_EXECUTION_PLAN.md](TECHNICAL_BETA_EXECUTION_PLAN.md) and [TECHNICAL_BETA_MATRIX.md](TECHNICAL_BETA_MATRIX.md)
+4. read [LIMITED_TECHNICAL_BETA_RUNBOOK.md](LIMITED_TECHNICAL_BETA_RUNBOOK.md), [TECHNICAL_BETA_OPERATIONS.md](TECHNICAL_BETA_OPERATIONS.md), [TECHNICAL_BETA_EXECUTION_PLAN.md](TECHNICAL_BETA_EXECUTION_PLAN.md), and [TECHNICAL_BETA_MATRIX.md](TECHNICAL_BETA_MATRIX.md)

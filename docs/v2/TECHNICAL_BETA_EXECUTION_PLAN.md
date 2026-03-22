@@ -1,209 +1,221 @@
 # RetroFX 2.x Technical Beta Execution Plan
 
-This document defines the rapid technical-beta execution set for the merged `main` branch.
+This document defines the real limited technical-beta execution set for the merged `main` branch.
 
-This is an execution document, not a feature plan.
-It is deliberately small enough to run in one operator pass and precise enough to support blocker triage.
+It is based on the copied-toolchain package actually exercised on 2026-03-22, not on a branch-era plan.
 
-Operational note:
+Current evidence root:
 
-- there is no dedicated `TECHNICAL_BETA_OPERATIONS.md` on this branch right now
-- operational guidance is currently split across this plan, [TECHNICAL_BETA_RELEASE_CHECKLIST.md](TECHNICAL_BETA_RELEASE_CHECKLIST.md), [TECHNICAL_BETA_NOTES.md](TECHNICAL_BETA_NOTES.md), and the technical-beta templates and triage docs
+- `v2/releases/reports/technical-beta-main-20260322-094027Z`
 
-Current rapid-pass evidence root:
+Operational support docs:
 
-- `v2/releases/reports/technical-beta-exec-20260322-072746Z`
+- [TECHNICAL_BETA_OPERATIONS.md](TECHNICAL_BETA_OPERATIONS.md)
+- [LIMITED_TECHNICAL_BETA_RUNBOOK.md](LIMITED_TECHNICAL_BETA_RUNBOOK.md)
 
 ## Audience
 
-The limited technical beta is for:
+This line is for:
 
-- technically literate testers comfortable with temp-HOME workflows
-- testers able to read machine-readable JSON output and explicit warnings
-- testers who understand that 1.x remains the production line
+- advanced testers comfortable with temp-HOME or user-local testing
+- testers willing to read explicit JSON status, warnings, and diagnostics output
+- testers who understand that `1.x` remains the production line
 
 It is not for:
 
 - general users
-- testers expecting global desktop integration
 - testers expecting live Wayland ownership
+- testers expecting broad migration guarantees
 
-## Rapid Scenario Set
+## Executed Scenario Set
 
-### A. Core inspection
-
-Commands:
-
-- `scripts/dev/retrofx-v2 --help`
-- `scripts/dev/retrofx-v2 status`
-- `scripts/dev/retrofx-v2-techbeta --help`
-- `scripts/dev/retrofx-v2-techbeta status`
-
-Expected:
-
-- help text is present and the outside-facing wrapper remains narrower than the internal surface
-- machine-readable status distinguishes the internal developer line from the technical-beta line
-
-Evidence:
-
-- captured help output
-- captured status JSON
-
-### B. CRT profile resolve, plan, and compile
+### A. Package and wrapper inspection
 
 Commands:
 
-- `scripts/dev/retrofx-v2-techbeta resolve --pack crt-core --profile-id green-crt`
-- `scripts/dev/retrofx-v2-techbeta plan --pack crt-core --profile-id green-crt --write-preview --out-root <temp>`
-- `scripts/dev/retrofx-v2-techbeta compile --pack crt-core --profile-id green-crt --out-root <temp>`
+- `scripts/dev/retrofx-v2 package-technical-beta --pack modern-minimal --profile-id warm-night --package-root <report>/packages`
+- `<package-dir>/bin/retrofx-v2-techbeta --help`
+- `<package-dir>/bin/retrofx-v2-techbeta status`
 
 Expected:
 
-- the retro-style profile resolves cleanly
-- plan output remains explicit
-- compile emits deterministic artifacts
+- package generation succeeds from a clean `main` tree
+- the packaged wrapper exposes only the narrowed technical-beta surface
+- status reports `technical-beta` identity and the limited support matrix
 
 Evidence:
 
-- resolve JSON
-- plan JSON
-- compile JSON
+- `commands/package_technical_beta.*`
+- `commands/techbeta_help.*`
+- `commands/techbeta_status.*`
+- `packages/.../package-manifest.json`
 
-### C. Modern or minimal profile resolve, plan, and compile
+### B. Supported smoke path
 
 Commands:
 
-- `scripts/dev/retrofx-v2-techbeta resolve --pack modern-minimal --profile-id warm-night`
-- `scripts/dev/retrofx-v2-techbeta plan --pack modern-minimal --profile-id warm-night --write-preview --out-root <temp>`
-- `scripts/dev/retrofx-v2-techbeta compile --pack modern-minimal --profile-id warm-night --out-root <temp>`
+- `<package-dir>/bin/retrofx-v2-techbeta smoke --pack modern-minimal --profile-id warm-night --out-root <report>/smoke-out`
 
 Expected:
 
-- the modern profile resolves cleanly
-- plan output remains non-destructive and capability-aware
-- compile emits toolkit, WM, terminal, and X11-adjacent outputs deterministically
+- the copied-toolchain smoke path succeeds end to end without destructive side effects
 
 Evidence:
 
-- resolve JSON
-- plan JSON
-- compile JSON
-- output inventory from diagnostics
+- `commands/techbeta_smoke.*`
+- `smoke-out/`
 
-### D. Bounded activation
+### C. CRT resolve and plan
 
 Commands:
 
-- `scripts/dev/retrofx-v2-techbeta apply --pack crt-core --profile-id green-crt`
-- `scripts/dev/retrofx-v2-techbeta status`
-- `scripts/dev/retrofx-v2-techbeta off`
+- `<package-dir>/bin/retrofx-v2-techbeta resolve --pack crt-core --profile-id green-crt`
+- `<package-dir>/bin/retrofx-v2-techbeta plan --pack crt-core --profile-id green-crt --write-preview --out-root <report>/out-crt`
 
 Expected:
 
-- apply remains bounded to 2.x-owned roots
-- `status` reflects the active state truthfully
-- `off` removes only 2.x-owned active state
+- the retro profile resolves deterministically
+- plan output clearly separates apply-preview, degraded, and export-only targets
 
 Evidence:
 
-- apply JSON
-- post-apply status JSON
-- off JSON
-- captured current-state or manifest files from diagnostics
+- `commands/techbeta_resolve_crt.*`
+- `commands/techbeta_plan_crt.*`
+- `out-crt/`
 
-### E. Package, bundle, and temp-HOME install path
+### D. Modern compile and artifact inspection
 
 Commands:
 
-- `scripts/dev/retrofx-v2 package-technical-beta --pack modern-minimal --profile-id warm-night --package-root <temp>`
-- fallback if packaging is intentionally blocked on the current tree:
-- `scripts/dev/retrofx-v2-techbeta bundle --pack modern-minimal --profile-id warm-night --out-root <temp>`
-- `HOME=<temp-home> scripts/dev/retrofx-v2-techbeta install <bundle-dir>`
-- `HOME=<temp-home> scripts/dev/retrofx-v2-techbeta diagnostics --pack modern-minimal --profile-id warm-night --output-root <temp> --label <label>`
-- `HOME=<temp-home> scripts/dev/retrofx-v2-techbeta uninstall modern-minimal--warm-night`
+- `<package-dir>/bin/retrofx-v2-techbeta compile --pack modern-minimal --profile-id warm-night --out-root <report>/out-modern`
 
 Expected:
 
-- a clean candidate tree can package reproducibly
-- if current operator state blocks packaging, the block is explicit rather than ambiguous
-- bundle, install, diagnostics, and uninstall remain bounded and reversible
+- deterministic terminal, WM, toolkit-export, display-policy, and X11-adjacent artifacts are emitted
+- advisory exports remain clearly advisory
 
 Evidence:
 
-- package or bundle JSON
-- install JSON
-- diagnostics bundle
-- uninstall JSON
+- `commands/techbeta_compile_modern.*`
+- `out-modern/`
 
-### F. X11 and degraded-path planning
+### E. Bounded activation
 
 Commands:
 
-- `scripts/dev/retrofx-v2 preview-x11 v2/tests/fixtures/passthrough-minimal.toml --out-root <temp>`
-- `WAYLAND_DISPLAY=wayland-0 XDG_SESSION_TYPE=wayland XDG_CURRENT_DESKTOP=sway ... scripts/dev/retrofx-v2-techbeta plan --pack modern-minimal --profile-id warm-night --write-preview --out-root <temp>`
+- `<package-dir>/bin/retrofx-v2-techbeta apply --pack crt-core --profile-id green-crt`
+- `<package-dir>/bin/retrofx-v2-techbeta status`
+- `<package-dir>/bin/retrofx-v2-techbeta off`
 
 Expected:
 
-- the internal X11 preview path works where supported
-- the degraded Wayland plan remains honest and export-oriented
+- live checks remain bounded to managed `retrofx-v2-dev` roots
+- post-apply status stays truthful
+- `off` removes only 2.x-owned activation state
 
 Evidence:
 
-- preview JSON
-- degraded plan JSON
+- `commands/techbeta_apply_x11.*`
+- `commands/techbeta_status_after_apply.*`
+- `commands/techbeta_off_x11.*`
 
-### G. Compatibility inspection
+### F. Temp-HOME install diagnostics and cleanup
+
+Commands:
+
+- `<package-dir>/bin/retrofx-v2-techbeta install <package-dir>/bundle`
+- `<package-dir>/bin/retrofx-v2-techbeta diagnostics --pack modern-minimal --profile-id warm-night --output-root <report>/diagnostics --label installed-main`
+- `<package-dir>/bin/retrofx-v2-techbeta uninstall modern-minimal--warm-night`
+
+Expected:
+
+- install records technical-beta release metadata, not internal-alpha metadata
+- diagnostics bundles capture install-state and package metadata
+- uninstall removes only bounded install artifacts
+
+Evidence:
+
+- `commands/techbeta_install_bundle.*`
+- `commands/techbeta_diagnostics_installed.*`
+- `commands/techbeta_uninstall_bundle.*`
+- `diagnostics/20260322-094028z--installed-main/`
+
+### G. Active diagnostics capture
+
+Commands:
+
+- `<package-dir>/bin/retrofx-v2-techbeta diagnostics --pack crt-core --profile-id green-crt --output-root <report>/diagnostics --label active-main`
+
+Expected:
+
+- diagnostics are usable after bounded activation and capture current activation truth
+
+Evidence:
+
+- `commands/techbeta_diagnostics_active.*`
+- `diagnostics/20260322-094027z--active-main/`
+
+### H. Degraded Wayland plan
+
+Commands:
+
+- `WAYLAND_DISPLAY=wayland-0 XDG_SESSION_TYPE=wayland XDG_CURRENT_DESKTOP=sway ... <package-dir>/bin/retrofx-v2-techbeta plan --pack modern-minimal --profile-id warm-night --write-preview --out-root <report>/out-wayland`
+
+Expected:
+
+- the scenario succeeds only as degraded or export-only
+- live ownership is not implied
+
+Evidence:
+
+- `commands/techbeta_wayland_plan.*`
+- `out-wayland/`
+
+### I. Internal supplementary checks: migration inspection and X11 preview
 
 Commands:
 
 - `scripts/dev/retrofx-v2 migrate inspect-1x profiles/packs/core/ibm-vga16.toml --compact`
+- `scripts/dev/retrofx-v2 preview-x11 v2/tests/fixtures/passthrough-minimal.toml --out-root <report>/preview-x11`
 
 Expected:
 
-- the current migration inspection path remains deterministic and explicit about lossy mappings
+- internal maintainer-only surfaces remain deterministic
+- these checks do not expand the outside-facing support promise
 
 Evidence:
 
-- migration inspection JSON
+- `commands/dev_migrate_inspect.*`
+- `commands/dev_preview_x11.*`
+- `preview-x11/`
 
-## Recommended Environments
+### J. Regression suite
 
-- validated supported:
-  - X11 plus `i3`-like
-  - temp-HOME install mode
-- degraded/export-only:
-  - Wayland plus `sway`-like
-- outside current candidate promise:
-  - Wayland plus GNOME or Plasma-like live runtime ownership
-  - broad migration assurance
-  - explicit X11 live probe use by outside testers
+Commands:
 
-## Evidence To Capture
+- `./v2/tests/test.sh`
 
-- current branch revision and status output
-- help output for both entrypoints
-- command stdout, stderr, and exit codes
-- package or bundle manifest paths where applicable
-- plan output for supported and degraded scenarios
-- current-state and active-manifest evidence for bounded runtime checks
-- diagnostics bundle paths
-- install-state and uninstall summaries where relevant
-- migration inspection output
-- X11 preview output where supported
+Expected:
+
+- the Python test suite stays green while the technical-beta docs and package surface are updated
+
+Evidence:
+
+- test output from the current run
 
 ## Result Classes
 
-- `pass`: expected workflow completed and output matched the declared support matrix
-- `degraded-pass`: the workflow completed and reported a degraded or export-only condition honestly
-- `partial`: the workflow completed but omitted important expected evidence or required manual interpretation
-- `blocker`: the workflow failed in a way that makes the limited technical beta unsafe, misleading, or unfit for outside advanced testers
-- `blocked`: the workflow could not be completed because a declared gate, operator-state restriction, or environment limitation prevented it
+- `pass`: the workflow completed and matched the declared support matrix
+- `degraded-pass`: the workflow completed and the degraded or export-only condition was surfaced honestly
+- `partial`: the workflow completed but expected evidence was incomplete
+- `fail`: the workflow completed with incorrect or misleading behavior
+- `blocked`: the workflow could not be run because of an environment or gate restriction
+- `not-tested`: the workflow was intentionally skipped
 
-## Explicitly Out Of Scope
+## Out Of Scope
 
-- replacing 1.x
-- public general-user beta claims
+- general-public beta claims
 - live Wayland ownership
-- global desktop mutation
-- broad migration compatibility guarantees
-- external automation or automatic publication
+- broad migration assurance
+- replacement of `1.x`
+- automatic publication

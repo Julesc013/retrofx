@@ -6,6 +6,12 @@ This is still experimental.
 It is not a general-public beta.
 It does not replace RetroFX 1.x.
 
+Use these docs together:
+
+- [LIMITED_TECHNICAL_BETA_RUNBOOK.md](LIMITED_TECHNICAL_BETA_RUNBOOK.md)
+- [TECHNICAL_BETA_CHECKLIST.md](TECHNICAL_BETA_CHECKLIST.md)
+- [TECHNICAL_BETA_OPERATIONS.md](TECHNICAL_BETA_OPERATIONS.md)
+
 ## Intended Tester Audience
 
 - advanced testers
@@ -50,6 +56,10 @@ These unsupported areas are not bugs for the limited technical-beta line:
 4. `bin/retrofx-v2-techbeta diagnostics --pack modern-minimal --profile-id warm-night --label first-pass`
 5. `bin/retrofx-v2-techbeta uninstall <bundle-id>`
 6. on supported X11 only, `bin/retrofx-v2-techbeta apply --pack modern-minimal --profile-id warm-night` followed by `bin/retrofx-v2-techbeta off`
+
+Real packaged execution evidence for this line is recorded at:
+
+- `v2/releases/reports/technical-beta-main-20260322-094027Z`
 
 ## Revert And Cleanup
 

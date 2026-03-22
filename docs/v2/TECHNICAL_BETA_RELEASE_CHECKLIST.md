@@ -27,7 +27,7 @@ It does not publish anything automatically.
 - version and status metadata included
 - copied-toolchain wrapper included
 - package manifest included
-- notes, checklist, and readiness docs included
+- notes, checklist, operations, runbook, and readiness docs included
 
 ## Decision
 

@@ -127,9 +127,11 @@ class AlphaSupportTests(unittest.TestCase):
             "docs/v2/PUBLIC_BETA_RISK_SURFACE.md": ["retrofx-v2-techbeta", "candidate surface", "internal-only"],
             "docs/v2/PUBLIC_BETA_GATES.md": ["Documentation", "Workflow Safety", "limited public technical beta: ready"],
             "docs/v2/PUBLIC_BETA_BLOCKERS.md": ["None open for the limited technical-beta line", "public-beta-blocker", "X11"],
-            "docs/v2/PUBLIC_BETA_READINESS.md": ["READY_FOR_LIMITED_PUBLIC_TECHNICAL_BETA=yes", "limited public technical beta: yes", "copied-toolchain"],
+            "docs/v2/PUBLIC_BETA_READINESS.md": ["READY_FOR_LIMITED_PUBLIC_TECHNICAL_BETA=yes", "continue limited public technical beta: yes", "outside tester evidence"],
             "docs/v2/TECHNICAL_BETA_NOTES.md": ["advanced testers", "diagnostics", "unsupported"],
             "docs/v2/TECHNICAL_BETA_CHECKLIST.md": ["status", "diagnostics", "cleanup"],
+            "docs/v2/TECHNICAL_BETA_OPERATIONS.md": ["advanced testers", "retrofx-v2-techbeta", "diagnostics"],
+            "docs/v2/LIMITED_TECHNICAL_BETA_RUNBOOK.md": ["Obtain The Current Package", "Diagnostics Capture", "Cleanup"],
             "docs/v2/TECHNICAL_BETA_CANDIDATE_NOTES.md": ["TECHNICAL_BETA_CANDIDATE_READY=yes", "2.0.0-techbeta.1", "X11"],
             "docs/v2/TECHNICAL_BETA_CANDIDATE_SUMMARY.md": ["TECHNICAL_BETA_CANDIDATE_READY=yes", "v2.0.0-techbeta.1", "technical-beta"],
             "docs/v2/TECHNICAL_BETA_RELEASE_CHECKLIST.md": ["public-beta-blocker", "status", "technical-beta package"],
@@ -138,10 +140,10 @@ class AlphaSupportTests(unittest.TestCase):
             "docs/v2/TECHNICAL_BETA_FEEDBACK_TEMPLATE.md": ["technical-beta-blocker", "Result class", "Diagnostics bundle path"],
             "docs/v2/TECHNICAL_BETA_ISSUE_TEMPLATE.md": ["technical-beta-blocker", "Commands run", "Diagnostics bundle path"],
             "docs/v2/TECHNICAL_BETA_TRIAGE.md": ["technical-beta-blocker", "environment-specific", "broader beta stabilization"],
-            "docs/v2/TECHNICAL_BETA_MATRIX.md": ["technical-beta wrapper help and status", "degraded-pass", "Ran 143 tests"],
-            "docs/v2/TECHNICAL_BETA_BLOCKERS.md": ["None open for continued limited technical-beta circulation", "READY_FOR_LIMITED_TECHNICAL_BETA_CONTINUATION=yes", "advanced outside testers"],
-            "docs/v2/TECHNICAL_BETA_READINESS.md": ["READY_FOR_LIMITED_TECHNICAL_BETA_CONTINUATION=yes", "READY_FOR_BROADER_BETA_STABILIZATION=no", "NEEDS_ANOTHER_TECHNICAL_BETA_REMEDIATION_CYCLE=yes"],
-            "docs/v2/NEXT_STAGE_VERDICT.md": ["READY_FOR_INTERNAL_ALPHA_CONTINUATION", "READY_FOR_BROADER_ALPHA", "READY_FOR_LIMITED_PUBLIC_TECHNICAL_BETA=yes"],
+            "docs/v2/TECHNICAL_BETA_MATRIX.md": ["packaged wrapper help and status", "degraded-pass", "Ran 143 tests"],
+            "docs/v2/TECHNICAL_BETA_BLOCKERS.md": ["None open for continued limited technical-beta circulation", "READY_FOR_LIMITED_TECHNICAL_BETA_CONTINUATION=yes", "outside-tester"],
+            "docs/v2/TECHNICAL_BETA_READINESS.md": ["READY_FOR_LIMITED_TECHNICAL_BETA_CONTINUATION=yes", "READY_FOR_BROADER_BETA_STABILIZATION=no", "NEEDS_ANOTHER_TECHNICAL_BETA_REMEDIATION_CYCLE=no"],
+            "docs/v2/NEXT_STAGE_VERDICT.md": ["READY_FOR_INTERNAL_ALPHA_CONTINUATION", "READY_FOR_BROADER_ALPHA", "NEEDS_ANOTHER_TECHNICAL_BETA_REMEDIATION_CYCLE=no"],
         }
         for relative_path, expected_strings in doc_expectations.items():
             content = (REPO_ROOT / relative_path).read_text(encoding="utf-8")

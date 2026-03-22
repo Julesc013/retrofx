@@ -1,6 +1,6 @@
 # RetroFX 2.x Public Beta Readiness
 
-This document answers the public-surface question for the current `main` branch after the rapid technical-beta execution pass on 2026-03-22.
+This document answers the public-surface question for the current `main` branch after the real technical-beta execution pass on 2026-03-22.
 
 It is not a public release note.
 It does not authorize automatic publication.
@@ -11,7 +11,7 @@ READY_FOR_LIMITED_PUBLIC_TECHNICAL_BETA=yes
 
 READY_FOR_CONTINUED_NON_PUBLIC_PRE_BETA=no
 
-NEEDS_ANOTHER_HARDENING_CYCLE=yes
+NEEDS_ANOTHER_HARDENING_CYCLE=no
 
 ## What “Limited Public Technical Beta” Means Here
 
@@ -35,17 +35,18 @@ It still does not mean:
 
 - the externally visible tester surface remains the narrower `retrofx-v2-techbeta` wrapper rather than the broader internal developer surface
 - the copied-toolchain technical-beta package remains the intended outside-facing delivery shape for advanced testers
+- clean-tree copied-toolchain package generation now succeeds on current `main`
 - diagnostics capture, bounded `apply` or `off`, and temp-HOME install or uninstall remain usable for advanced testers
 - degraded Wayland behavior remains explicit and supportable
 
-## Why Another Hardening Cycle Is Still Needed
+## Why Broader Beta Still Is Not Approved
 
-- the fallback install path still records internal developer-line release metadata
 - the current evidence is still one real X11 plus `i3` host plus simulated or temp-HOME scenarios
+- there is still no real outside tester evidence corpus
 - lower-level surfaced JSON still leaks prompt-era implementation metadata
 
 ## Current Branch Position
 
 - continue limited public technical beta: yes
 - broader beta stabilization: no
-- next step: one short remediation cycle plus wider real-host evidence before any broader-beta discussion
+- next step: continue limited technical beta with real outside-tester evidence collection and at least one more real-host pass before any broader-beta discussion

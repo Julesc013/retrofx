@@ -1,58 +1,55 @@
 # RetroFX 2.x Technical Beta Matrix
 
-This document records the rapid technical-beta execution pass against the merged `main` branch on 2026-03-22.
+This document records the real limited technical-beta execution pass against the merged `main` branch on 2026-03-22.
 
-It is based on real command execution and captured artifacts under:
+It is based on captured artifacts under:
 
-- `v2/releases/reports/technical-beta-exec-20260322-072746Z`
+- `v2/releases/reports/technical-beta-main-20260322-094027Z`
 
 It is not a synthetic success summary.
-Blocked and degraded scenarios are recorded as they happened.
+The matrix below reflects the actual copied-toolchain package run on `main`.
 
 ## Status Summary
 
-- `pass`: 11
+- `pass`: 14
 - `degraded-pass`: 1
 - `partial`: 0
 - `fail`: 0
-- `blocked`: 1
+- `blocked`: 0
 - `not-tested`: 0
 
 ## Matrix
 
 | Scenario | Environment | Commands | Expected | Actual | Status | Severity if failed | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| internal developer help and status | real X11 plus `i3` host | `scripts/dev/retrofx-v2 --help`; `scripts/dev/retrofx-v2 status` | internal surface is reachable and status truthfully reports the broader developer line | help and status both succeeded; `version=2.0.0-alpha.internal.2`, `status_label=internal-alpha`, `current_build_kind=untagged-internal-developer-line` | pass | n/a | Confirms the broader internal surface still exists separately from the technical-beta wrapper. |
-| technical-beta wrapper help and status | real X11 plus `i3` host | `scripts/dev/retrofx-v2-techbeta --help`; `scripts/dev/retrofx-v2-techbeta status` | narrowed outside-facing surface is reachable and status remains explicit | help and status both succeeded; `version=2.0.0-techbeta.1`, `status_label=technical-beta`, `ready_for_limited_public_technical_beta=true`, and the wrapper still excludes `migrate inspect-1x` and `preview-x11` | pass | n/a | The current branch build is ahead of the historical local tag, and status reports that honestly. |
-| diagnostics capture on current main | real X11 plus `i3` host and temp HOME | `scripts/dev/retrofx-v2-techbeta diagnostics --pack modern-minimal --profile-id warm-night --output-root <temp> --label rapid-main` | diagnostics bundle is usable for triage and records the technical-beta identity | diagnostics succeeded and wrote 18 artifacts including `capture-manifest.json`, `platform-status.json`, `release-status.json`, `state/current-state.json`, `profile/output-inventory.json`, and `source-control.json` | pass | n/a | Bundle path: `v2/releases/reports/technical-beta-exec-20260322-072746Z/diagnostics/20260322-072823z--rapid-main/`. |
-| CRT resolve, plan, and compile | real X11 plus `i3` host | `scripts/dev/retrofx-v2-techbeta resolve/plan/compile --pack crt-core --profile-id green-crt` | retro-style profile remains deterministic and the plan stays explicit | resolve, plan, and compile all succeeded; plan reported `apply_preview_targets=[i3,x11-picom,x11-render-runtime,xresources]` and compile emitted bounded CRT artifacts | pass | n/a | Confirms the retro profile family still behaves coherently through the narrowed wrapper. |
-| modern or minimal resolve, plan, and compile | real X11 plus `i3` host | `scripts/dev/retrofx-v2-techbeta resolve/plan/compile --pack modern-minimal --profile-id warm-night` | modern daily-driver profile remains deterministic and capability-aware | resolve, plan, and compile all succeeded for `warm-night`; plan stayed non-destructive and compile emitted the expected target families | pass | n/a | Diagnostics later confirmed output inventory under `v2/out/warm-night/`. |
-| target output inspection | real X11 plus `i3` host | inspect outputs from `techbeta_compile_modern` and diagnostics inventory | at least terminal, WM, toolkit, and display-policy artifacts are present and advisory where documented | compile reported implemented families for terminal, WM, toolkit, and X11; emitted outputs included terminal configs, WM configs, toolkit exports, and display-policy or render artifacts | pass | n/a | Output inventory stayed repo-local and inspectable without implying live desktop ownership. |
-| bounded apply and off | real X11 plus `i3` host and temp HOME | `scripts/dev/retrofx-v2-techbeta apply --pack crt-core --profile-id green-crt`; `status`; `off` | bounded activation remains reversible and 2.x-owned | apply succeeded with clear `export_only_targets`, `degraded_targets`, and `apply_preview_targets`; `off` removed only `active/current` and `current-state.json` and preserved installs, manifests, and last-good data | pass | n/a | `skipped_cleanup_paths=[]`; cleanup stayed inside managed roots. |
-| technical-beta candidate package generation on current working tree | current repo-local `main` checkout with in-flight doc changes | `scripts/dev/retrofx-v2 package-technical-beta --pack modern-minimal --profile-id warm-night --package-root <temp>` | fresh candidate package can be regenerated | command returned structured `dirty-working-tree` failure and did not emit a package | blocked | n/a | This was an honest operator-state gate, not a crash. The current rapid pass therefore fell back to bundle or install evidence instead of a fresh candidate package. |
-| bundle, temp-HOME install, diagnostics, and uninstall fallback | temp HOME via technical-beta wrapper | `scripts/dev/retrofx-v2-techbeta bundle`; `install`; `diagnostics`; `uninstall` | bundle and user-local install flow remain bounded and reversible | bundle, install, diagnostics, and uninstall all succeeded; uninstall removed only bundle and install records | pass | medium | The flow worked, but the install JSON still carried internal developer-line release metadata instead of technical-beta metadata. |
-| degraded Wayland export-only plan | simulated Wayland plus `sway` | `WAYLAND_DISPLAY=wayland-0 XDG_SESSION_TYPE=wayland XDG_CURRENT_DESKTOP=sway ... scripts/dev/retrofx-v2-techbeta plan --pack modern-minimal --profile-id warm-night --write-preview --out-root <temp>` | degraded or export-only behavior is surfaced honestly | command succeeded; `apply_preview_targets=['sway']`, X11 runtime pieces stayed degraded, and warnings kept live ownership out of scope | degraded-pass | n/a | This is the expected limited technical-beta behavior, not a failure. |
-| migration inspection | internal developer surface on real host | `scripts/dev/retrofx-v2 migrate inspect-1x profiles/packs/core/ibm-vga16.toml --compact` | deterministic compatibility report with explicit loss classes | inspection succeeded with a compact mapping summary and no crash | pass | n/a | This remains internal-only evidence, not part of the outside-facing promise. |
-| X11 preview | internal developer surface on real X11 plus `i3` host | `scripts/dev/retrofx-v2 preview-x11 v2/tests/fixtures/passthrough-minimal.toml --out-root <temp>` | bounded preview artifacts still emit where supported | preview succeeded with `implemented_mode=passthrough`, `probe.status=not-requested`, and no warnings | pass | n/a | This remains internal-only evidence. |
-| full 2.x test suite | repo-local dev | `./v2/tests/test.sh` | suite stays green while docs and status truth are updated | `Ran 143 tests in 2.806s`; `OK` | pass | n/a | Confirms the rapid execution documentation pass did not regress the Python test suite. |
+| technical-beta package generation on clean `main` | real X11 plus `i3` host, clean tree | `scripts/dev/retrofx-v2 package-technical-beta --pack modern-minimal --profile-id warm-night --package-root <report>/packages` | copied-toolchain package regenerates cleanly from current `main` | package succeeded; `version=2.0.0-techbeta.1`, `status_label=technical-beta`, `distribution_scope=limited-public-technical-beta`, `working_tree_clean=true` | pass | broader-beta-blocker | Evidence: `commands/package_technical_beta.out` and `packages/retrofx-v2--2.0.0-techbeta.1--modern-minimal--warm-night/`. |
+| packaged wrapper help and status | packaged copied toolchain on real X11 plus `i3` host | `<package-dir>/bin/retrofx-v2-techbeta --help`; `status` | wrapper is reachable and remains narrower than the internal developer surface | both commands succeeded; help kept migration inspection and explicit X11 preview off the outside-facing surface; status reported `technical-beta` identity and the limited support matrix | pass | technical-beta-blocker | Evidence: `commands/techbeta_help.*`, `commands/techbeta_status.*`. |
+| packaged smoke path | packaged copied toolchain on real X11 plus `i3` host | `<package-dir>/bin/retrofx-v2-techbeta smoke --pack modern-minimal --profile-id warm-night --out-root <report>/smoke-out` | supported smoke path succeeds without hidden global mutation | smoke succeeded and emitted repo-local preview and compile artifacts under `smoke-out/` | pass | high | Evidence: `commands/techbeta_smoke.*`, `smoke-out/`. |
+| CRT resolve and plan | packaged copied toolchain on real X11 plus `i3` host | `<package-dir>/bin/retrofx-v2-techbeta resolve --pack crt-core --profile-id green-crt`; `plan --write-preview --out-root <report>/out-crt` | retro profile resolves deterministically and plan stays capability-aware | resolve and plan both succeeded; `apply_preview_targets=[i3,x11-picom,x11-render-runtime,xresources]`, degraded targets stayed explicit | pass | high | Evidence: `commands/techbeta_resolve_crt.*`, `commands/techbeta_plan_crt.*`. |
+| modern compile | packaged copied toolchain on real X11 plus `i3` host | `<package-dir>/bin/retrofx-v2-techbeta compile --pack modern-minimal --profile-id warm-night --out-root <report>/out-modern` | compile emits deterministic artifacts for the supported target families | compile succeeded and emitted terminal, WM, toolkit-export, display-policy, and X11-adjacent artifacts under `out-modern/warm-night/` | pass | high | Evidence: `commands/techbeta_compile_modern.*`, `out-modern/`. |
+| target output inspection | packaged copied toolchain on real X11 plus `i3` host | inspect `out-modern/warm-night/` and compile JSON | terminal, WM, toolkit, and display-policy artifacts are present and advisory where documented | inspected outputs included `alacritty`, `kitty`, `tmux`, `vim`, `i3`, `sway`, `waybar`, `gtk-export`, `qt-export`, `fontconfig`, `desktop-style`, `x11-display-policy`, `x11-picom`, `x11-render-runtime`, `x11-shader`, and `xresources` | pass | medium | Advisory/export-only notes stayed explicit in the compile payload rather than pretending to be live desktop ownership. |
+| bounded apply, post-apply status, and off | packaged copied toolchain on real X11 plus `i3` host and temp HOME | `<package-dir>/bin/retrofx-v2-techbeta apply --pack crt-core --profile-id green-crt`; `status`; `off` | bounded activation remains reversible and stays inside 2.x-managed roots | apply succeeded with explicit warnings, post-apply status succeeded, and `off` removed only `active/current` and `current-state.json` while preserving bundle, install, last-good, and manifest roots | pass | technical-beta-blocker | Evidence: `commands/techbeta_apply_x11.*`, `commands/techbeta_status_after_apply.*`, `commands/techbeta_off_x11.*`. |
+| active diagnostics capture | packaged copied toolchain on real X11 plus `i3` host and temp HOME | `<package-dir>/bin/retrofx-v2-techbeta diagnostics --pack crt-core --profile-id green-crt --output-root <report>/diagnostics --label active-main` | diagnostics capture active-state evidence and technical-beta identity | diagnostics succeeded and wrote `20260322-094027z--active-main/` with capture manifest, release status, platform status, source control, current activation, environment, resolved profile, session plan, and package-manifest evidence | pass | high | Evidence directory: `diagnostics/20260322-094027z--active-main/`. |
+| temp-HOME install | packaged copied toolchain in temp HOME or XDG roots | `<package-dir>/bin/retrofx-v2-techbeta install <package-dir>/bundle` | install is bounded and records technical-beta metadata | install succeeded and recorded `version=2.0.0-techbeta.1`, `status_label=technical-beta`, `distribution_scope=limited-public-technical-beta` | pass | technical-beta-blocker | Evidence: `commands/techbeta_install_bundle.*`. This closes the earlier internal-alpha metadata leak. |
+| installed diagnostics capture | packaged copied toolchain in temp HOME or XDG roots | `<package-dir>/bin/retrofx-v2-techbeta diagnostics --pack modern-minimal --profile-id warm-night --output-root <report>/diagnostics --label installed-main` | diagnostics capture install-state and package metadata for a tester-ready bug report | diagnostics succeeded and wrote `20260322-094028z--installed-main/` with install-state, package metadata, resolved profile, session plan, output inventory, release status, and source-control evidence | pass | high | Evidence directory: `diagnostics/20260322-094028z--installed-main/`. |
+| uninstall cleanup | packaged copied toolchain in temp HOME or XDG roots | `<package-dir>/bin/retrofx-v2-techbeta uninstall modern-minimal--warm-night` | uninstall removes only bundle-store and installation records | uninstall succeeded and removed only bundle and installation JSON paths while preserving profile and pack config roots | pass | technical-beta-blocker | Evidence: `commands/techbeta_uninstall_bundle.*`. |
+| degraded Wayland export-only plan | packaged copied toolchain, simulated Wayland plus `sway` | `WAYLAND_DISPLAY=wayland-0 XDG_SESSION_TYPE=wayland XDG_CURRENT_DESKTOP=sway ... <package-dir>/bin/retrofx-v2-techbeta plan --pack modern-minimal --profile-id warm-night --write-preview --out-root <report>/out-wayland` | degraded behavior is explicit and remains non-destructive | command succeeded; `apply_preview_targets=['sway']`, X11 live-runtime pieces stayed degraded, and export-only targets stayed export-only | degraded-pass | n/a | Evidence: `commands/techbeta_wayland_plan.*`, `out-wayland/`. |
+| migration inspection | internal developer surface on real host | `scripts/dev/retrofx-v2 migrate inspect-1x profiles/packs/core/ibm-vga16.toml --compact` | deterministic compatibility inspection without crashing | inspection succeeded with explicit lossy or unsupported reporting | pass | medium | Internal-only evidence; not part of the outside-facing technical-beta promise. |
+| X11 preview | internal developer surface on real X11 plus `i3` host | `scripts/dev/retrofx-v2 preview-x11 v2/tests/fixtures/passthrough-minimal.toml --out-root <report>/preview-x11` | bounded internal X11 preview artifacts still emit where supported | preview succeeded with `implemented_mode=passthrough` and no warnings | pass | medium | Internal-only evidence; not part of the outside-facing technical-beta promise. |
+| full 2.x test suite | repo-local dev | `./v2/tests/test.sh` | Python test suite stays green while technical-beta docs and package metadata are updated | suite passed; `Ran 143 tests in 2.878s`; `OK` | pass | n/a | Confirms the current documentation and package-support pass did not regress the 2.x test suite. |
 
 ## Interpretation
 
-What this rapid pass proved:
+What this real main-branch execution pass proved:
 
-- the merged `main` branch still supports continued limited technical beta
-- the narrowed technical-beta wrapper remains reachable and supportable
-- bounded apply, off, diagnostics, bundle, install, and uninstall remain usable for rapid evidence capture
-- degraded Wayland planning is explicit rather than misleading
+- the copied-toolchain technical-beta package regenerates cleanly from current `main`
+- the packaged wrapper is usable by advanced testers without dropping back to the internal developer surface
+- bounded apply or off, diagnostics, install, and uninstall remain supportable and reversible
+- packaged install now reports technical-beta release metadata end to end
+- degraded Wayland behavior remains honest rather than misleading
 
-What this rapid pass also exposed:
-
-- a fresh technical-beta package was not regenerated on this in-flight working tree because the clean-tree gate did its job
-- the fallback install path still leaks internal developer-line release metadata
-- lower-level JSON still leaks historical prompt IDs in some subsystem implementation blocks
-
-What this rapid pass did not prove:
+What this execution pass did not prove:
 
 - broader beta stabilization readiness
-- multi-host support breadth
+- multi-host or multi-operator breadth
 - a real outside tester evidence corpus

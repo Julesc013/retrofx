@@ -1,20 +1,22 @@
 # RetroFX 2.x Current Execution Baseline
 
-This document records what was actually present on the merged `main` branch during the rapid technical-beta execution pass on 2026-03-22.
+This document records what was actually present on the merged `main` branch during the real limited technical-beta execution pass on 2026-03-22.
 
-It is intentionally factual.
-It does not restate older branch-era plans as if they were freshly verified.
+It is factual on purpose.
+It does not treat older branch-stage plans as current evidence.
 
 ## Evidence Root
 
-- `v2/releases/reports/technical-beta-exec-20260322-072746Z`
+- `v2/releases/reports/technical-beta-main-20260322-094027Z`
 
 That report root contains:
 
+- copied-toolchain package output
 - command stdout, stderr, and exit-code captures
-- diagnostics bundles for the rapid execution cycle
-- temp-HOME install or apply evidence
-- bundle or package logs where applicable
+- diagnostics bundles for active and installed states
+- temp-HOME install, uninstall, and bounded apply or off evidence
+- degraded Wayland planning evidence
+- internal supplementary migration and X11 preview evidence
 
 ## Current Visible Surfaces
 
@@ -24,7 +26,7 @@ Entrypoint:
 
 - `scripts/dev/retrofx-v2`
 
-Current surface includes:
+Current internal surface includes:
 
 - `status`
 - `resolve`
@@ -49,7 +51,7 @@ Entrypoint:
 
 - `scripts/dev/retrofx-v2-techbeta`
 
-Current surface includes:
+Current technical-beta surface includes:
 
 - `status`
 - `resolve`
@@ -64,51 +66,52 @@ Current surface includes:
 - `packs`
 - `smoke`
 
-Current surface intentionally excludes:
+Current technical-beta surface intentionally excludes:
 
 - `migrate inspect-1x`
 - `preview-x11`
 - `package-alpha`
 
-## Current Package, Bundle, And Install Truth
+## Current Package Bundle And Install Truth
 
-- `package-alpha` remains the broader internal developer-line packaging flow.
-- `package-technical-beta` is the narrowed copied-toolchain candidate packaging flow.
-- `bundle`, `install`, and `uninstall` remain available on both the internal developer surface and the technical-beta wrapper.
-- temp-HOME install state remains isolated under the managed `retrofx-v2-dev` footprint.
+- `package-technical-beta` now regenerates the copied-toolchain candidate package cleanly from the current `main` tree.
+- the generated package exposes `bin/retrofx-v2-techbeta`, a bounded bundle, copied toolchain files, and tester docs
+- the packaged install flow now records `technical-beta` release metadata end to end
+- temp-HOME install state remains isolated under the managed `retrofx-v2-dev` footprint
 
 ## Current Status And Diagnostics Truth
 
-- `scripts/dev/retrofx-v2 status` reports the broader internal developer-line identity `2.0.0-alpha.internal.2`.
-- `scripts/dev/retrofx-v2-techbeta status` reports the narrower outside-facing identity `2.0.0-techbeta.1`.
-- the latest local `v2.0.0-techbeta.1` tag exists, but it is historical and does not point at the current `main` HEAD
-- diagnostics capture is present and usable on both the internal and technical-beta surfaces
+- `scripts/dev/retrofx-v2 status` still reports the broader internal developer-line identity `2.0.0-alpha.internal.2`
+- `scripts/dev/retrofx-v2-techbeta status` reports the narrowed outside-facing identity `2.0.0-techbeta.1`
+- branch-level release metadata now reports the current execution prompt as `TWO-35`
+- diagnostics capture remains usable on both the internal and technical-beta surfaces
 
-## What Was Actually Exercised In The Rapid Pass
+## What Was Actually Exercised
 
-- internal developer help and status
-- technical-beta help and status
-- CRT pack resolve, plan, and compile
-- modern or minimal pack resolve, plan, and compile
-- toolkit, WM, terminal, and display-policy output inspection
-- bounded `apply` and `off`
-- diagnostics capture
-- technical-beta bundle, temp-HOME install, diagnostics, and uninstall
+- copied-toolchain package generation from a clean `main` tree
+- packaged-wrapper `--help` and `status`
+- packaged smoke path
+- CRT resolve and plan
+- modern compile plus artifact inspection
+- bounded `apply`, post-apply `status`, and `off`
+- active-state diagnostics capture
+- temp-HOME install, diagnostics, and uninstall
 - one degraded Wayland export-oriented plan scenario
 - one internal migration inspection scenario
 - one internal X11 preview scenario
 - the 2.x Python test suite
 
-## Gaps And Risks Observed
+## Remaining Risks
 
-- there is no dedicated `docs/v2/TECHNICAL_BETA_OPERATIONS.md`; current operations guidance is split across the execution plan, checklist, notes, templates, and triage docs
-- a fresh `package-technical-beta` run was blocked during this pass because the working tree was dirty while docs and status updates were still in progress
-- the fallback `bundle` plus `install` path still records internal developer-line release metadata even when exercised through the technical-beta wrapper
-- some subsystem JSON still advertises historical implementation prompt IDs such as `TWO-18`, `TWO-19`, and `TWO-16` even though the current branch-level status surface reports `TWO-33`
+- evidence is still one operator and one real X11 plus `i3` host plus simulated Wayland and temp-HOME scenarios
+- there is still no real outside tester corpus on `main`
+- some subsystem JSON still leaks historical implementation prompt IDs such as `TWO-19`, `TWO-18`, `TWO-17`, and `TWO-15`
+- Wayland remains degraded or export-only rather than supported for live runtime ownership
 
 ## Current Conclusion
 
-The merged `main` branch is coherent enough to continue the limited technical-beta line.
+The merged `main` branch is coherent enough to continue the limited technical beta.
 
-It is not yet coherent enough to start broader beta stabilization from this rapid pass alone.
-The next step should be a short remediation cycle focused on metadata coherence and then a broader evidence pass on clean candidate artifacts and more than one real host.
+It is not yet coherent enough to start broader beta stabilization.
+The next step is not a fast remediation sprint.
+The next step is to continue the limited technical beta, collect real outside-style reports, and broaden real-host evidence before revisiting broader beta stabilization.

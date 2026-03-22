@@ -5,7 +5,7 @@ Each phase should narrow uncertainty before more implementation surface is added
 
 ## Current Progress
 
-Status after TWO-33:
+Status after TWO-35:
 
 - 2.0-C has an experimental implementation foothold for load, validate, normalize, and resolve in `v2/core/`
 - 2.0-D has started with the first terminal/TUI compiler family under `v2/targets/terminal/`
@@ -33,7 +33,7 @@ Status after TWO-33:
 - TWO-31 adds a public-beta risk inventory, technical-beta preparatory docs, and code-side fences that keep internal package metadata from pretending to be pre-beta or public-beta material
 - TWO-32 adds a copied-toolchain `retrofx-v2-techbeta` wrapper, a limited technical-beta candidate package, and a narrowed X11-oriented support matrix for advanced testers without widening the broader internal developer surface
 - TWO-33 executes the first limited technical-beta workflow, adds execution templates and triage docs, records a technical-beta validation matrix, and establishes continued limited technical beta as the current outside-facing line
-- the current merged `main` rapid execution pass re-runs that surface against the actual branch state, records a fresh evidence bundle, and keeps broader beta stabilization blocked pending a short metadata-coherence remediation plus wider real-host evidence
+- the current merged `main` real technical-beta execution pass runs the copied-toolchain package on the actual branch state, adds main-branch operations and runbook docs, confirms package and install metadata coherence, and keeps broader beta stabilization blocked on wider real-host and real-tester evidence rather than an immediate remediation list
 - broad live session orchestration, Wayland render, and broader target families remain future phases
 
 ## 2.0-A Product And Spec Design

@@ -75,6 +75,8 @@ class TechnicalBetaPackageTests(unittest.TestCase):
             self.assertTrue((package_dir / "toolchain" / "v2").is_dir())
             self.assertTrue((package_dir / "toolchain" / "scripts" / "dev" / "retrofx-v2-techbeta").is_file())
             self.assertTrue((package_dir / "docs" / "TECHNICAL_BETA_CANDIDATE_NOTES.md").is_file())
+            self.assertTrue((package_dir / "docs" / "TECHNICAL_BETA_OPERATIONS.md").is_file())
+            self.assertTrue((package_dir / "docs" / "LIMITED_TECHNICAL_BETA_RUNBOOK.md").is_file())
             manifest = json.loads((package_dir / "package-manifest.json").read_text(encoding="utf-8"))
             self.assertEqual(manifest["schema"], "retrofx.technical-beta-package/v2alpha1")
             self.assertEqual(manifest["release_status"]["version"], "2.0.0-techbeta.1")
@@ -83,6 +85,8 @@ class TechnicalBetaPackageTests(unittest.TestCase):
             self.assertEqual(manifest["distribution"]["toolchain_mode"], "copied-toolchain")
             self.assertEqual(manifest["toolchain"]["entrypoint_relative_path"], "bin/retrofx-v2-techbeta")
             self.assertTrue(manifest["release_status"]["ready_for_limited_public_technical_beta"])
+            self.assertIn("docs/TECHNICAL_BETA_OPERATIONS.md", manifest["included_docs"])
+            self.assertIn("docs/LIMITED_TECHNICAL_BETA_RUNBOOK.md", manifest["included_docs"])
 
     def test_packaged_wrapper_help_and_temp_home_install_flow(self) -> None:
         with TemporaryDirectory() as tmppackages, TemporaryDirectory() as tmphome, TemporaryDirectory() as tmpdiag:

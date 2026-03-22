@@ -5,6 +5,7 @@ This checklist applies to the current limited technical-beta line and its copied
 ## Preflight
 
 - read [TECHNICAL_BETA_NOTES.md](TECHNICAL_BETA_NOTES.md)
+- read [LIMITED_TECHNICAL_BETA_RUNBOOK.md](LIMITED_TECHNICAL_BETA_RUNBOOK.md)
 - confirm you are using the copied-toolchain candidate package rather than the broader internal developer surface
 - run `bin/retrofx-v2-techbeta status`
 
@@ -27,6 +28,7 @@ This checklist applies to the current limited technical-beta line and its copied
 - run `bin/retrofx-v2-techbeta diagnostics --pack modern-minimal --profile-id warm-night --label techbeta`
 - run `bin/retrofx-v2-techbeta uninstall <bundle-id>`
 - attach the diagnostics directory when reporting issues
+- use the technical-beta report templates when sending feedback
 
 ## Cleanup
 
