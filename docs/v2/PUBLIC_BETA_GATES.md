@@ -14,7 +14,7 @@ Required:
 - supported versus degraded versus unsupported environments are explicit
 - known limitations and non-goals are obvious to outside advanced testers
 
-Current TWO-32 state:
+Current line state:
 
 - satisfied for the limited technical-beta surface
 - the candidate package ships the relevant notes, checklist, and readiness docs directly
@@ -28,7 +28,7 @@ Required:
 - package, install, uninstall, and diagnostics flows are deterministic
 - cleanup and ownership are explicit
 
-Current TWO-32 state:
+Current line state:
 
 - satisfied for the limited technical-beta surface
 - apply is explicitly gated to X11-oriented environments and everything remains user-local
@@ -42,7 +42,7 @@ Required:
 - degraded and unsupported paths are surfaced explicitly
 - risky internal-only paths are fenced off from outside testers
 
-Current TWO-32 state:
+Current line state:
 
 - satisfied for the limited technical-beta surface
 - migration and the explicit X11 probe are now outside the support promise rather than overclaimed
@@ -55,16 +55,16 @@ Required:
 - the branch does not impersonate production quality
 - the support burden remains manageable for maintainers
 
-Current TWO-32 state:
+Current line state:
 
 - satisfied for the limited technical-beta surface
 - the copied-toolchain package, wrapper, notes, and diagnostics flow remove the old repo-checkout requirement
 
 ## Gate Result
 
-For TWO-32:
+For the current limited technical-beta line:
 
 - limited public technical beta: ready
 - continued non-public pre-beta: not the active track
 - continued internal alpha: yes
-- next step: local candidate packaging and optional local tag preparation for the limited technical-beta surface only
+- next step: continue limited technical-beta circulation, gather diagnostics-backed tester evidence, and revisit broader beta only after the evidence base widens

@@ -13,7 +13,7 @@ from v2.session.environment import detect_environment
 from v2.session.install import describe_install_state
 from v2.targets import list_target_families, list_targets
 
-from .release import build_experimental_release_metadata, build_source_control_summary
+from .release import CURRENT_PROMPT, build_experimental_release_metadata, build_source_control_summary
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 UNIFIED_ENTRYPOINT = REPO_ROOT / "scripts" / "dev" / "retrofx-v2"
@@ -220,7 +220,7 @@ IMPLEMENTED_STATUS_MATRIX = [
         "implemented": True,
         "experimental": True,
         "planned": False,
-        "notes": "The TWO-19 current-state activation path is real but limited to 2.x-owned staging, explicit manifests, and managed-root cleanup only.",
+        "notes": "The current-state activation path is real but limited to 2.x-owned staging, explicit manifests, and managed-root cleanup only.",
     },
     {
         "area": "global desktop integration",
@@ -247,7 +247,7 @@ IMPLEMENTED_STATUS_MATRIX = [
 
 PLATFORM_IMPLEMENTATION_INFO = {
     "status": "experimental-dev-only",
-    "prompt": "TWO-32",
+    "prompt": CURRENT_PROMPT,
     "surface": "unified-dev-platform-internal-only",
     "entrypoint": str(UNIFIED_ENTRYPOINT),
     "implemented_targets": list_targets(),
@@ -288,7 +288,7 @@ def build_platform_status(
     ]
     if release_status["local_tag_state"] != "current-head":
         limitations.append(
-            "The current build is an untagged post-alpha hardening build; the latest local alpha candidate tag remains historical rather than current."
+            "The current `main` HEAD is not identical to the latest local candidate tags; treat historical alpha and technical-beta tags as reference snapshots rather than proof that the current tree is the same build."
         )
 
     return {

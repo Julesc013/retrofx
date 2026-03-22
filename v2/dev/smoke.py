@@ -10,9 +10,11 @@ from v2.core.dev.plan_session import plan_profile_session
 from v2.core.dev.profile_input import run_selected_profile_pipeline
 from v2.session.apply import apply_dev_profile, describe_current_activation
 
+from .release import CURRENT_PROMPT
+
 SMOKE_IMPLEMENTATION_INFO = {
     "status": "experimental-dev-only",
-    "prompt": "TWO-20",
+    "prompt": CURRENT_PROMPT,
     "surface": "developer-smoke-workflow",
     "mode": "safe-by-default",
     "not_implemented": [

@@ -1,91 +1,121 @@
-# RetroFX 2.x Alpha Versioning
+# RetroFX 2.x Versioning And Status Identities
 
-RetroFX 2.x now has an explicit experimental version policy for internal alpha circulation plus a separate limited technical-beta candidate identity.
+RetroFX 2.x now uses two explicit identities:
 
-1.x remains the production line.
-2.x versioning here exists for the experimental branch surface, bundle metadata, internal-alpha package artifacts, and the local limited technical-beta candidate package.
+- an internal developer-line identity
+- a narrower technical-beta candidate identity
 
-## Current Version
+That split is deliberate.
+It keeps the broader internal surface from being mistaken for the outside-facing advanced-tester package.
 
-- current 2.x experimental version: `2.0.0-alpha.internal.2`
-- current status label: `internal-alpha`
-- current packaging prompt milestone: `TWO-31`
-- current technical-beta prompt milestone: `TWO-32`
-- current version tag name: `v2.0.0-alpha.internal.2`
-- latest local/internal alpha candidate tag: `v2.0.0-alpha.internal.1`
-- current build kind: untagged post-alpha hardening
-- reserved non-public pre-beta candidate version: `2.0.0-prebeta.internal.1`
-- reserved non-public pre-beta candidate tag: `v2.0.0-prebeta.internal.1`
-- approved limited technical-beta candidate version: `2.0.0-techbeta.1`
-- approved limited technical-beta candidate tag: `v2.0.0-techbeta.1`
-- code-side source of truth: `v2/dev/release.py`
+## Current Identities
 
-## Format
-
-The current internal format is:
-
-`2.0.0-alpha.internal.<n>`
-
-Example:
-
-- `2.0.0-alpha.internal.2`
-
-Why this format:
-
-- clearly distinct from 1.x
-- clearly pre-release
-- clearly non-public
-- simple enough to stamp into bundle, install, and package metadata
-
-## What The Version Applies To
-
-The 2.x experimental version currently identifies:
-
-- internal-alpha package manifests
-- experimental release-status metadata in bundle manifests
-- install-state records derived from those bundles
-- machine-readable platform status output
-
-It does not mean:
-
-- a public release exists
-- 2.x has replaced 1.x
-- package-manager distribution is ready
-- the runtime is stable
-
-The separate limited technical-beta candidate identity means:
-
-- a copied-toolchain candidate package can be produced for advanced testers
-- the broader `retrofx-v2` developer surface still remains internal-only
-
-## Version Discipline
-
-Use this rule set for now:
-
-- increment the trailing internal alpha number when the branch meaningfully changes its internal testing contract
-- reserve the first matching `2.0.0-prebeta.internal.<n>` only when the pre-beta gates are actually satisfied
-- do not invent multiple competing 2.x version formats
-- keep the version static within a given committed internal-alpha state
-- keep status labels separate from readiness decisions
-- keep historical local candidate tags separate from newer untagged hardening builds
-- keep the technical-beta candidate identity separate from both the internal-alpha line and the blocked pre-beta line
-
-## Readiness Versus Version
-
-Version and readiness are related but not identical.
-
-Example:
+### Internal Developer Line
 
 - version: `2.0.0-alpha.internal.2`
 - status label: `internal-alpha`
-- readiness decision: controlled internal alpha is acceptable for a narrow cohort, but the current build is not a local alpha candidate and is not a non-public pre-beta candidate
+- intended surface: `scripts/dev/retrofx-v2`
+- current prompt milestone in code metadata: `TWO-33`
+- matching local tag for this exact version: none
+- latest historical local alpha tag: `v2.0.0-alpha.internal.1`
+- note: the current `main` HEAD uses this identity by default, but it is not represented by a current local tag
 
-That means the branch can be circulated internally without promoting the status label to anything public-facing.
+### Limited Technical-Beta Candidate
 
-For TWO-29 through TWO-32, the branch version remains on the internal-alpha line intentionally so the current hardening build is not mistaken for either the historical local alpha candidate tagged at `v2.0.0-alpha.internal.1` or the still-blocked reserved pre-beta candidate `v2.0.0-prebeta.internal.1`.
+- version: `2.0.0-techbeta.1`
+- status label: `technical-beta`
+- intended surface: `scripts/dev/retrofx-v2-techbeta`
+- matching local candidate tag: `v2.0.0-techbeta.1`
+- note: the technical-beta tag is a historical candidate tag and may not point at the current `main` HEAD after later documentation or execution-only commits
 
-The limited technical-beta candidate uses a separate version identity:
+### Reserved But Blocked
 
-- candidate version: `2.0.0-techbeta.1`
-- candidate status label: `technical-beta`
-- candidate package flow: `scripts/dev/retrofx-v2 package-technical-beta`
+- reserved non-public pre-beta version: `2.0.0-prebeta.internal.1`
+- reserved non-public pre-beta tag: `v2.0.0-prebeta.internal.1`
+- current state: blocked, not approved
+
+Code-side source of truth:
+
+- `v2/dev/release.py`
+
+## Why The Split Exists
+
+The internal developer line needs to keep reporting the broader experimental platform truth:
+
+- internal package flows
+- migration inspection
+- preview and internal-only X11 probe paths
+- broader implementation status
+
+The technical-beta candidate needs a narrower promise:
+
+- copied-toolchain package
+- advanced tester workflow
+- explicit support matrix
+- bounded cleanup and diagnostics expectations
+
+One version/status label cannot express both surfaces honestly.
+
+## Format Rules
+
+### Internal Developer Line
+
+Format:
+
+- `2.0.0-alpha.internal.<n>`
+
+Why:
+
+- clearly distinct from `1.x`
+- clearly non-public
+- clearly experimental
+- suitable for internal package, install-state, and release-status metadata
+
+### Technical-Beta Candidate
+
+Format:
+
+- `2.0.0-techbeta.<n>`
+
+Why:
+
+- clearly distinct from the internal developer line
+- clearly narrower than a general public beta
+- suitable for copied-toolchain candidate packages and outside-facing status output
+
+## What These Identities Apply To
+
+Internal developer-line identity applies to:
+
+- `package-alpha`
+- internal release-status metadata
+- user-local experimental install-state derived from internal bundles
+- `retrofx-v2` status output
+
+Technical-beta candidate identity applies to:
+
+- `package-technical-beta`
+- copied-toolchain candidate metadata
+- `retrofx-v2-techbeta` status output
+- technical-beta diagnostics and install-state records
+
+## Version Discipline
+
+- keep the internal developer line and technical-beta candidate line separate
+- increment the internal-alpha suffix only when the internal testing contract changes materially
+- increment the technical-beta suffix only when the outside-facing candidate contract changes materially
+- do not mint pre-beta, public-beta, or stable-looking metadata until their gates are actually satisfied
+- do not treat a historical local tag as proof that the current `main` HEAD is the same candidate
+
+## Readiness Versus Version
+
+Version identity and readiness are related, but not identical.
+
+Current example:
+
+- internal developer line: `2.0.0-alpha.internal.2`
+- technical-beta candidate: `2.0.0-techbeta.1`
+- limited technical beta continuation: approved
+- broader beta stabilization: not approved
+
+That means the repo can expose a narrowed advanced-tester surface without claiming that the broader internal platform has crossed the same maturity gate.

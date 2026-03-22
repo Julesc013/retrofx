@@ -1,6 +1,6 @@
 # RetroFX 2.x Technical Beta Notes
 
-These notes apply to the limited public technical-beta candidate prepared in TWO-32.
+These notes apply to the current limited public technical-beta line and the copied-toolchain candidate package built from it.
 
 This is still experimental.
 It is not a general-public beta.

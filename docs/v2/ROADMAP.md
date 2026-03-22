@@ -32,7 +32,8 @@ Status after TWO-33:
 - TWO-30 adds blocked pre-beta-candidate notes, a pre-beta release checklist, and machine-readable reserved pre-beta-candidate metadata while keeping the branch honestly on the internal-alpha line
 - TWO-31 adds a public-beta risk inventory, technical-beta preparatory docs, and code-side fences that keep internal package metadata from pretending to be pre-beta or public-beta material
 - TWO-32 adds a copied-toolchain `retrofx-v2-techbeta` wrapper, a limited technical-beta candidate package, and a narrowed X11-oriented support matrix for advanced testers without widening the broader internal developer surface
-- TWO-33 executes the first limited technical-beta workflow, adds execution templates and triage docs, records a technical-beta validation matrix, and keeps broader beta stabilization blocked pending wider evidence rather than another immediate remediation cycle
+- TWO-33 executes the first limited technical-beta workflow, adds execution templates and triage docs, records a technical-beta validation matrix, and establishes continued limited technical beta as the current outside-facing line
+- the current merged `main` rapid execution pass re-runs that surface against the actual branch state, records a fresh evidence bundle, and keeps broader beta stabilization blocked pending a short metadata-coherence remediation plus wider real-host evidence
 - broad live session orchestration, Wayland render, and broader target families remain future phases
 
 ## 2.0-A Product And Spec Design

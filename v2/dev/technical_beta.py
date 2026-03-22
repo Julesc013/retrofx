@@ -8,6 +8,7 @@ from typing import Any, Mapping
 from v2.session.environment import detect_environment
 
 from .release import (
+    CURRENT_PROMPT,
     PROPOSED_TECHNICAL_BETA_VERSION,
     TECHNICAL_BETA_LIMITATIONS,
     TECHNICAL_BETA_SUPPORT_MATRIX,
@@ -101,7 +102,7 @@ TECHNICAL_BETA_COMMAND_SUMMARY = [
 
 TECHNICAL_BETA_IMPLEMENTATION_INFO = {
     "status": "experimental-limited-technical-beta",
-    "prompt": "TWO-32",
+    "prompt": CURRENT_PROMPT,
     "surface": "limited-technical-beta-candidate-surface",
     "entrypoint": str(TECHNICAL_BETA_ENTRYPOINT),
     "validated_primary_environment": "x11+i3-like",

@@ -1,4 +1,4 @@
-"""Local diagnostics capture for the RetroFX 2.x controlled internal alpha."""
+"""Local diagnostics capture for the RetroFX 2.x experimental surfaces."""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ from v2.session.install import describe_install_state
 from v2.session.install.layout import REPO_ROOT, resolve_install_layout
 from v2.session.install.state import current_timestamp, list_install_records
 
-from .release import build_experimental_release_metadata, build_source_control_summary
+from .release import CURRENT_PROMPT, build_experimental_release_metadata, build_source_control_summary
 from .status import build_platform_status
 
 DEFAULT_DIAGNOSTICS_ROOT = REPO_ROOT / "v2" / "out" / "diagnostics"
@@ -24,8 +24,8 @@ DEFAULT_ARTIFACT_ROOT = REPO_ROOT / "v2" / "out"
 
 IMPLEMENTATION_INFO = {
     "status": "experimental-dev-only",
-    "prompt": "TWO-32",
-    "surface": "controlled-alpha-diagnostics",
+    "prompt": CURRENT_PROMPT,
+    "surface": "current-2x-diagnostics",
     "mode": "local-file-based-evidence-capture",
     "not_implemented": [
         "network reporting",

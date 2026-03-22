@@ -18,7 +18,7 @@ RetroFX 1.x remains responsible for the documented stable line:
 1.x should stay boring.
 It should not absorb broad platform redesign work.
 
-## Why 2.x Is A Separate Branch And Track
+## Why 2.x Is A Separate Track
 
 2.x needs a broader product model than 1.x:
 
@@ -29,7 +29,7 @@ It should not absorb broad platform redesign work.
 - deeper separation between theme, render, and session concerns
 
 That is redesign work, not a patch stream.
-Putting it directly on the 1.x release line would destabilize the stable product and blur responsibility.
+Even now that both lines live on `main`, 2.x still needs to stay logically separate from the 1.x production surface.
 
 ## What Carries Forward From 1.x
 
@@ -74,12 +74,18 @@ It means 1.x is not the right long-term container for the broader platform.
 - Existing 1.x users should be able to stay on 1.x without being forced into early 2.x semantics.
 - 2.x should avoid breaking the current 1.x release workflow, packaging, or support promises while the redesign is still maturing.
 
-## Branch Discipline
+## Track Discipline On `main`
 
-- `release/1.0` remains the maintenance branch for 1.x stability work.
-- 2.x redesign work belongs on a dedicated design or architecture branch until implementation phases are ready.
-- 1.x bug fixes may inform 2.x design, but 2.x architecture work should not be backported into 1.x.
-- Reading 1.x for context is encouraged; redefining 1.x from within 2.x work is not.
+RetroFX no longer relies on separate long-lived local branches for 1.x and 2.x work.
+That means the separation is now policy-driven instead of branch-name-driven.
+
+Rules:
+
+- `scripts/retrofx`, the root `docs/` set, and the `1.x` support matrix remain the production surface
+- `v2/`, `docs/v2/`, and `scripts/dev/retrofx-v2*` remain the experimental surface
+- 1.x fixes may inform 2.x design, but 2.x architecture work must not quietly change 1.x defaults
+- 2.x must not take over the production CLI without an explicit promotion decision
+- reading 1.x for context is encouraged; redefining 1.x from within 2.x work is not
 
 ## Decision Rule
 

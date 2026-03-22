@@ -53,12 +53,12 @@ def main(argv: list[str] | None = None) -> int:
     _add_passthrough_command(subparsers, "compile", "Compile the implemented target families into deterministic export artifacts.")
     _add_passthrough_command(subparsers, "plan", "Run the implemented non-destructive session planning preview for the current environment.")
     _add_passthrough_command(subparsers, "preview-x11", "Run the bounded X11 render preview surface. This remains explicit, internal-only, and not pre-beta ready.")
-    _add_passthrough_command(subparsers, "apply", "Run the bounded TWO-19 experimental apply flow under the isolated 2.x-owned footprint. This remains internal-only.")
-    _add_passthrough_command(subparsers, "off", "Clear the bounded TWO-19 experimental activation without touching 1.x.")
-    _add_passthrough_command(subparsers, "bundle", "Build one deterministic TWO-16 dev bundle.")
+    _add_passthrough_command(subparsers, "apply", "Run the bounded experimental apply flow under the isolated 2.x-owned footprint. This remains internal-only.")
+    _add_passthrough_command(subparsers, "off", "Clear the bounded experimental activation without touching 1.x.")
+    _add_passthrough_command(subparsers, "bundle", "Build one deterministic dev bundle.")
     _add_passthrough_command(subparsers, "package-alpha", "Build one reproducible internal-alpha validation package around a deterministic 2.x bundle. Dirty trees are blocked by default. This is not a broader-alpha, pre-beta-candidate, or public-technical-beta package flow.")
     _add_passthrough_command(subparsers, "package-technical-beta", "Build one copied-toolchain limited technical-beta candidate package for advanced testers. This stays local and does not publish anything automatically.")
-    _add_passthrough_command(subparsers, "diagnostics", "Capture a local TWO-32 diagnostics directory for internal alpha or limited technical-beta triage.")
+    _add_passthrough_command(subparsers, "diagnostics", "Capture a local diagnostics directory for internal or technical-beta triage.")
     _add_passthrough_command(subparsers, "install", "Install one dev bundle into the isolated user-local 2.x footprint. This remains internal-only.")
     _add_passthrough_command(subparsers, "uninstall", "Remove one installed dev bundle from the isolated user-local 2.x footprint. This remains internal-only.")
 
@@ -86,7 +86,7 @@ def main(argv: list[str] | None = None) -> int:
     smoke_parser.add_argument(
         "--apply",
         action="store_true",
-        help="Also run the bounded TWO-19 apply step after resolve, plan, and compile.",
+        help="Also run the bounded apply step after resolve, plan, and compile.",
     )
     smoke_parser.add_argument(
         "--probe-x11",

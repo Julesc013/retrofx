@@ -1,6 +1,6 @@
 # RetroFX 2.x Technical Beta Checklist
 
-This checklist applies to the limited technical-beta candidate prepared in TWO-32.
+This checklist applies to the current limited technical-beta line and its copied-toolchain candidate package.
 
 ## Preflight
 

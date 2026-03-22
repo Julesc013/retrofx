@@ -1,14 +1,15 @@
-# RetroFX 2.x Implementation Scaffold
+# RetroFX 2.x Implementation Tree
 
-`v2/` is the future implementation root for RetroFX 2.x.
-It is intentionally non-production at this stage.
+`v2/` is the implementation root for the experimental RetroFX `2.x` line.
+It is intentionally non-production.
 
+Repository-level doc navigation stays in [`docs/README.md`](../docs/README.md).
 Design truth stays in [`docs/v2/`](../docs/v2/README.md).
-This tree exists so later prompts implement 2.x in the right places instead of expanding the 1.x shell layout.
+This tree exists so `2.x` can evolve without silently stretching the `1.x` shell runtime into a broader platform.
 
 ## Current State
 
-As of TWO-20:
+As of the current `main` branch state:
 
 - `v2/core/` contains an experimental stdlib-only Python scaffold for loading, validating, normalizing, and resolving 2.x profile documents
 - `v2/tests/` contains isolated fixtures and tests for that scaffold
@@ -31,9 +32,10 @@ As of TWO-20:
 - `scripts/dev/retrofx-v2-install` and `retrofx-v2-uninstall` now manage that separate experimental install footprint
 - `v2/session/apply/` now contains the first bounded experimental apply/off slice with current-state manifests, last-good state, and event logs
 - `scripts/dev/retrofx-v2-apply`, `retrofx-v2-off`, and `retrofx-v2-status` now manage a bounded current activation inside the isolated `retrofx-v2-dev` footprint
-- `v2/dev/` now provides a unified experimental branch surface for platform status, smoke flows, and top-level command dispatch
+- `v2/dev/` now provides a unified experimental branch surface for platform status, smoke flows, package builders, and top-level command dispatch
 - `scripts/dev/retrofx-v2` now dispatches to the implemented 2.x developer workflows from one place
-- public packaging, broad live session orchestration, and production command delegation still do not exist
+- `scripts/dev/retrofx-v2-techbeta` now exposes the narrower copied-toolchain technical-beta surface for advanced testers
+- broader beta stabilization, live Wayland ownership, and production command delegation still do not exist
 
 Python is used only for the early 2.x internal scaffold because `tomllib` gives deterministic TOML parsing with no extra dependency burden.
 This choice does not change the 1.x runtime or make Python the default user-facing path.
@@ -57,3 +59,4 @@ This choice does not change the 1.x runtime or make Python the default user-faci
 - Do not add fake CLI commands here just to make the scaffold feel active.
 - Do not port 1.x shell code into `v2/` without an explicit migration prompt.
 - Implement against the contracts in `docs/v2/`, especially `MODULE_BOUNDARIES.md` and `IMPLEMENTATION_SEQUENCE.md`.
+- Keep the broader internal `retrofx-v2` surface distinct from the narrower `retrofx-v2-techbeta` promise.

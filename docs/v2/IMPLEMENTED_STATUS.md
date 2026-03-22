@@ -1,10 +1,14 @@
 # RetroFX 2.x Implemented Status
 
-This document is the current truth pass for the 2.x branch as of TWO-33.
+This document is the current implementation truth for `2.x` on the current `main` branch.
 It is intentionally blunt.
 
-1.x remains the production line.
-2.x remains experimental and developer-facing.
+Repository truth:
+
+- `1.x` remains the production line
+- `2.x` remains experimental
+- the broader internal developer surface and the narrower technical-beta candidate surface are both real, but they are not the same promise
+- the current `main` HEAD is not automatically the same artifact as the latest local technical-beta tag
 
 ## Matrix
 
@@ -28,9 +32,11 @@ It is intentionally blunt.
 | live Wayland render | no | no | yes | Wayland render remains degraded or export-only. |
 | full compatibility mode | no | no | yes | Migration exists, but 1.x runtime compatibility does not. |
 
-## Developer Reality
+## Surfaces In Scope
 
-Implemented and coherent now:
+### Broader Internal Developer Surface
+
+Implemented and coherent:
 
 - `scripts/dev/retrofx-v2 status`
 - `scripts/dev/retrofx-v2 resolve`
@@ -46,6 +52,39 @@ Implemented and coherent now:
 - `scripts/dev/retrofx-v2 smoke`
 - `scripts/dev/retrofx-v2-techbeta`
 
+### Narrower Technical-Beta Surface
+
+Implemented and coherent:
+
+- `scripts/dev/retrofx-v2-techbeta status`
+- `scripts/dev/retrofx-v2-techbeta resolve`
+- `scripts/dev/retrofx-v2-techbeta plan`
+- `scripts/dev/retrofx-v2-techbeta compile`
+- `scripts/dev/retrofx-v2-techbeta bundle`
+- `scripts/dev/retrofx-v2-techbeta install`
+- `scripts/dev/retrofx-v2-techbeta uninstall`
+- `scripts/dev/retrofx-v2-techbeta diagnostics`
+- `scripts/dev/retrofx-v2-techbeta apply`
+- `scripts/dev/retrofx-v2-techbeta off`
+- `scripts/dev/retrofx-v2-techbeta packs`
+- `scripts/dev/retrofx-v2-techbeta smoke`
+
+Intentionally excluded from the technical-beta promise:
+
+- `migrate inspect-1x`
+- `preview-x11`
+- the broader internal package surface
+
+## Current Status Notes
+
+- internal developer-line version identity: `2.0.0-alpha.internal.2`
+- internal developer-line status label: `internal-alpha`
+- limited technical-beta candidate identity: `2.0.0-techbeta.1`
+- limited technical-beta status label: `technical-beta`
+- latest historical alpha tag: `v2.0.0-alpha.internal.1`
+- latest local technical-beta candidate tag: `v2.0.0-techbeta.1`
+- current `main` may be ahead of the latest local technical-beta tag even when the technical-beta line remains approved
+
 Still intentionally bounded:
 
 - live apply only exists as a narrow 2.x-owned activation path plus the explicit short-lived X11 probe
@@ -53,20 +92,20 @@ Still intentionally bounded:
 - install and current activation remain separated, but unified `status` now reports both surfaces together
 - controlled internal alpha readiness is narrow and currently grounded most strongly in one real X11 plus `i3` validation host
 - broader-alpha readiness is not approved; non-sway Wayland desktops are explicitly fenced as export-oriented validation environments
-- the current branch version is `2.0.0-alpha.internal.2`, which is an untagged post-alpha hardening build rather than the historical `.1` local alpha candidate
 - internal-alpha packages are reproducible and self-describing, but they still assume a repo checkout rather than a standalone copied toolchain
 - the limited technical-beta candidate is a separate copied-toolchain surface exposed through `retrofx-v2-techbeta`
 - release-ish package generation now blocks dirty trees by default unless explicit internal triage mode is requested
 - controlled internal alpha now has a real operational layer, and diagnostics now capture source-control state plus installed bundle or package evidence for the selected profile
 - release-status metadata now distinguishes the current build from the historical local alpha candidate and makes broader-alpha or pre-beta no explicit in machine-readable form
 - release-status metadata now also carries the blocked pre-beta-candidate identity explicitly so the current internal-alpha line is not mistaken for a non-public pre-beta candidate
-- release-status metadata now also carries the technical-beta candidate identity, support matrix, and `ready_for_limited_public_technical_beta=true`
+- release-status metadata now also carries the technical-beta candidate identity, support matrix, and line-level `ready_for_limited_public_technical_beta=true`
 - `package-alpha` now rejects pre-beta, beta, or stable-looking version or status overrides so the current internal package surface cannot fake a public-facing maturity level
 - `package-technical-beta` now produces a local copied-toolchain candidate package and keeps the explicit X11 probe plus migration tooling outside the public-facing support promise
 - the first limited technical-beta execution cycle has now been run against the tagged candidate package, with structured diagnostics evidence under the new technical-beta matrix and blocker docs
+- the rapid merged-`main` execution pass has now re-run that surface directly on the current branch state and recorded one short remediation list before broader beta stabilization should be reconsidered
 - the default repo-local release output path is now `v2/releases/internal-alpha/`, which is treated as generated machine-local output rather than committed source
 
-Not implemented:
+Still not implemented:
 
 - production CLI takeover
 - release-quality stability guarantees
@@ -85,12 +124,14 @@ Related truth docs:
 
 - internal experimental use: yes
 - controlled internal alpha: yes, for a narrow internal cohort
-- current local alpha tag candidate: no
+- current local alpha tag candidate at HEAD: no
 - alpha candidate ready for the current branch build: no
 - latest historical local alpha candidate: `v2.0.0-alpha.internal.1`
 - proposed pre-beta candidate version: `2.0.0-prebeta.internal.1`
 - local pre-beta tag candidate: no
 - pre-beta candidate ready: no
+- latest local technical-beta candidate tag: `v2.0.0-techbeta.1`
+- current local technical-beta tag candidate at HEAD: no
 - broader alpha: no
 - controlled external alpha: no
 - non-public pre-beta: no
@@ -98,7 +139,7 @@ Related truth docs:
 - limited public technical beta candidate ready: yes
 - limited technical beta continuation: yes
 - broader beta stabilization: no
-- another technical-beta remediation cycle before continuation: no
+- another fast remediation cycle before broader beta stabilization: yes
 - pre-beta stabilization: no
 - broader testing: no
-- main reasons to avoid broader testing: live support remains intentionally narrow to the technical-beta matrix, real Wayland-host live-runtime evidence remains out of scope, and migration validation breadth remains limited
+- main reasons to avoid broader testing: live support remains intentionally narrow to the technical-beta matrix, the fallback technical-beta install path still leaks internal developer-line metadata, lower-level surfaced JSON still leaks prompt-era identifiers, real Wayland-host live-runtime evidence remains out of scope, and migration validation breadth remains limited

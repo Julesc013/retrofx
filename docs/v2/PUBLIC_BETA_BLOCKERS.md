@@ -2,12 +2,12 @@
 
 This document lists the issues that still block a broader public beta.
 
-For the narrower limited technical-beta candidate prepared in TWO-32, there are no open `public-beta-blocker` items.
-The remaining items below are non-blocking limitations for that candidate but still matter for any broader future public surface.
+For the current limited technical-beta line, there are no open `public-beta-blocker` items.
+The remaining items below are non-blocking limitations for that line but still matter for any broader future public surface.
 
 ## Public-Beta-Blocker
 
-None open for the limited technical-beta candidate.
+None open for the limited technical-beta line.
 
 ## High
 
@@ -39,7 +39,7 @@ None open for the limited technical-beta candidate.
 
 ## Current Result
 
-For TWO-32:
+For the current limited technical-beta line:
 
 - `READY_FOR_LIMITED_PUBLIC_TECHNICAL_BETA=yes`
 - current public surface position: `limited-public-technical-beta-candidate`

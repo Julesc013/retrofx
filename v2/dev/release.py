@@ -29,7 +29,7 @@ STATUS_LADDER = (
 
 CURRENT_EXPERIMENTAL_VERSION = "2.0.0-alpha.internal.2"
 CURRENT_STATUS_LABEL = "internal-alpha"
-CURRENT_PROMPT = "TWO-32"
+CURRENT_PROMPT = "TWO-33"
 CURRENT_DISTRIBUTION_SCOPE = "internal-non-public"
 CURRENT_COHORT = "controlled-internal"
 PROPOSED_PRE_BETA_VERSION = "2.0.0-prebeta.internal.1"
@@ -183,9 +183,9 @@ def build_experimental_release_metadata(
             "tagged-local-technical-beta-candidate"
             if technical_beta_tag_state["points_at_head"]
             else (
-                "tagged-local-alpha-candidate"
+                "tagged-local-internal-alpha-build"
                 if tag_state["points_at_head"]
-                else "technical-beta-candidate-prep"
+                else "untagged-internal-developer-line"
             )
         ),
         "source_revision": _git_output(["rev-parse", "HEAD"]),

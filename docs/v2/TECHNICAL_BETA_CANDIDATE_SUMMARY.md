@@ -8,6 +8,8 @@ Candidate status: `technical-beta`
 
 Candidate tag name: `v2.0.0-techbeta.1`
 
+Current `main` note: this tag is the latest local technical-beta candidate snapshot, but current `main` may be ahead of it.
+
 Default package root: `v2/releases/technical-beta/`
 
 Primary supported environment: X11 plus `i3`-like
@@ -28,7 +30,7 @@ Major limitations:
 
 Next human steps:
 
-1. generate the copied-toolchain candidate package
-2. run the release checklist
-3. create the local candidate tag if the final validation pass stays clean
+1. generate the copied-toolchain candidate package from the current tree when you need a fresh tester artifact
+2. run the release checklist and the technical-beta execution plan
+3. use the local tag as a reference snapshot, not as proof that current `main` is unchanged
 4. circulate the package only to advanced testers who match the documented support matrix

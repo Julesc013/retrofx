@@ -1,13 +1,13 @@
 # RetroFX 2.x Public Beta Risk Surface
 
-This document inventories the externally visible or externally confusable 2.x surfaces after TWO-32.
+This document inventories the externally visible or externally confusable 2.x surfaces on the current limited technical-beta line.
 
 It is evidence-driven.
 It does not imply general-public beta readiness.
 
 ## Inventory
 
-| Surface | Current classification | Current truth | TWO-32 position |
+| Surface | Current classification | Current truth | Current position |
 | --- | --- | --- | --- |
 | unified `scripts/dev/retrofx-v2` entrypoint | safe only for internal or non-public use | coherent and deterministic, but still a broader repo-oriented developer surface | kept internal-only and clearly separate from the technical-beta wrapper |
 | `scripts/dev/retrofx-v2-techbeta` entrypoint | safe for external advanced testers | exposes only the narrowed technical-beta command family and documents the bounded support matrix | approved candidate surface |
